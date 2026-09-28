@@ -1,0 +1,204 @@
+/* Courses list, lesson page, breadcrumb and exercise panel styles. */
+
+.breadcrumb {
+  display: flex;
+  gap: var(--md-sys-spacing-2);
+  align-items: center;
+  margin-block-end: var(--md-sys-spacing-5);
+  font-size: var(--md-sys-typescale-small-size);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.module-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--md-sys-spacing-3);
+  margin-block-start: var(--md-sys-spacing-6);
+  font-size: 1.3rem;
+}
+
+.module-title__count {
+  font-size: var(--md-sys-typescale-small-size);
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.course-list {
+  display: grid;
+  gap: var(--md-sys-spacing-3);
+  margin: var(--md-sys-spacing-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course-list__link {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-4);
+  padding: var(--md-sys-spacing-4);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-lg);
+  background-color: var(--md-sys-color-surface-container-low);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.course-list__link:hover {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: var(--md-elev-1);
+}
+
+.course-list__order {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-weight: 700;
+  font-size: var(--md-sys-typescale-small-size);
+}
+
+.course-list__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.course-list__text small {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.course-list__meta {
+  margin-inline-start: auto;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-small-size);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .course-list__link {
+    flex-wrap: wrap;
+  }
+
+  .course-list__meta {
+    margin-inline-start: calc(2.25rem + var(--md-sys-spacing-4));
+  }
+}
+
+/* Lesson page */
+
+.lesson-header__meta {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-small-size);
+  margin-block-end: var(--md-sys-spacing-2);
+}
+
+.lesson-objectives {
+  max-width: 48rem;
+  margin-block-end: var(--md-sys-spacing-5);
+}
+
+.lesson-objectives h2 {
+  font-size: 1.15rem;
+  margin-block-end: var(--md-sys-spacing-3);
+}
+
+.lesson-objectives ul {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.lesson-objectives li {
+  margin-block-end: 0.3rem;
+}
+
+.lesson-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--md-sys-spacing-4);
+  margin-block-start: var(--md-sys-spacing-6);
+}
+
+.lesson-pager__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-2);
+  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-4);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-lg);
+  text-decoration: none;
+  max-width: 45%;
+}
+
+.lesson-pager__link:hover {
+  border-color: var(--md-sys-color-primary);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.lesson-pager__link[data-direction='next'] {
+  margin-inline-start: auto;
+  text-align: end;
+}
+
+/* Exercise panel */
+
+.exercise {
+  max-width: 48rem;
+}
+
+.exercise h2 {
+  font-size: 1.15rem;
+}
+
+.exercise__task {
+  font-weight: 500;
+}
+
+.exercise__hints {
+  display: grid;
+  gap: var(--md-sys-spacing-2);
+}
+
+.exercise__hint summary,
+.exercise__solution summary {
+  cursor: pointer;
+  padding: var(--md-sys-spacing-2) var(--md-sys-spacing-3);
+  border-radius: var(--md-sys-shape-corner-sm);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-primary);
+  font-weight: 600;
+}
+
+.exercise__hint summary:hover,
+.exercise__solution summary:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.exercise__hint > p {
+  margin: var(--md-sys-spacing-3) 0 0;
+  padding-inline-start: var(--md-sys-spacing-2);
+}
+
+.exercise__solution {
+  margin-block-start: var(--md-sys-spacing-4);
+}
+
+.exercise__solution summary {
+  display: inline-block;
+}
+
+.exercise__solution pre {
+  margin-block-start: var(--md-sys-spacing-3);
+}
+
+.exercise__solution pre:empty {
+  display: none;
+}

@@ -1,0 +1,114 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ExercisePanel from '@/components/ExercisePanel.astro';
+import { getExerciseFiles } from '@/lib/courses/exercise-files';
+import { getLessons, lessonIdOf, lessonNeighbours, type LessonEntry } from '@/lib/courses/server';
+import { createTranslator } from '@/lib/i18n/core';
+import { APP_LOCALES, type AppLocale } from '@/lib/i18n/types';
+import { coursesPath, lessonPath, relativeHref } from '@/lib/routes';
+import { render } from 'astro:content';
+import '@/styles/pages.css';
+import '@/styles/courses.css';
+import '@/styles/prose.css';
+
+interface Props {
+  locale: AppLocale;
+  entry: LessonEntry;
+  index: number;
+  lessons: LessonEntry[];
+}
+
+interface StaticPath {
+  params: { locale: string; lessonId: string };
+  props: Props;
+}
+
+export async function getStaticPaths(): Promise<StaticPath[]> {
+  const paths: StaticPath[] = [];
+  for (const locale of APP_LOCALES) {
+    const lessons = await getLessons(locale);
+    lessons.forEach((entry, index) => {
+      paths.push({
+        params: { locale, lessonId: lessonIdOf(entry) },
+        props: { locale, entry, index, lessons },
+      });
+    });
+  }
+  return paths;
+}
+
+const { locale, entry, index, lessons } = Astro.props;
+const t = createTranslator(locale);
+const { Content } = await render(entry);
+const lessonId = lessonIdOf(entry);
+const exercise = getExerciseFiles(lessonId);
+const { prev, next } = lessonNeighbours(lessons, index);
+const from = Astro.url.pathname;
+---
+
+<BaseLayout
+  locale={locale}
+  title={`${entry.data.title} — ${t.t('common.appName')}`}
+  description={entry.data.summary}
+>
+  <nav class="breadcrumb" aria-label={t.t('a11y.breadcrumb')}>
+    <a href={relativeHref(coursesPath(locale), from)}>{t.t('nav.courses')}</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{entry.data.title}</span>
+  </nav>
+
+  <header class="lesson-header">
+    <p class="lesson-header__meta">
+      {t.t(`courses.moduleNames.${entry.data.module}`)} ·{' '}
+      {t.t(`courses.difficulty.${entry.data.difficulty}`)} ·
+      {t.t('lesson.estimated', { minutes: entry.data.minutes })}
+    </p>
+    <h1 class="page-title">{entry.data.title}</h1>
+    <p class="page-subtitle">{entry.data.summary}</p>
+  </header>
+
+  <section class="lesson-objectives card" aria-labelledby="objectives-title">
+    <h2 id="objectives-title">{t.t('lesson.objectives')}</h2>
+    <ul>
+      {entry.data.objectives.map((objective) => (
+        <li>{objective}</li>
+      ))}
+    </ul>
+  </section>
+
+  <article class="prose">
+    <Content />
+  </article>
+
+  <ExercisePanel
+    locale={locale}
+    task={entry.data.exercise.task}
+    hints={entry.data.exercise.hints}
+    solution={exercise.solution}
+  />
+
+  <nav class="lesson-pager" aria-label={t.t('nav.courses')}>
+    {prev ? (
+      <a
+        class="lesson-pager__link"
+        data-direction="prev"
+        href={relativeHref(lessonPath(locale, lessonIdOf(prev)), from)}
+      >
+        <span aria-hidden="true">←</span> {prev.data.title}
+      </a>
+    ) : (
+      <span />
+    )}
+    {next ? (
+      <a
+        class="lesson-pager__link"
+        data-direction="next"
+        href={relativeHref(lessonPath(locale, lessonIdOf(next)), from)}
+      >
+        {next.data.title} <span aria-hidden="true">→</span>
+      </a>
+    ) : (
+      <span />
+    )}
+  </nav>
+</BaseLayout>

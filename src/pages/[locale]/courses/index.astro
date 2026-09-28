@@ -1,0 +1,72 @@
+---
+import { getLessons, lessonIdOf } from '@/lib/courses/server';
+import { COURSE_MODULES } from '@/lib/courses/schema';
+import { createTranslator } from '@/lib/i18n/core';
+import { APP_LOCALES, type AppLocale } from '@/lib/i18n/types';
+import { lessonPath, relativeHref } from '@/lib/routes';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import '@/styles/pages.css';
+import '@/styles/courses.css';
+
+export function getStaticPaths() {
+  return APP_LOCALES.map((locale) => ({ params: { locale }, props: { locale } }));
+}
+
+interface Props {
+  locale: AppLocale;
+}
+
+const { locale } = Astro.props;
+const t = createTranslator(locale);
+const from = Astro.url.pathname;
+const lessons = await getLessons(locale);
+
+const groups = COURSE_MODULES.map((module) => ({
+  module,
+  entries: lessons.filter((lesson) => lesson.data.module === module),
+}));
+---
+
+<BaseLayout
+  locale={locale}
+  title={t.t('meta.coursesTitle')}
+  description={t.t('meta.coursesDescription')}
+>
+  <h1 class="page-title">{t.t('courses.title')}</h1>
+  <p class="page-subtitle">{t.t('courses.subtitle')}</p>
+
+  {groups.map(({ module, entries }) =>
+    entries.length > 0 ? (
+      <section aria-labelledby={`module-${module}`}>
+        <h2 class="module-title" id={`module-${module}`}>
+          {t.t(`courses.moduleNames.${module}`)}
+          <span class="module-title__count">
+            {t.t('courses.lessonsInModule', { count: entries.length })}
+          </span>
+        </h2>
+        <ol class="course-list">
+          {entries.map((entry) => (
+            <li class="course-list__item">
+              <a
+                class="course-list__link"
+                href={relativeHref(lessonPath(locale, lessonIdOf(entry)), from)}
+              >
+                <span class="course-list__order" aria-hidden="true">
+                  {entry.data.order}
+                </span>
+                <span class="course-list__text">
+                  <strong>{entry.data.title}</strong>
+                  <small>{entry.data.summary}</small>
+                </span>
+                <span class="course-list__meta">
+                  {t.t(`courses.difficulty.${entry.data.difficulty}`)} ·{' '}
+                  {t.t('common.minutesShort', { minutes: entry.data.minutes })}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ) : null,
+  )}
+</BaseLayout>

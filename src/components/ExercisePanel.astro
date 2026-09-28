@@ -1,0 +1,51 @@
+---
+import { createTranslator } from '@/lib/i18n/core';
+import type { AppLocale } from '@/lib/i18n/core';
+
+interface Props {
+  locale: AppLocale;
+  task: string;
+  hints: string[];
+  solution: { html: string; css: string; js: string };
+}
+
+const { locale, task, hints, solution } = Astro.props;
+const t = createTranslator(locale);
+---
+
+<section class="exercise card" aria-labelledby="exercise-title">
+  <h2 id="exercise-title">{t.t('lesson.exercise')}</h2>
+  <p class="exercise__task">{task}</p>
+
+  {hints.length > 0 && (
+    <div class="exercise__hints" data-hints>
+      {hints.map((hint, index) => (
+        <details class="exercise__hint" data-hint hidden={index > 0}>
+          <summary>{t.t('lesson.showHint', { n: index + 1 })}</summary>
+          <p>{hint}</p>
+        </details>
+      ))}
+    </div>
+  )}
+
+  <details class="exercise__solution">
+    <summary>{t.t('lesson.solution')}</summary>
+    <pre><code>{solution.html}</code></pre>
+    <pre><code>{solution.css}</code></pre>
+    <pre><code>{solution.js}</code></pre>
+  </details>
+</section>
+
+<script>
+  // Progressive hints: opening a hint unlocks the next one.
+  document.querySelectorAll<HTMLElement>('[data-hints]').forEach((root) => {
+    const items = [...root.querySelectorAll<HTMLDetailsElement>('details[data-hint]')];
+    items.forEach((item) => {
+      item.addEventListener('toggle', () => {
+        if (!item.open) return;
+        const next = items[items.indexOf(item) + 1];
+        if (next) next.hidden = false;
+      });
+    });
+  });
+</script>
