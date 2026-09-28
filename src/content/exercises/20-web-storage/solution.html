@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lesson 20 - A todo list that remembers (solution)</title>
+    <link rel="stylesheet" href="solution.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>Tasks</h1>
+
+      <form id="add-task">
+        <input
+          type="text"
+          id="task-input"
+          placeholder="What needs doing?"
+          autocomplete="off"
+          aria-label="New task"
+        />
+        <button type="submit">Add</button>
+      </form>
+
+      <ul id="task-list"></ul>
+
+      <p class="status" id="status" hidden></p>
+    </main>
+
+    <script src="solution.js"></script>
+  </body>
+</html>

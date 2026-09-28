@@ -1,0 +1,49 @@
+/* Task board styling. The layout works as-is; polish it if you like. */
+
+body {
+  font-family: system-ui, sans-serif;
+  margin: 2rem auto;
+  max-width: 30rem;
+  padding: 0 1rem;
+  color: #1d1b20;
+}
+
+form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+input[type='text'] {
+  flex: 1;
+  padding: 0.5rem;
+}
+
+#task-count {
+  color: #57534e;
+}
+
+#task-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+#task-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d6d3d1;
+  border-radius: 8px;
+}
+
+#task-list li.done span {
+  text-decoration: line-through;
+  color: #a8a29e;
+}
+
+#task-list button {
+  margin-left: auto;
+}

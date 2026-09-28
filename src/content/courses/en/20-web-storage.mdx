@@ -1,0 +1,221 @@
+---
+lessonId: 20-web-storage
+order: 20
+module: dom
+difficulty: intermediate
+minutes: 30
+title: 'Web Storage: localStorage and JSON'
+summary: 'Persist user data across reloads with localStorage, serialize structures with JSON, and defend against quota and parsing failures.'
+objectives:
+  - 'Choose between localStorage and sessionStorage using their scope and lifetime differences.'
+  - 'Store and retrieve structured data with JSON.stringify() and JSON.parse().'
+  - 'Guard every storage call with try/catch and fall back to in-memory data when storage is unavailable.'
+  - 'Handle real-world failure modes: quota limits, malformed saved data, and disabled storage.'
+  - 'Build a save-on-change habit so saved state never drifts from what is on screen.'
+exercise:
+  task: 'Build a small todo list that survives page reloads. The user can add a task, mark it done, and delete it. Save the full task array to localStorage as JSON after every change and load it back when the page starts. Wrap all storage access in try/catch: if localStorage is unavailable (as in a sandboxed iframe) or the saved data is malformed, fall back to an in-memory array so the app keeps working.'
+  hints:
+    - 'Write one save() function that does localStorage.setItem(KEY, JSON.stringify(tasks)) inside a try/catch, and call it after every add, toggle, and delete rather than only when the page unloads.'
+    - 'localStorage only ever returns strings: saving means JSON.stringify(tasks), loading means JSON.parse(saved) — and parse can throw, so it needs its own try/catch that rejects the value when it fails.'
+    - 'Give the load function a shape check after parsing (Array.isArray and every item has text and done) and use a module-level tasks array as the single source of truth for both rendering and saving.'
+---
+
+## Overview
+
+Every app you have built so far has had the same quiet flaw: the moment the page reloads, everything is gone. A to-do list forgets its to-dos, a settings panel forgets your choice. Real applications remember, and the web gives you a surprisingly simple way to do that: Web Storage, a small key-value database built into the browser itself.
+
+Web Storage comes in two flavors, and the workhorse is `localStorage`: values you store there survive reloads, browser restarts, and reboots. Because it only stores strings, structured data — lists, settings objects, nested state — travels through `JSON.stringify()` on the way in and `JSON.parse()` on the way out.
+
+Persistence also introduces new failure modes you have not had to think about: storage can be full, can be disabled, or can contain last year's garbage. In this lesson you will build a todo list that survives reloads and, just as importantly, fails gracefully when storage is not there at all.
+
+## Two pantries: localStorage and sessionStorage
+
+Both storage objects live on `window`, share the same API, and are scoped per origin — data saved by one site is never visible to another. They differ only in how long the data lives:
+
+|              | `localStorage`                                 | `sessionStorage`               |
+| ------------ | ---------------------------------------------- | ------------------------------ |
+| Lifetime     | Forever, until code or the user clears it      | Until the tab or window closes |
+| Visible in   | Every tab of the same origin                   | Only the tab that wrote it     |
+| Typical size | Around 5 MB                                    | Around 5 MB                    |
+| Good for     | Preferences, drafts, todo lists                | Form drafts, one-session state |
+| API          | `getItem` / `setItem` / `removeItem` / `clear` | Identical                      |
+
+```js
+localStorage.setItem('theme', 'dark');
+localStorage.getItem('theme'); // "dark"
+localStorage.removeItem('theme');
+localStorage.getItem('theme'); // null
+
+sessionStorage.setItem('scroll-position', '1420');
+```
+
+Three properties shape everything else in this lesson. First, storage holds **strings only** — the number `42` goes in as `"42"` and comes back as a string. Second, both reads and writes are **synchronous**: no callbacks, no promises, just values. Third, every value is tied to the **origin**, so your page can only ever see its own pantry.
+
+> **Tip:** `sessionStorage` is not a "smaller localStorage" — it is a different tool. Use it when data should logically die with the tab, like an unsent form draft.
+
+> **Try it:** In the built-in editor, store a value with `localStorage.setItem`, then call `localStorage.getItem` for it in the console. Reload the preview — the value is still there.
+
+## Storing structure with JSON
+
+Real state is rarely a single string. A todo list is an array of objects; settings are objects with several fields. The bridge between JavaScript structures and storage strings is JSON:
+
+```js
+const tasks = [
+  { id: 1, text: 'Learn localStorage', done: true },
+  { id: 2, text: 'Build a persistent app', done: false },
+];
+
+// Store: structure -> string
+localStorage.setItem('todos.v1', JSON.stringify(tasks));
+
+// Retrieve: string -> structure
+const raw = localStorage.getItem('todos.v1');
+const restored = JSON.parse(raw);
+console.log(restored[1].text); // "Build a persistent app"
+```
+
+`JSON.stringify()` and `JSON.parse()` are exact inverses for plain data — objects, arrays, strings, numbers, booleans, `null`. Two caveats matter in practice. A `Date` object serializes to a string and does not come back as a `Date`; convert to a timestamp string yourself if you need one. And `undefined`, functions, and DOM nodes simply do not survive the round trip, which is usually a helpful sign you were about to store something you should not.
+
+Key naming is worth a little discipline. `"todos.v1"` beats `"todos"` the day your data shape changes: bump the version, and code that understands the new shape will simply not trip over old data.
+
+> **Try it:** In the editor, stringify a small object, store it, parse it back, and log both the string and the restored object. Notice the string is what storage actually keeps.
+
+## Reading and writing safely
+
+Here is the part most tutorials skip: **storage can fail**. Writing past the ~5 MB quota throws a `QuotaExceededError`. Browsers with cookies blocked may refuse storage entirely. And — important for this platform — a page running inside a sandboxed iframe with an opaque origin has **no storage at all**: every access can throw a `SecurityError`. The preview window in this course is exactly such an iframe, so code that assumes `localStorage` works will crash there.
+
+The defense is the same for every case: wrap each access in `try/catch` and keep a fallback in memory. The app then behaves identically in the happy path and degrades to "resets on reload" when storage is absent.
+
+```js
+const STORAGE_KEY = 'todos.v1';
+let memoryStore = {}; // fallback when storage is unavailable
+
+function loadAll() {
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch (error) {
+    console.warn('Storage unavailable, using memory only:', error.message);
+    return memoryStore[STORAGE_KEY] ?? null;
+  }
+}
+
+function saveAll(value) {
+  try {
+    localStorage.setItem(STORAGE_KEY, value);
+  } catch (error) {
+    memoryStore[STORAGE_KEY] = value;
+  }
+}
+```
+
+Malformed data is the second hazard. Storage is outside your program — an old version of your app, or a user with dev tools, can put anything under your key. `JSON.parse(null)` returns `null` politely, but `JSON.parse("{oops")` throws. So loading gets one more layer: parse inside `try/catch`, then check the shape of what came back before you trust it.
+
+```js
+function loadTasks() {
+  try {
+    const parsed = JSON.parse(loadAll());
+    if (Array.isArray(parsed) && parsed.every((t) => 'text' in t && 'done' in t)) {
+      return parsed;
+    }
+  } catch (error) {
+    // fell through: not JSON, wrong shape, or nothing saved
+  }
+  return []; // a sane default beats a crashed app
+}
+```
+
+> **Try it:** Open the exercise in the preview and watch the console. The starter already warns when storage is unavailable — the fallback path is not hypothetical here, it is the environment you are running in.
+
+## The save-on-change rhythm
+
+A subtle design decision hides in every persistent app: _when_ do you save? Saving only on `beforeunload` (when the tab closes) is unreliable — it does not fire on every kind of exit, and it couples your saving to browser behavior you do not control.
+
+The robust habit is simpler: **save after every mutation**. Add a task, save. Toggle a task, save. Delete a task, save. The write is tiny (a few kilobytes), synchronous, and local — there is nothing to optimize away yet. The reward is an invariant you can rely on: _the screen and the stored data always agree._
+
+```js
+function addTask(text) {
+  tasks.push({ id: nextId++, text: text, done: false });
+  render();
+  save(); // one call after every mutation
+}
+
+function save() {
+  saveAll(JSON.stringify(tasks));
+}
+```
+
+> **Tip:** Keep one `tasks` array as the single source of truth. Rendering reads from it, mutations change it, `save()` writes it. Three functions, one array, no drift.
+
+## The exercise: a todo list that survives reloads
+
+The starter page has the full interface — an input with an Add button, a list where each task shows a checkbox and a delete button, and an empty `#task-list` you will fill in. Conceptually, here is the build:
+
+1. **Data first.** Keep a `tasks` array of `{ id, text, done }` objects and a `render()` function that rebuilds the list from it. Create elements with `document.createElement` and set task text with `textContent`.
+2. **Add.** Listen to the form's `submit` event, `preventDefault()`, and push a new task for non-empty input.
+3. **Toggle and delete.** Let the `change` and `click` events bubble up to the list container, find the task by `id` from the checkbox or button, and update or remove it in the array.
+4. **Persist.** Write `save()` (stringify inside `try/catch`) and call it after every mutation. Write `loadTasks()` (parse inside `try/catch`, then shape-check) and fill `tasks` from it on startup before the first render.
+5. **Test the fallback.** Add a task, reload the preview. In the sandboxed iframe the reload wipes it — and that is your fallback working exactly as designed. In a regular browser tab, the list returns.
+
+## Common Mistakes
+
+**1. Saving an object directly.** Storage stringifies values silently with `toString()`, which turns objects into the useless string `"[object Object]"`.
+
+```js
+// Wrong: stores "[object Object]"
+localStorage.setItem('settings', { theme: 'dark' });
+
+// Right: JSON carries the structure
+localStorage.setItem('settings', JSON.stringify({ theme: 'dark' }));
+```
+
+**2. Parsing without protection.** `JSON.parse` throws on anything that is not valid JSON — a truncated write, an old format, garbage — and one throw kills the whole script.
+
+```js
+// Wrong: one bad byte takes the app down
+const tasks = JSON.parse(localStorage.getItem(KEY));
+
+// Right: parse defensively and keep a default
+let tasks = [];
+try {
+  tasks = JSON.parse(localStorage.getItem(KEY)) ?? [];
+} catch (error) {
+  tasks = [];
+}
+```
+
+**3. Assuming storage exists.** In a sandboxed iframe with an opaque origin — like this platform's preview — even _touching_ `localStorage` can throw a SecurityError.
+
+```js
+// Wrong: crashes where storage is disabled
+const saved = localStorage.getItem(KEY);
+
+// Right: every access is guarded
+let saved = null;
+try {
+  saved = localStorage.getItem(KEY);
+} catch (error) {
+  saved = null; // fall back to in-memory data
+}
+```
+
+**4. Saving only when the page unloads.** The `beforeunload` event is not guaranteed to fire, so the user's last changes can vanish. Save after each mutation instead, and the stored state never lags behind the screen.
+
+**5. Forgetting that numbers come back as strings.** `getItem` returns a string or `null` — never a number. Convert deliberately and check for `null` before doing arithmetic.
+
+```js
+// Wrong: "0" + 1 is "01"
+const count = localStorage.getItem('count') + 1;
+
+// Right: convert, with a default for the first visit
+const count = Number(localStorage.getItem('count') ?? 0) + 1;
+```
+
+**6. Storing DOM nodes or derived values.** Functions, element references, and things you can recompute (a filtered list, a total) do not belong in storage. Persist the source data; rebuild the rest on load.
+
+## Summary
+
+- `localStorage` persists per origin across sessions; `sessionStorage` dies with the tab — same API, different lifetime.
+- Storage speaks only strings, so structures travel as JSON: `JSON.stringify()` in, `JSON.parse()` out, with `Date` and non-data values as known casualties.
+- Guard every access with `try/catch`: quota errors, disabled storage, and the sandboxed preview's opaque origin all throw, and an in-memory fallback keeps the app alive.
+- Treat loaded data as untrusted: parse defensively, shape-check the result, and keep a sane default.
+- Save after every mutation from a single source-of-truth array, so the screen and storage never disagree.

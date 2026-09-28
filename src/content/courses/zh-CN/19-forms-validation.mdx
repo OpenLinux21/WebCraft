@@ -1,0 +1,261 @@
+---
+lessonId: 19-forms-validation
+order: 19
+module: dom
+difficulty: intermediate
+minutes: 35
+title: '表单与客户端校验'
+summary: '用原生校验属性、约束校验 API 和可访问的行内错误提示，构建一个值得信赖的注册表单。'
+objectives:
+  - '用真实的 label、fieldset、legend 和语义化 input 类型搭建表单骨架。'
+  - '借助 required、minlength、pattern 和类型约束，免费获得基础校验能力。'
+  - '用 checkValidity()、validity 对象和 setCustomValidity() 在 JavaScript 中驱动校验。'
+  - '通过 aria-describedby 把行内错误提示与对应的输入框关联起来。'
+  - '用 :valid、:invalid 和 :user-invalid 为合法与非法状态设置样式。'
+exercise:
+  task: '构建一个包含姓名、邮箱、密码三个字段的小型注册表单。先用 novalidate 关闭浏览器自带的错误气泡，然后在提交处理器中用约束校验 API 校验每个字段，在每个无效输入框下方显示具体的行内错误信息，并用 aria-describedby 与输入框关联。把焦点移到第一个无效字段上。全部通过后，隐藏所有错误并显示成功提示。'
+  hints:
+    - '先给 form 元素加上 novalidate，让浏览器不再弹出自己的错误气泡，把提示工作完全交给你。'
+    - '每个输入框都暴露一个 validity 对象：校验失败时 validity.valid 为 false，而 validity.valueMissing、validity.typeMismatch 等标志会告诉你具体违反了哪条规则。'
+    - "提交时按顺序遍历字段，把 validity 标志翻译成一句人话写进同一 .field 包裹层里的错误元素；另外记住，setCustomValidity('') 是清除自定义错误的唯一方式。"
+---
+
+## 概览
+
+表单是应用与用户"打交道"的地方：注册、登录、搜索、结账都离不开它。一个静默失败、报错笼统、或者因为某个字段出错就让用户重输密码的表单，赶走用户的速度比任何其他界面缺陷都快。校验不是装饰——它是把人类输入转化为可信数据的对话过程。
+
+好消息是，浏览器多年前就内置了一套完整的校验引擎：你只需以属性的形式在元素上声明约束，浏览器就会逐字段替你检查。而约束校验 API（Constraint Validation API）让你能用 JavaScript 驾驶同一台引擎，把浏览器默认的气泡提示换成友好、持久、可设置样式的行内提示。
+
+本课你将构建一个小型注册表单：提交时校验，并在每个无效字段下方显示具体的错误信息。它会串联起 DOM 模块学到的一切——选择元素、监听事件、更新文本——再加上让表单"成品化"的那一层。
+
+## 一个好表单的骨架
+
+在谈校验之前，先把表单搭对。每个控件都需要一个通过 `for` 和 `id` 真正关联起来的 `<label>`：点击标签文字会让输入框获得焦点，屏幕阅读器也会在字段获得焦点时朗读它。`placeholder` 不是标签——用户一开始打字它就消失了，上下文随之丢失。
+
+一组相关的选项应该放进带 `<legend>` 的 `<fieldset>`，最典型的就是单选按钮组：legend 会作为整个组的名称被朗读出来。另外，`autocomplete` 属性能让浏览器自动填入已知信息，在注册表单里能省下不少输入。
+
+```html
+<form class="signup" novalidate>
+  <div class="field">
+    <label for="email">邮箱</label>
+    <input id="email" name="email" type="email" autocomplete="email" required />
+    <p class="field-error" hidden></p>
+  </div>
+
+  <fieldset>
+    <legend>账户类型</legend>
+    <label><input type="radio" name="plan" value="free" checked /> 免费</label>
+    <label><input type="radio" name="plan" value="pro" /> 专业版</label>
+  </fieldset>
+
+  <button type="submit">创建账户</button>
+</form>
+```
+
+> **试一试：** 在内置编辑器里点击"邮箱"两个字，观察输入框立刻获得焦点——这正是 label 关联在起作用。
+
+选对 `type` 不只是改变手机上的键盘——每种类型都会带上一条浏览器可以代你检查的约束：
+
+| 类型       | 附带的约束                              | 典型场景       |
+| ---------- | --------------------------------------- | -------------- |
+| `email`    | 值必须像邮箱地址（否则 `typeMismatch`） | 注册、登录     |
+| `url`      | 值必须是 URL（否则 `typeMismatch`）     | 个人主页链接   |
+| `number`   | 数值，受 `min`、`max`、`step` 限制      | 数量、年龄     |
+| `date`     | 真实的日历日期，受 `min`、`max` 限制    | 生日、预订     |
+| `password` | 输入被遮蔽；本身不附加规则              | 密码等机密信息 |
+| `checkbox` | `required` 表示必须勾选                 | 同意条款       |
+
+## 原生校验属性
+
+约束直接声明在元素上，代码本身就成了一份文档。浏览器会自动执行它们：提交时逐字段检查，任一规则失败就阻止提交，并在第一个出问题的地方弹出气泡。
+
+| 属性                      | 对应的失败标志                                      | 含义                     |
+| ------------------------- | --------------------------------------------------- | ------------------------ |
+| `required`                | `valueMissing`                                      | 字段不能为空             |
+| `minlength` / `maxlength` | `tooShort` / `tooLong`                              | 文本长度边界             |
+| `min` / `max` / `step`    | `rangeUnderflow` / `rangeOverflow` / `stepMismatch` | 数值与日期的边界         |
+| `pattern`                 | `patternMismatch`                                   | 值必须匹配一个正则表达式 |
+| `type`                    | `typeMismatch`                                      | 上表中的类型格式约束     |
+
+```html
+<label for="username">用户名</label>
+<input
+  id="username"
+  name="username"
+  required
+  minlength="3"
+  maxlength="16"
+  pattern="[A-Za-z0-9_]+"
+  title="只允许字母、数字和下划线"
+  autocomplete="username"
+/>
+```
+
+> **提示：** `pattern` 是对整个值进行匹配的，相当于两端加了锚点，所以 `[A-Za-z0-9_]+` 天然会拒绝中间出现的空格。`title` 属性会显示在默认气泡里，适合用大白话复述这条规则。
+
+> **试一试：** 在练习起始代码里给密码字段加上 `minlength="8"`，然后提交空表单。你一行校验代码都没写，浏览器就已经给出了自己的提示——这就是原生引擎在工作。
+
+## 约束校验 API
+
+每个表单控件都暴露两样东西：一个 `checkValidity()` 方法和一个 `validity` 对象，后者会准确解释值为什么不合格。一旦给表单加上 `novalidate`，提交就不会被自动拦截——何时检查、检查结果如何处理，都由你决定。
+
+```js
+const email = document.querySelector('#email');
+
+console.log(email.checkValidity()); // 值违反规则时为 false
+console.log(email.validity.valueMissing); // 字段为空时为 true
+
+email.addEventListener('input', () => {
+  if (email.validity.valueMissing) {
+    email.setCustomValidity('请输入邮箱地址。');
+  } else if (email.validity.typeMismatch) {
+    email.setCustomValidity('这看起来不像一个邮箱地址。');
+  } else {
+    email.setCustomValidity(''); // 空字符串会清除自定义错误
+  }
+});
+```
+
+掌握 `setCustomValidity()` 只需要记住两条规则：
+
+- 传入任何非空字符串都会通过 `customError` 标志把字段标记为无效——即使其他所有规则都通过了。不清除它，字段就永远不会自报"合法"。
+- 传入空字符串 `""` 即可清除。经典的 bug 是设置过一次自定义错误却从不清除，导致无论用户怎么修改，字段都永远是无效的。
+
+`validity` 对象为每条规则准备了一个布尔标志（`valueMissing`、`typeMismatch`、`tooShort`、`patternMismatch`、`rangeOverflow` 等），外加一个汇总标志 `valid`。把它当作字段的成绩单来读。
+
+> **试一试：** 往字段里输入不同的值，然后在控制台打印 `input.validity`，观察标志如何随着值从空、到格式错误、再到合法而变化。
+
+## 用户能真正执行的行内提示
+
+默认气泡在下一次按键时就消失了，而且没法设置样式。行内提示——字段正下方的一小段文字——会一直可见，可以慢慢阅读，也能与设计风格统一。三条经验能让它们真正有用：
+
+1. 在用户完成一次尝试之后再显示（失焦或提交时），而不是第一次按键就报错——对还没动过的字段报错像是在训人。
+2. 既说错在哪，也说该怎么做："密码至少需要 8 个字符"远好于"输入无效"。
+3. 用 `aria-describedby` 把提示与输入框关联起来，这样焦点回到字段时屏幕阅读器会朗读提示内容。
+
+```js
+function showError(input, message) {
+  const error = input.closest('.field').querySelector('.field-error');
+  error.textContent = message;
+  error.hidden = false;
+}
+
+function clearError(input) {
+  const error = input.closest('.field').querySelector('.field-error');
+  error.textContent = '';
+  error.hidden = true;
+}
+```
+
+CSS 也能反映同样的状态。注意两个伪类的区别：`:invalid` 从页面加载那一刻起就可能为真（必填且为空的字段就是无效的），所以它会把没人碰过的字段也标出来；`:user-invalid` 则等到用户真正编辑过该字段之后才生效——通常这才是想要的。
+
+```css
+.field input:user-invalid {
+  border-color: #b3261e;
+}
+
+.field-error {
+  color: #b3261e;
+  font-size: 0.85rem;
+}
+```
+
+> **试一试：** 给练习中的错误段落设置样式，然后用 Tab 键走过尚未填写的表单。`:user-invalid` 对新鲜字段保持沉默——这份克制正是它的价值。
+
+## 实战练习：带行内提示的注册表单
+
+起始页面已经提供三个字段——姓名、邮箱、密码——每个字段都包在 `.field` 容器里，下方有一个空的、隐藏着的错误段落。你要搭建的部分，从思路上看：
+
+1. **补全标记。** 给表单加上 `novalidate`；给每个输入框补上 `required`、合适的 `type`，以及指向其错误段落的 `aria-describedby`。
+2. **声明约束。** 除了 `required`，给密码加上 `minlength="8"`，让引擎有值得报告的内容。
+3. **拦截提交。** 在提交处理器里调用 `event.preventDefault()`，然后按 DOM 顺序遍历字段，把 `validity` 标志翻译成通顺的人话。
+4. **给出反馈。** 把信息写进错误段落并取消隐藏，同时把焦点移到第一个无效字段上，让键盘用户直接落在问题所在之处。
+5. **漂亮收尾。** 全部字段通过后，隐藏所有错误并显示成功提示。
+
+提交处理器的骨架——具体的消息映射由你来写：
+
+```js
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  // 对每个字段：如果 checkValidity() 为 false，
+  // 根据 validity 标志挑选一句话并调用 showError(field, message)。
+  // 否则调用 clearError(field)。
+  // 记录第一个无效字段，最后把焦点给它。
+});
+```
+
+> **提示：** 按照字段在页面上出现的顺序校验。"聚焦第一个错误"只有在按阅读顺序发现错误时才说得通。
+
+## 常见错误
+
+**1. 让 placeholder 冒充标签。** placeholder 一输入就消失，而且会被许多屏幕阅读器跳过，字段等于没有了可访问名称。
+
+```html
+<!-- 错误：一开始打字上下文就没了 -->
+<input type="email" placeholder="邮箱" />
+
+<!-- 正确：持久存在且已关联的标签 -->
+<label for="email">邮箱</label>
+<input type="email" id="email" name="email" />
+```
+
+**2. 一边写自定义提示，一边留着浏览器气泡。** 不加 `novalidate`，浏览器会在你的处理器运行之前就拦截提交，用户要面对两套互相打架的错误样式。
+
+```html
+<!-- 错误：行内提示会和原生气泡打架 -->
+<form>...</form>
+
+<!-- 正确：提示权交给你自己 -->
+<form novalidate>...</form>
+```
+
+**3. 设置了自定义错误却从不清除。** 只要 `setCustomValidity()` 收到非空字符串，字段就会一直无效，哪怕用户早已改正。
+
+```js
+// 错误：一旦触发就永远无效
+if (email.validity.typeMismatch) {
+  email.setCustomValidity('不是有效的邮箱地址。');
+}
+
+// 正确：每个自定义错误都要有回头路
+if (email.validity.typeMismatch) {
+  email.setCustomValidity('不是有效的邮箱地址。');
+} else {
+  email.setCustomValidity('');
+}
+```
+
+**4. 只用颜色表达错误。** 单纯的红色边框对色盲用户无效，也没有说明该如何修正。要把颜色与文字配对，并把两者关联起来。
+
+```html
+<!-- 错误：只有视觉暗示，没有解释 -->
+<input class="bad" type="text" />
+
+<!-- 正确：提示与字段建立关联 -->
+<input type="text" aria-describedby="name-error" />
+<p id="name-error">请输入你的姓名。</p>
+```
+
+**5. 把没碰过的字段也标记为无效。** 页面一加载，空且必填的字段就满足 `:invalid`，于是整个表单在任何人输入之前就红成一片。
+
+```css
+/* 错误：冲着什么都没做错的用户大喊 */
+input:invalid {
+  border-color: red;
+}
+
+/* 正确：等用户真正编辑过再反应 */
+input:user-invalid {
+  border-color: red;
+}
+```
+
+**6. 把客户端校验当成安全防线。** 任何人都可以禁用 JavaScript，或者直接向服务器发送伪造的请求。客户端校验是用户体验，不是边界——接收这份表单的服务端必须重新检查每一条规则。
+
+## 小结
+
+- 用真实的 label、fieldset 和 legend 搭建表单，并选择自带约束的输入类型。
+- 用 `required`、`minlength`、`pattern` 等属性声明规则——检查工作浏览器免费代劳。
+- 用 `checkValidity()`、`validity` 标志和 `setCustomValidity()` 在 JavaScript 中驱动同一台引擎，并始终记得用空字符串清除自定义错误。
+- 在字段旁边显示行内提示，措辞写成一条指引，并用 `aria-describedby` 建立关联。
+- 用 `:user-invalid` 呈现反馈，让未被触碰的字段保持安静；同时记住客户端校验是体验手段，绝不是安全机制。

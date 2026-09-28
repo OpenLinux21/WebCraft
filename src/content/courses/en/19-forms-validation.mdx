@@ -1,0 +1,261 @@
+---
+lessonId: 19-forms-validation
+order: 19
+module: dom
+difficulty: intermediate
+minutes: 35
+title: 'Forms and Client-side Validation'
+summary: 'Build a trustworthy signup form with native validation attributes, the Constraint Validation API, and accessible inline error messages.'
+objectives:
+  - 'Build forms from the right parts: labels, fieldsets, legends, and semantic input types.'
+  - 'Get basic validation for free with required, minlength, pattern, and type-based constraints.'
+  - 'Drive validation from JavaScript with checkValidity(), the validity object, and setCustomValidity().'
+  - 'Show inline error messages linked to their inputs with aria-describedby.'
+  - 'Style valid and invalid states with :valid, :invalid, and :user-invalid.'
+exercise:
+  task: "Build a small signup form with a name field, an email field, and a password field. Disable the browser's default error bubbles with novalidate, then validate every field in the submit handler using the Constraint Validation API and show a specific inline error message under each invalid input, linked with aria-describedby. Focus the first invalid field. When everything passes, hide the errors and show a success message."
+  hints:
+    - 'Start by adding novalidate to the form element so the browser stops showing its own bubbles and leaves the messaging entirely to you.'
+    - 'Every input exposes a validity object: validity.valid is false when a rule fails, and flags like validity.valueMissing or validity.typeMismatch tell you which rule broke.'
+    - "On submit, loop over the fields, translate the validity flags into a sentence, write it into the error element inside the same field wrapper, and remember that setCustomValidity('') is how you clear a custom error."
+---
+
+## Overview
+
+Forms are where a web app does business with its users: signing up, logging in, searching, checking out. A form that fails silently, shows a cryptic error at the top of the page, or wipes a carefully typed password because one field was wrong will lose people faster than almost any other UI bug. Validation is not decoration — it is the conversation that turns human typing into trustworthy data.
+
+Here is the good news: browsers have shipped a complete validation engine for years. You declare constraints as attributes right on the element, and the browser checks them for you, field by field. The Constraint Validation API then lets you drive that same engine from JavaScript, so you can replace the browser's default bubbles with friendly, persistent, styled inline messages.
+
+In this lesson you will build a small signup form that validates on submit and shows a specific error under each invalid field. It pulls together everything from the DOM module — selecting elements, listening to events, updating text — and adds the layer that makes a form feel finished rather than merely present.
+
+## The anatomy of a usable form
+
+Before validating anything, make sure the form is built correctly. Every control needs a real `<label>` connected through `for` and `id`. Clicking the label focuses the input, and screen readers announce the label when the field takes focus. The `placeholder` attribute is not a label — it disappears the moment someone starts typing, so the user loses all context.
+
+Related choices belong in a `<fieldset>` with a `<legend>`, most often for radio groups: the legend is announced as the group's name. And the `autocomplete` attribute lets the browser fill in known values, which saves real typing on signup forms.
+
+```html
+<form class="signup" novalidate>
+  <div class="field">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" autocomplete="email" required />
+    <p class="field-error" hidden></p>
+  </div>
+
+  <fieldset>
+    <legend>Account type</legend>
+    <label><input type="radio" name="plan" value="free" checked /> Free</label>
+    <label><input type="radio" name="plan" value="pro" /> Pro</label>
+  </fieldset>
+
+  <button type="submit">Create account</button>
+</form>
+```
+
+> **Try it:** In the built-in editor, click the word "Email" and watch the input take focus. That single click is the label connection doing its job.
+
+Choosing the right `type` does more than change the keyboard on phones — each type applies a constraint the browser can check for you:
+
+| Type       | Constraint it applies                                   | Typical use         |
+| ---------- | ------------------------------------------------------- | ------------------- |
+| `email`    | Value must look like an address (`typeMismatch` if not) | Signup, login       |
+| `url`      | Value must be a URL (`typeMismatch` if not)             | Profile links       |
+| `number`   | Numeric value, bounded by `min`, `max`, `step`          | Quantities, ages    |
+| `date`     | A real calendar date, bounded by `min` and `max`        | Birthdays, bookings |
+| `password` | Obscured entry; adds no rule by itself                  | Secrets             |
+| `checkbox` | `required` means this box must be checked               | Consent, opt-ins    |
+
+## Native validation attributes
+
+Constraints are declared directly on the element, where they document themselves. The browser applies them automatically: on submit it checks every field, blocks submission if any rule fails, and shows a bubble next to the first problem.
+
+| Attribute                 | Failing flag                                        | Meaning                                       |
+| ------------------------- | --------------------------------------------------- | --------------------------------------------- |
+| `required`                | `valueMissing`                                      | The field must not be empty                   |
+| `minlength` / `maxlength` | `tooShort` / `tooLong`                              | Length bounds for text values                 |
+| `min` / `max` / `step`    | `rangeUnderflow` / `rangeOverflow` / `stepMismatch` | Numeric and date bounds                       |
+| `pattern`                 | `patternMismatch`                                   | Value must match a regular expression         |
+| `type`                    | `typeMismatch`                                      | The type-specific format from the table above |
+
+```html
+<label for="username">Username</label>
+<input
+  id="username"
+  name="username"
+  required
+  minlength="3"
+  maxlength="16"
+  pattern="[A-Za-z0-9_]+"
+  title="Letters, numbers and underscores only"
+  autocomplete="username"
+/>
+```
+
+> **Tip:** A `pattern` is tested against the whole value, as if it were wrapped in anchors, so `[A-Za-z0-9_]+` already rejects spaces anywhere in the string. The `title` attribute is shown in the default bubble and is a good place to restate the rule in plain language.
+
+> **Try it:** In the exercise starter, add `minlength="8"` to the password field and submit the empty form. The browser writes its own message before you have written a single line of validation code — that is the native engine at work.
+
+## The Constraint Validation API
+
+Every form control exposes two things: a `checkValidity()` method and a `validity` object that explains exactly why the value fails. Once you add `novalidate` to the form, submission is never blocked automatically — you decide when to run the checks and what to do with the result.
+
+```js
+const email = document.querySelector('#email');
+
+console.log(email.checkValidity()); // false while the value breaks a rule
+console.log(email.validity.valueMissing); // true while the field is empty
+
+email.addEventListener('input', () => {
+  if (email.validity.valueMissing) {
+    email.setCustomValidity('Please enter your email address.');
+  } else if (email.validity.typeMismatch) {
+    email.setCustomValidity('That does not look like an email address.');
+  } else {
+    email.setCustomValidity(''); // an empty string clears the custom error
+  }
+});
+```
+
+Two rules make `setCustomValidity()` click:
+
+- Passing any non-empty string marks the field invalid through the `customError` flag — even when every other rule passes. The field will not report itself valid until you clear it.
+- Passing the empty string `""` clears it. The classic bug is setting a custom error once and never clearing it, which leaves the field permanently invalid no matter what the user types.
+
+The `validity` object has one boolean flag per rule (`valueMissing`, `typeMismatch`, `tooShort`, `patternMismatch`, `rangeOverflow`, and friends) plus the summary flag `valid`. Treat it as a live report card for the field.
+
+> **Try it:** Log `input.validity` to the console after typing different values into a field. Watch the flags flip as the value moves from empty, to malformed, to valid.
+
+## Inline errors users can act on
+
+The default bubbles disappear on the next keystroke and cannot be styled. Inline messages — a short paragraph directly under the field — stay visible, can be read at leisure, and can match your design. Three habits make them genuinely useful:
+
+1. Show them after the user commits an attempt (on blur or on submit), not on the very first keystroke — errors on untouched fields feel like scolding.
+2. Say what is wrong _and_ what to do: "Password needs at least 8 characters" beats "Invalid input".
+3. Connect each message to its input with `aria-describedby`, so screen readers announce the message when focus moves back to the field.
+
+```js
+function showError(input, message) {
+  const error = input.closest('.field').querySelector('.field-error');
+  error.textContent = message;
+  error.hidden = false;
+}
+
+function clearError(input) {
+  const error = input.closest('.field').querySelector('.field-error');
+  error.textContent = '';
+  error.hidden = true;
+}
+```
+
+CSS can reflect the same state. Note the difference between the two pseudo-classes: `:invalid` is already true when the page loads (a required, empty field is invalid), so it flags fields nobody has touched. `:user-invalid` waits until the user has actually interacted with the field — usually what you want.
+
+```css
+.field input:user-invalid {
+  border-color: #b3261e;
+}
+
+.field-error {
+  color: #b3261e;
+  font-size: 0.85rem;
+}
+```
+
+> **Try it:** Style the error paragraph in the exercise, then tab through the untouched form. `:user-invalid` stays quiet on fresh fields — that restraint is the whole point.
+
+## The exercise: a signup form with inline errors
+
+The starter page gives you the three fields — name, email, password — each wrapped in a `.field` div with an empty, hidden error paragraph underneath. The pieces you will build, conceptually:
+
+1. **Mark up.** Add `novalidate` to the form; give every input its `required` attribute, a `type` where one applies, and `aria-describedby` pointing at its error paragraph.
+2. **Declare constraints.** Beyond `required`, add `minlength="8"` to the password so the engine has something interesting to report.
+3. **Intercept submit.** In the submit handler, call `event.preventDefault()`, then loop over the fields in DOM order and translate `validity` flags into human sentences.
+4. **Report.** Write the message into the error paragraph, unhide it, and focus the first invalid field so keyboard users land where the problem is.
+5. **Finish well.** When every field passes, hide all errors and reveal the success message.
+
+The shape of the submit handler — the message mapping is yours to write:
+
+```js
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  // For each field: if checkValidity() is false, pick a message based on
+  // the validity flags and call showError(field, message).
+  // Otherwise call clearError(field).
+  // Track the first invalid field and focus it at the end.
+});
+```
+
+> **Tip:** Validate fields in the same order they appear on screen. "Focus the first error" only makes sense if you discover errors in reading order.
+
+## Common Mistakes
+
+**1. Placeholder posing as a label.** Placeholders vanish on input and are skipped by many screen readers, leaving a field with no accessible name.
+
+```html
+<!-- Wrong: context disappears as soon as typing starts -->
+<input type="email" placeholder="Email" />
+
+<!-- Right: a persistent, connected label -->
+<label for="email">Email</label>
+<input type="email" id="email" name="email" />
+```
+
+**2. Custom messages while the browser bubbles are still on.** Without `novalidate`, the browser blocks submission before your handler even runs, and users face two competing error styles.
+
+```html
+<!-- Wrong: your inline errors will fight the native bubbles -->
+<form>...</form>
+
+<!-- Right: you own the messaging now -->
+<form novalidate>...</form>
+```
+
+**3. Setting a custom error and never clearing it.** A non-empty `setCustomValidity()` value keeps the field invalid forever, even after the user fixes the problem.
+
+```js
+// Wrong: stuck invalid once triggered
+if (email.validity.typeMismatch) {
+  email.setCustomValidity('Not an email address.');
+}
+
+// Right: every custom error needs a clear path back
+if (email.validity.typeMismatch) {
+  email.setCustomValidity('Not an email address.');
+} else {
+  email.setCustomValidity('');
+}
+```
+
+**4. Errors that are only color.** A red border alone fails color-blind users and says nothing about what to fix. Pair it with text and connect the two.
+
+```html
+<!-- Wrong: a visual hint with no explanation -->
+<input class="bad" type="text" />
+
+<!-- Right: message linked to the field -->
+<input type="text" aria-describedby="name-error" />
+<p id="name-error">Please enter your name.</p>
+```
+
+**5. Flagging untouched fields as invalid.** `:invalid` is true for empty required fields the moment the page loads, so the whole form lights up red before anyone types a character.
+
+```css
+/* Wrong: shouts at users who have done nothing wrong */
+input:invalid {
+  border-color: red;
+}
+
+/* Right: react only after the user actually edits the field */
+input:user-invalid {
+  border-color: red;
+}
+```
+
+**6. Trusting client-side validation as security.** Anyone can disable JavaScript or submit a crafted request directly to a server. Client-side validation is user experience, not a boundary — whatever server receives this form must re-check every rule itself.
+
+## Summary
+
+- Build forms from real labels, fieldsets, and legends, and pick input types that carry their own constraints.
+- Declare rules with `required`, `minlength`, `pattern`, and friends — the browser does the checking for free.
+- Drive the same engine from JavaScript with `checkValidity()`, the `validity` flags, and `setCustomValidity()`, always clearing custom errors with an empty string.
+- Show inline messages adjacent to the field, worded as an instruction, and connect them with `aria-describedby`.
+- Style feedback with `:user-invalid` so untouched fields stay calm, and remember that client-side validation is UX, never security.

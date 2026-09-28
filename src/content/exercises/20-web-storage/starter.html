@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lesson 20 - A todo list that remembers</title>
+    <link rel="stylesheet" href="starter.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>Tasks</h1>
+
+      <form id="add-task">
+        <!-- TODO: nothing to change here - but note the input has
+             aria-label="New task" because it has no visible label. -->
+        <input
+          type="text"
+          id="task-input"
+          placeholder="What needs doing?"
+          autocomplete="off"
+          aria-label="New task"
+        />
+        <button type="submit">Add</button>
+      </form>
+
+      <!-- render() fills this list from the tasks array. -->
+      <ul id="task-list"></ul>
+
+      <p class="status" id="status" hidden></p>
+    </main>
+
+    <script src="starter.js"></script>
+  </body>
+</html>

@@ -1,0 +1,197 @@
+---
+lessonId: 24-capstone-mini-app
+order: 24
+module: advanced
+difficulty: intermediate
+minutes: 45
+title: 'Capstone: Build an Interactive Task Board'
+summary: 'Combine HTML, CSS, JavaScript, DOM events, and localStorage into one finished app: a task board that adds, completes, deletes, and remembers.'
+objectives:
+  - 'Recap the arc from HTML through CSS, JavaScript, the DOM, and storage by building one app that needs all of them.'
+  - 'Model app state as an array of plain objects and render the whole UI from that state.'
+  - 'Wire add, toggle, and delete interactions with form events and event delegation.'
+  - 'Persist state to localStorage after every change, with guarded access and defensive loading.'
+  - 'Finish an app to a shippable bar: keyboard-friendly, labeled, resilient, and free of stale state.'
+exercise:
+  task: "Build an interactive task board - the capstone combines the whole course. Users can add a task through a form, mark it done via its checkbox, delete it with a button, and see a counter like '2 of 5 done' update live. After every change, the tasks array is saved to localStorage as JSON with try/catch protection and an in-memory fallback; on startup it is loaded with defensive JSON.parse plus a shape check, falling back to an empty list. Build list items with createElement and textContent only, and handle all checkbox and delete interactions through one delegated listener on the list container."
+  hints:
+    - 'Keep a tasks array of { id, text, done } objects as the single source of truth, write one render() that rebuilds the list and the counter from it, and call render() followed by save() after every mutation.'
+    - "Put one 'change' listener and one 'click' listener on the list container; read event.target.closest('li').dataset.id and branch on whether the target is a checkbox or carries the delete class."
+    - 'Reuse the lesson 20 pattern: storageGet/storageSet helpers wrapping localStorage in try/catch, a loadTasks() that JSON.parses inside try/catch and validates Array.isArray plus per-item text and done, returning [] on any failure.'
+---
+
+## Overview
+
+This is the summit of the course. Over the previous lessons you have assembled the complete toolchain of front-end craft: structure with HTML, presentation with CSS, behavior with JavaScript, interactivity with the DOM, and memory with Web Storage. Each lesson ended with a small artifact. A capstone is different — it is one artifact that _needs all of them at once_, wired together the way real apps are.
+
+The brief: an interactive task board. Add a task, mark it done, delete it, watch a counter update, and reload the page to find everything still there. Nothing here is new in isolation. The skill on display is composition: a data model that drives the interface, events that mutate the model, a render step that redraws from truth, and persistence that rides along after every mutation.
+
+Take your time with this one — it is the longest exercise of the course, and the habits it rehearses (state, render, save) are the ones you will use in every app you ever build.
+
+## The journey, in one view
+
+Before writing code, look back at how each module contributes to this one app:
+
+| Stop                | What you learned                                | Where it appears in the board                 |
+| ------------------- | ----------------------------------------------- | --------------------------------------------- |
+| HTML                | Structure, semantics, forms                     | The form, labeled inputs, the list landmark   |
+| CSS                 | Layout, tokens, states                          | The board layout, the done style, focus rings |
+| JavaScript          | Variables, functions, arrays, objects           | The data model, the render logic              |
+| DOM                 | Selection, events, element creation             | Every interaction on the page                 |
+| Storage and quality | JSON persistence, guarded access, accessibility | Saving, loading, labels, keyboard flow        |
+
+Notice the shape of the table: every capability has a _home_. When a feature request arrives ("add a counter"), you will know which layer it belongs to. That instinct — features live in layers — is the real graduation gift of this course.
+
+## Designing the board: state, render, save
+
+One decision shapes the entire build: **the array is the app**. Everything visible is derived from a `tasks` array of plain objects; every interaction changes the array; a single `render()` redraws the interface from it. This is the state-render loop from Lesson 20, now carrying a whole UI:
+
+```js
+// The single source of truth.
+let tasks = [
+  // { id: 1717, text: "Review lesson 24", done: false }
+];
+
+// One render to rule them all: rebuild list + counter from tasks.
+function render() {
+  // 1. empty the list container
+  // 2. for each task: create li with checkbox, text, delete button
+  // 3. update the counter paragraph
+}
+
+// Every mutation ends the same way:
+function mutate(update) {
+  update();
+  render();
+  save();
+}
+```
+
+Why insist on rebuilding from scratch instead of nudging the existing DOM? Because it removes an entire class of bugs. There is no scenario where the screen shows a deleted task, forgets a checkbox, or disagrees with the counter — the screen _is_ the array, freshly stamped out every time. For a list of tens of items, the cost is nothing; the simplicity is everything.
+
+The second architectural decision: **event delegation**. Every list item would otherwise need two listeners of its own — and rebuilt items need them reattached. Instead, the list container listens once for `click` and once for `change`, inspects `event.target`, and dispatches to the right mutation. New items are automatically interactive the moment they render.
+
+```js
+list.addEventListener('click', (event) => {
+  const li = event.target.closest('li');
+  if (!li) return;
+  if (event.target.classList.contains('delete')) {
+    // remove the task whose id is li.dataset.id
+  }
+});
+```
+
+> **Try it:** In the built-in editor, read through the starter's HTML first and find the three regions: form, list, counter. Every TODO in the JavaScript attaches to one of them.
+
+## The plan: five steps
+
+The starter gives you complete HTML and CSS plus a JavaScript file of function stubs and TODOs. Work through the steps in order; each one ends with something runnable.
+
+**Step 1 — Data and render.** Fill in `render()`: for each task in `tasks`, build an `li` with a checkbox (`checked` from `task.done`), a `span` with `textContent` set to the task text, and a delete button. Set `li.dataset.id` so events can find their task. Update the `#done-counter` text. Call `render()` once at startup, after loading. Verify: an empty board with a sensible counter.
+
+**Step 2 — Add.** Listen for `submit` on the form, `preventDefault()`, take the trimmed input value, ignore empties, and push `{ id: Date.now(), text, done: false }` onto `tasks`. End with `render()` and `save()` (save can be a stub at first). Clear the input and keep focus in it — small touch, big usability.
+
+**Step 3 — Toggle and delete.** Add the delegated `change` listener for checkboxes and the delegated `click` listener for delete buttons, as sketched above. Each branch finds the task by id, mutates the array (`filter` for delete), and ends with `render()` and `save()`. Verify: the counter tracks your clicks exactly.
+
+**Step 4 — Persist.** Now make `save()` real: `JSON.stringify(tasks)` into storage, wrapped in `try/catch` with a memory fallback — the exact helpers from Lesson 20. Write `loadTasks()` with defensive `JSON.parse` and a shape check (`Array.isArray`, every item has string `text` and boolean `done`), returning `[]` on any doubt. Call it before the first render. Verify: reload in a regular tab and your tasks survive; reload in the sandboxed preview and the fallback path runs without a single error.
+
+**Step 5 — Finish like a pro.** Give the checkbox an `aria-label` carrying the task text, ensure the delete button has an accessible name, add the `:focus-visible` styles from Lesson 21, and handle the empty board with a friendly message instead of a blank list. Reload with zero tasks: the app should look intentional, not broken.
+
+> **Tip:** Resist writing all five steps at once. Run the page after every step; each TODO is deliberately sized so the app stays working between steps.
+
+## Persistence and polish, borrowed from earlier lessons
+
+Nothing in this capstone is invented here — that is the point. The save/load pair is Lesson 20's guarded pattern, pasted in with a new key (`taskboard.v1`). The accessibility layer is Lesson 21's checklist applied: real `<button>` elements, connected labels, visible keyboard focus. The visual states ride on Lesson 22's idea of consistency: the `.done` class is the single styling hook that render() toggles, and CSS does the rest.
+
+One polish detail worth calling out because it recurs in every real app: **focus management**. After deleting a task with the keyboard, focus was on the removed button — it vanishes, and keyboard users are dumped back at the top of the page. A one-line fix moves focus somewhere sensible after deletion, such as the form input:
+
+```js
+// after removing a task via keyboard:
+document.querySelector('#task-input').focus();
+```
+
+Also worth a moment: the id. `Date.now()` is fine at this scale — unique enough for one user, one board. If you later store thousands of items created in the same millisecond, reach for `crypto.randomUUID()`; knowing _why_ an id is needed matters more than which one you pick.
+
+> **Try it:** Once your board works, try to break it: add an empty task, toggle rapidly, delete while a checkbox is focused, reload mid-edit. A finished app is one that survives its own user.
+
+## Common Mistakes
+
+**1. Editing the DOM directly instead of the state.** Toggling the checkbox class by hand works once, then drifts from the array — and from the counter.
+
+```js
+// Wrong: the DOM and the state grow apart
+checkbox.closest('li').classList.toggle('done');
+
+// Right: change the state, re-render from it
+task.done = checkbox.checked;
+render();
+```
+
+**2. innerHTML with user-typed text.** A task named `<img src=x>` with an `onerror` attribute becomes executable markup. Building nodes keeps input as inert text.
+
+```js
+// Wrong: task text is interpolated into markup
+item.innerHTML = `<span>${task.text}</span>`;
+
+// Right: textContent can only ever be text
+const span = document.createElement('span');
+span.textContent = task.text;
+```
+
+**3. Forgetting preventDefault on the form.** The submit reloads the page, and the just-added task vanishes — looking exactly like a persistence bug.
+
+```js
+// Wrong: the browser's default submission wins
+form.addEventListener('submit', () => {
+  addTask(input.value);
+});
+
+// Right: stop the navigation, then handle it
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  addTask(input.value);
+});
+```
+
+**4. Saving some mutations but not others.** Add saves, but toggle does not — a reload resurrects deleted-looking tasks. Route every mutation through one path that ends in `render()` and `save()`.
+
+**5. Trusting whatever comes out of storage.** Last week's format, a half-written string, or an object instead of an array: unguarded `JSON.parse` crashes at startup before the user can do anything.
+
+```js
+// Wrong: one bad byte bricks the app on load
+tasks = JSON.parse(localStorage.getItem(KEY));
+
+// Right: parse in try/catch, shape-check, default to []
+tasks = loadTasks(); // returns [] on any doubt
+```
+
+**6. Listeners attached inside render().** Rebuilding the list then re-attaching listeners per item stacks duplicates. Listen once, on the container, with delegation.
+
+```js
+// Wrong: every render adds another listener per item
+tasks.forEach(() => li.addEventListener('click', handleDelete));
+
+// Right: one listener survives every render
+list.addEventListener('click', handleClick); // once, at setup
+```
+
+## Extending the board (if you finish early)
+
+The exercise above is the passing bar. If you finish with time to spare, each of these is a realistic next feature — and each one is a small rehearsal of a pattern you already know:
+
+- **Filters** — three buttons ("All", "Active", "Done") above the list. Store the current filter in a variable, and have `render()` decide which tasks to show. Notice how the state model quietly grows by one field.
+- **Editing in place** — a "Rename" button that replaces the text with an `<input>`, committing on `Enter` or `blur`. You will need one more delegated listener and a `tasks` update that re-renders.
+- **Counts that tell the truth** — a "Clear completed" action plus per-task timestamps, formatted with `Intl.DateTimeFormat` from lesson 20.
+- **Drag to reorder** — the hardest one. Research `draggable`, `dragstart` and `dragover`; reordering means mutating the array (for example with `splice`) and re-rendering.
+
+Pick at most one. The discipline you are practicing — model first, render second, events third — matters more than the feature list.
+
+## Summary
+
+- One app, all layers: HTML structure, CSS states, JS data, DOM events, and storage — each with a known home.
+- The array of plain objects is the app; one `render()` stamps the screen from it, and every mutation follows the same `mutate, render, save` path.
+- Form `submit` with `preventDefault` adds; delegated `change` and `click` listeners on the list container handle toggles and deletes for all items, present and future.
+- Persistence reuses the guarded pattern: stringify under `try/catch` with a memory fallback, parse defensively with a shape check, and default to empty.
+- Ship-worthy means labeled, keyboard-friendly, focused, and unbothered by reloads, storage failures, or an empty board — the standards you have met across this whole course.
+
+You have reached the end of the track. From here: push this board further (filters, editing, drag-to-reorder), or take the patterns to a framework — where state, render, and one-way data flow will all feel like old friends.

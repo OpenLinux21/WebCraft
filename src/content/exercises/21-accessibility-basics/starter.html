@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lesson 21 - Keyboard-accessible disclosure</title>
+    <link rel="stylesheet" href="starter.css" />
+  </head>
+  <body>
+    <main class="card">
+      <h1>Frequently asked questions</h1>
+
+      <!-- The trigger is a real button, so Enter and Space already work.
+           TODO: verify it has aria-expanded="false" (matching the panel
+           below, which starts hidden) and aria-controls="panel". -->
+      <button type="button" class="disclosure-trigger" aria-expanded="false" aria-controls="panel">
+        What is this widget called?
+        <span class="arrow" aria-hidden="true">&#9662;</span>
+      </button>
+
+      <!-- TODO: this panel must start hidden so the markup state and
+           aria-expanded="false" agree before any JavaScript runs. -->
+      <div class="disclosure-panel" id="panel" hidden>
+        <p>
+          A disclosure: a button that toggles the visibility of a related region of content. The
+          button owns the state, and it reports that state through <code>aria-expanded</code> so
+          screen readers can announce it.
+        </p>
+        <p>
+          Keyboard users activate it with Enter or Space - both fire a click event on a real button
+          element.
+        </p>
+      </div>
+    </main>
+
+    <script src="starter.js"></script>
+  </body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lesson 23 - Build the color-chip element (solution)</title>
+    <link rel="stylesheet" href="solution.css" />
+  </head>
+  <body>
+    <main class="page">
+      <h1>Palette</h1>
+      <p>
+        Each swatch below is a <code>&lt;color-chip&gt;</code> custom element. The class in
+        <code>solution.js</code> defines, renders, and keeps them up to date.
+      </p>
+
+      <ul class="palette">
+        <li><color-chip hex="#7c4dff" label="Violet"></color-chip></li>
+        <li><color-chip hex="#00897b" label="Teal"></color-chip></li>
+        <!-- No label attribute: the chip shows the hex value itself. -->
+        <li><color-chip hex="#ef6c00"></color-chip></li>
+      </ul>
+
+      <p class="note">
+        Try it: run
+        <code>document.querySelector("color-chip").setAttribute("hex", "#d81b60")</code>
+        in the console - the chip re-renders immediately.
+      </p>
+    </main>
+
+    <script src="solution.js"></script>
+  </body>
+</html>

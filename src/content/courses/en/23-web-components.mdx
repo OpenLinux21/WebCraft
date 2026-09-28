@@ -1,0 +1,283 @@
+---
+lessonId: 23-web-components
+order: 23
+module: advanced
+difficulty: intermediate
+minutes: 40
+title: 'Thinking in Components: Web Components Basics'
+summary: 'Create your own HTML elements with customElements.define, the element lifecycle, and Shadow DOM encapsulation.'
+objectives:
+  - 'Define a custom element with customElements.define and understand the hyphen rule.'
+  - 'Use the element lifecycle callbacks: constructor, connectedCallback, attributeChangedCallback, disconnectedCallback.'
+  - 'Render into a Shadow DOM root and scope styles with :host so the page cannot leak in.'
+  - 'Distinguish attributes from properties and reflect configuration through attributes.'
+  - 'Build a reusable color-chip element that responds to attribute changes.'
+exercise:
+  task: "Build a custom element called color-chip. Written as <color-chip hex='#7c4dff' label='Violet'>, it renders a rounded color swatch of that hex value with the label text beside it - or the hex value itself when there is no label. Everything renders inside its Shadow DOM with its own scoped styles, so the page CSS cannot interfere. Changing the hex or label attribute after the element is connected must update the chip immediately. Use the element three times on the page with three different colors."
+  hints:
+    - "Register the class with customElements.define('color-chip', ColorChip) - the tag name must contain a hyphen - and put the initial rendering in connectedCallback()."
+    - "Add a static observedAttributes getter returning the strings 'hex' and 'label'; only then will attributeChangedCallback fire when one changes, and it can simply call your render method again."
+    - "In the constructor call super() first, then attachShadow({ mode: 'open' }); render with a template string into this.shadowRoot.innerHTML and scope the styles with a :host rule."
+---
+
+## Overview
+
+You have been composing interfaces out of built-in parts all along: a `<button>` here, an `<input>` there, glued together with classes and scripts. But look at any modern app and you will see the same small machines repeated everywhere — a rating star, a user badge, a color swatch — each with its markup, styling, and behavior that belong together. Component thinking is the answer: bundle the three, give the bundle a name, and reuse it like any native element.
+
+The browser agrees, and has standardized exactly that: **Web Components**. Three platform features — custom elements, Shadow DOM, and templates — let you invent your own HTML elements with no framework, no build step, and no dependencies. A `<color-chip>` you write today works in a plain page, in Astro, or in a React codebase, because it is just an element.
+
+This lesson builds one small element end to end: definition, lifecycle, encapsulated rendering, and configuration through attributes. The patterns here are the same ones underneath every component framework — learning them makes frameworks less magical, not more.
+
+## Custom elements: defining your own tag
+
+A custom element is an ordinary ES class that extends `HTMLElement`, registered under a name you invent. One rule defines the name: it **must contain a hyphen**, so `<color-chip>` is legal and `<colorchip>` is a syntax error. The hyphen keeps your elements from ever colliding with future HTML.
+
+```html
+<like-button></like-button>
+
+<script>
+  class LikeButton extends HTMLElement {
+    count = 0;
+
+    connectedCallback() {
+      this.innerHTML = '<button type="button">Like · 0</button>';
+      this.querySelector('button').addEventListener('click', () => {
+        this.count += 1;
+        this.querySelector('button').textContent = 'Like · ' + this.count;
+      });
+    }
+  }
+
+  customElements.define('like-button', LikeButton);
+</script>
+```
+
+The moment `define` runs, every `<like-button>` in the document — including ones the parser has not reached yet — is _upgraded_: connected to your class. You can also write the tags first and load the definition later; elements found before their definition simply wait. Elements that already exist in the HTML get the class attached automatically too, so there is no special "mount" step like frameworks have.
+
+Defining an element is global and final: a second `customElements.define("like-button", ...)` throws an error. When you cannot control how many times a script runs, ask first:
+
+```js
+if (!customElements.get('like-button')) {
+  customElements.define('like-button', LikeButton);
+}
+```
+
+> **Try it:** In the built-in editor, add a second `<like-button>` to the page. Each instance keeps its own `count` — a class instance per tag, exactly like built-in elements.
+
+## The element lifecycle
+
+An element's life has recognized moments, and the browser calls your class at each one. These callbacks are where custom elements differ most from plain DOM scripting:
+
+| Callback                     | Fires when                                | Use it for                               |
+| ---------------------------- | ----------------------------------------- | ---------------------------------------- |
+| `constructor()`              | The element is created or upgraded        | Initial state; `super()`; `attachShadow` |
+| `connectedCallback()`        | The element is inserted into the document | First render; event listeners            |
+| `disconnectedCallback()`     | The element is removed from the document  | Cleanup: timers, outside listeners       |
+| `attributeChangedCallback()` | An observed attribute changes             | Re-render on configuration changes       |
+
+```js
+class LikeButton extends HTMLElement {
+  static observedAttributes = ['label'];
+
+  constructor() {
+    super(); // must come before any use of this
+    this.count = 0;
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (oldValue === newValue) return;
+    this.render();
+  }
+
+  disconnectedCallback() {
+    // remove timers or document-level listeners here
+  }
+
+  render() {
+    const label = this.getAttribute('label') ?? 'Like';
+    this.innerHTML = `<button type="button">${label} · ${this.count}</button>`;
+  }
+}
+```
+
+Two of these deserve emphasis. The `constructor` runs when the element may not be in the document yet, so rendering there is unreliable — render in `connectedCallback`, which runs whenever the element enters a document (including re-entering after being moved). And `attributeChangedCallback` fires only for attributes listed in the static `observedAttributes` array — unlisted attributes change silently, which is a feature, since re-rendering on every irrelevant attribute would be waste.
+
+> **Try it:** Add a `console.log` line to each callback in the exercise, then move an element with `append`. Watch connected and disconnected fire in sequence — the lifecycle follows the DOM, not your expectations.
+
+## Shadow DOM: rendering behind a closed door
+
+So far `LikeButton` writes into its own light DOM with `innerHTML` — page CSS styles its button, page CSS breaks its button. **Shadow DOM** gives each element a private, encapsulated tree: styles defined inside do not leak out, and page styles do not sneak in.
+
+```js
+class UserBadge extends HTMLElement {
+  connectedCallback() {
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.innerHTML = `
+      <style>
+        :host {
+          display: inline-flex;
+        }
+        .badge {
+          padding: 0.2rem 0.6rem;
+          border-radius: 999px;
+          background: #5b4bd4;
+          color: white;
+          font-size: 0.8rem;
+        }
+      </style>
+      <span class="badge"><slot></slot></span>
+    `;
+  }
+}
+```
+
+The mechanics worth knowing:
+
+- `attachShadow({ mode: "open" })` creates the private tree and returns it as `this.shadowRoot`. You render into `shadowRoot`, not the element itself.
+- The `:host` selector styles the element _from the inside_ — the page's `.user-badge { ... }` rules would fight it, but inside the shadow, `:host` is how you set defaults.
+- The `<slot>` element marks where the element's children (its _light DOM_) appear. Writing `<user-badge>Ada</user-badge>` projects the text "Ada" into the badge.
+
+Encapsulation cuts both ways, deliberately. Buttons inside a shadow root cannot be targeted by the page's `.card button { ... }` rules — which is precisely the point: a component's internals are its own business.
+
+> **Try it:** In the editor, try to style the badge's inner `.badge` class from the page stylesheet. It will not work — then change the color inside the shadow's `<style>` and watch it work. That boundary is Shadow DOM.
+
+## Attributes vs properties
+
+How does the page _configure_ a component? Two channels exist, and they are not the same thing:
+
+|                       | Attributes                               | Properties         |
+| --------------------- | ---------------------------------------- | ------------------ |
+| Live where            | HTML markup                              | JavaScript only    |
+| Value type            | Always strings                           | Any JS value       |
+| Visible to            | HTML, CSS selectors, `getAttribute`      | JS code only       |
+| Change detection      | `attributeChangedCallback` (if observed) | Whatever you build |
+| Survive serialization | Yes — they are part of the markup        | No                 |
+
+```js
+const chip = document.querySelector('color-chip');
+
+chip.setAttribute('hex', '#7c4dff'); // string, appears in the HTML, observed
+chip.hex = '#7c4dff'; // property: invisible to the HTML and to callbacks
+```
+
+The practical convention: **configure components through attributes**, because attributes are the part that works declaratively in HTML and that `attributeChangedCallback` can observe. When you want a comfortable property API too, add a getter and setter that _reflect_ to the attribute:
+
+```js
+get label() {
+  return this.getAttribute("label");
+}
+
+set label(value) {
+  this.setAttribute("label", value);
+}
+```
+
+Now `chip.label = "Teal"` and `chip.setAttribute("label", "Teal")` are equivalent — both end up as an attribute change, one re-render, one source of truth. A classic pitfall hides in the string nature of attributes: `this.getAttribute("count")` returns `"5"`, the string. Convert with `Number(...)` where arithmetic is involved.
+
+## The exercise: build a color-chip element
+
+Time to assemble the whole pattern. The starter page uses `<color-chip>` three times with different `hex` and `label` attributes, and contains an empty class for you to complete. Conceptually:
+
+1. **Define and guard.** Extend `HTMLElement`, register as `color-chip`, and keep the `define` call guarded with `customElements.get`.
+2. **Construct.** Call `super()` and `attachShadow({ mode: "open" })` in the constructor — the shadow root should exist before any render.
+3. **Render.** In `connectedCallback` (and later from `attributeChangedCallback`), build the chip from `this.getAttribute("hex")` and `this.getAttribute("label")` into `this.shadowRoot.innerHTML`, with a `<style>` block using `:host`.
+4. **Label fallback.** When `label` is absent, show the hex value itself — a `??` on the attribute read handles it.
+5. **Observe.** Declare `static observedAttributes = ["hex", "label"]` and re-render in `attributeChangedCallback`. Prove it works: change an attribute from the console and watch the chip update.
+
+> **Tip:** Keep a single `render()` method as the only place that writes to `shadowRoot`. Connected and attribute callbacks both just call it — one render path, no stale states.
+
+## Common Mistakes
+
+**1. A tag name without a hyphen.** The parser rejects it before your code even runs.
+
+```js
+// Wrong: SyntaxError, not a custom element
+customElements.define('colorchip', ColorChip);
+
+// Right: the hyphen is mandatory
+customElements.define('color-chip', ColorChip);
+```
+
+**2. Defining the same name twice.** `define` is global and final; a second call throws and stops the script.
+
+```js
+// Wrong: crashes if the script ever runs twice
+customElements.define('color-chip', ColorChip);
+
+// Right: ask before registering
+if (!customElements.get('color-chip')) {
+  customElements.define('color-chip', ColorChip);
+}
+```
+
+**3. Forgetting `super()` in the constructor.** `HTMLElement`'s constructor must run first, or the element cannot initialize.
+
+```js
+// Wrong: ReferenceError the moment the element upgrades
+constructor() {
+  this.count = 0;
+}
+
+// Right: super first, then your state
+constructor() {
+  super();
+  this.count = 0;
+}
+```
+
+**4. Rendering in the constructor.** The constructor can run before the element is attached to a document; the element may also be moved later, re-running `connectedCallback`.
+
+```js
+// Wrong: no parent document yet, no re-render on reconnect
+constructor() {
+  super();
+  this.render();
+}
+
+// Right: render when connected, re-render whenever that happens
+connectedCallback() {
+  this.render();
+}
+```
+
+**5. Styling shadow content from the page.** Styles do not cross the shadow boundary in either direction; the page rule silently does nothing.
+
+```css
+/* Wrong: never reaches inside the shadow root */
+color-chip .chip {
+  border-radius: 999px;
+}
+```
+
+```js
+// Right: the component styles itself, with :host for the outside face
+shadowRoot.innerHTML = `
+  <style>
+    :host { display: inline-block; }
+    .chip { border-radius: 999px; }
+  </style>
+  <span class="chip"></span>
+`;
+```
+
+**6. Expecting attribute values to be typed.** Attributes are always strings; `#7c4dff` is fine as one, but numbers and booleans need conversion, and objects do not fit at all.
+
+```js
+// Wrong: "5" + 1 is "51"
+const total = this.getAttribute('count') + 1;
+
+// Right: convert deliberately, with a default
+const total = Number(this.getAttribute('count') ?? 0) + 1;
+```
+
+## Summary
+
+- `customElements.define` turns an `HTMLElement` subclass into a real tag — hyphen required, definition global and one-time.
+- The lifecycle gives hooks for each moment: construct state, render in `connectedCallback`, clean up in `disconnectedCallback`, re-render on observed attribute changes.
+- Shadow DOM encapsulates markup and styles behind the element, with `:host` for its own face and `<slot>` for projecting children.
+- Attributes are the declarative, observable configuration channel — always strings — and getters/setters can reflect properties onto them.
+- One `render()` method fed by attributes is the whole architecture: the same loop frameworks automate, learned by hand.

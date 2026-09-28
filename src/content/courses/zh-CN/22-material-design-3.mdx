@@ -1,0 +1,253 @@
+---
+lessonId: 22-material-design-3
+order: 22
+module: advanced
+difficulty: intermediate
+minutes: 30
+title: 'Material Design 3：tokens 与动态配色'
+summary: '以 CSS 自定义属性为唯一事实来源，用设计 token——M3 色彩角色、字阶、形状与高度——为界面主题化。'
+objectives:
+  - '说清设计 token 是什么，以及 CSS 自定义属性如何实现它。'
+  - '使用 M3 色彩角色对（primary 与 on-primary、surface 与 on-surface），让文字在每种背景上都可读。'
+  - '用 M3 字阶、形状阶梯和高度层级取代随手拍脑袋的数值。'
+  - '通过在 data-theme 选择器下重定义 token，构建明亮与深色两套主题。'
+  - '把硬编码的组件样式重构为基于 token 的样式。'
+exercise:
+  task: "完成一个完全由设计 token 主题化的卡片组件。先补全 :root 中缺失的 token 定义（on 色对和 error 色对），再把卡片样式里每一个硬编码的颜色、圆角和阴影替换成对应的 token。然后在一个 [data-theme='dark'] 块中编写深色主题，只重定义 token 的值——任何组件规则都不得提及深色模式。最后用一个切换按钮通过设置 html 元素的 data-theme 属性来翻转主题。"
+  hints:
+    - '组件 CSS 里每一个可见的值都应当是 var() 引用——如果某条规则里还留着十六进制颜色或像素圆角，那条规则就还没完成。'
+    - '色彩角色成对出现：凡是用 --md-sys-color-primary 绘制的内容，其文字与图标都应该用 --md-sys-color-on-primary。逐个判断缺失的角色，问自己：什么东西会放在它上面？'
+    - "深色主题就是一个 [data-theme='dark'] 选择器，只重定义 token 的值；切换脚本只负责设置 document.documentElement.dataset.theme，剩下的交给 CSS。"
+---
+
+## 概览
+
+你有没有想过，这个学习平台为什么看起来如此统一——每一页都是同样的紫色、同样的圆角、同样舒适的字号？并不是设计师逐个调整过所有数值，而是因为整个界面建立在**设计 token** 之上：像"主色""中等圆角"这样被命名、可复用的设计决策，只定义一次，处处引用。
+
+Material Design 3（M3），Google 的设计系统，是 token 思想最完整的公开示范。M3 给你的不是一堆十六进制色值，而是*角色*——"页面背后的颜色""页面上的文字颜色"——再用具体值去填充这些角色。换一组值，整个界面就会重新换肤，包括深色模式，以及由一个种子色自动生成的配色（M3 著名的动态配色）。
+
+让 token 生效的那个 CSS 特性你已经会了：自定义属性。本课要做的，是把你的直觉升级成方法——最后一节，你将用"本平台同款"的方式为一张卡片主题化。
+
+## 设计 token：唯一的真相来源
+
+token 是一个被命名的设计决策。组件不再说"我的按钮是 `#5b4bd4`"，而是说"我的按钮使用 primary 色 token"。定义只存在于一个地方，所有组件只是消费它：
+
+```css
+:root {
+  --md-sys-color-primary: #5b4bd4;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-shape-corner-medium: 12px;
+}
+
+.button {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+```
+
+界面越大，回报越多。品牌换青色系？改两行，而不是四十行。上深色模式？组件一行不动——变的只有 token 的值。一致性也不再靠自觉：token 文件就是调色板、字号表和圆角表，样式漂移根本无从发生。
+
+命名很关键。`--md-sys-color-*` 前缀沿用了 M3 自己的约定（`md` 即 Material Design，`sys` 表示系统层级），而 token 的名字描述的是*用途*而非外观：叫 `primary`，不叫 `purple`。一旦 token 叫了 `--purple`，把品牌换成绿色就成了荒谬的事——而品牌更迭在事后看总是荒谬的。
+
+> **试一试：** 在内置编辑器里修改 `:root` 中某一个颜色 token 的值，观察所有引用它的元素一起更新。
+
+## M3 色彩角色：是配对，不是色卡
+
+M3 的色彩系统由*角色*构成——颜色所承担的职责。核心思想是：角色成对出行，一个是容器色，另一个是画在容器**之上**的内容色。文字可读性不再是运气，而成了结构：
+
+| 角色                     | 职责                     | 配对对象                           |
+| ------------------------ | ------------------------ | ---------------------------------- |
+| `primary`                | 品牌主色：关键按钮、高亮 | `on-primary`（其上的文字/图标）    |
+| `primary-container`      | 低强调的着色表面         | `on-primary-container`             |
+| `secondary` / `tertiary` | 次要、更轻的点缀色       | 各自的 `on-*` 伙伴                 |
+| `surface`                | 页面与卡片的背景         | `on-surface`（默认文字）           |
+| `surface-variant`        | 略作区分的表面           | `on-surface-variant`（较弱的文字） |
+| `outline`                | 边框与分隔线             | -                                  |
+| `error`                  | 破坏性操作与错误状态     | `on-error`                         |
+
+```css
+:root {
+  --md-sys-color-primary: #5b4bd4;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-surface: #fef7ff;
+  --md-sys-color-on-surface: #1d1b20;
+  --md-sys-color-on-surface-variant: #49454f;
+  --md-sys-color-outline: #79747e;
+}
+
+.card {
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline);
+}
+
+.card .supporting {
+  color: var(--md-sys-color-on-surface-variant);
+}
+```
+
+如果只记住一条规则，那就是：**永远不要把内容放在某个颜色上却不使用它的 `on-*` 伙伴。**浅色主色上的白字、深色表面上的深色字——这正是配对系统要杜绝的对比度灾难。
+
+> **提示：** M3 的参考实现会自动生成满足对比度要求的角色值。这里是你在手写，所以请逐对检查：眯起眼睛，确认文字仍然清晰可读。
+
+## 字阶、形状与高度
+
+颜色只是 token 家族之一。M3 还把字体、形状和深度都 token 化了：
+
+**字阶（Type scale）。**五个家族、十五个命名样式——`display`、`headline`、`title`、`body`、`label`，各带尺寸变体。组件索要的是"title medium"，而不是"17 像素、半粗、大概这样"：
+
+```css
+:root {
+  --md-sys-typescale-headline-small: 1.5rem;
+  --md-sys-typescale-body-medium: 0.875rem;
+  --md-sys-typescale-label-large: 0.875rem;
+}
+
+.card h2 {
+  font-size: var(--md-sys-typescale-headline-small);
+  line-height: 1.3;
+}
+
+.card p {
+  font-size: var(--md-sys-typescale-body-medium);
+  line-height: 1.5;
+}
+```
+
+**形状阶梯（Shape scale）。**圆角是一个小词表——none、extra small、small、medium、large、extra large、full——被每个组件复用，于是按钮、卡片和对话框像一家人。
+
+**高度（Elevation）。**深度分六级，从 0（平面）到 5（最高）。浅色主题里 M3 主要靠细微的阴影；深色主题里则靠*更亮的表面色调*。这本该是组件的细节，token 把它吸收了：组件只说 `box-shadow: var(--md-sys-elevation-level-2)`，每套主题各自定义它的含义。
+
+> **试一试：** 看看练习中的卡片：标题、正文、按钮、边框。动手替换之前，先判断每个属性属于哪个 token 家族。
+
+## 靠交换值来换肤
+
+这正是 token 名副其实的地方。所谓主题，无非是第二组 token 值，借助一个选择器换装登场。组件从不提"深色"二字——它们只引用角色：
+
+```css
+:root {
+  --md-sys-color-surface: #fef7ff;
+  --md-sys-color-on-surface: #1d1b20;
+}
+
+[data-theme='dark'] {
+  --md-sys-color-surface: #141218;
+  --md-sys-color-on-surface: #e6e0e9;
+}
+```
+
+```js
+const toggle = document.querySelector('#theme-toggle');
+toggle.addEventListener('click', () => {
+  const root = document.documentElement;
+  const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  root.dataset.theme = next;
+});
+```
+
+翻转一个属性，页面上每个组件同时换装。M3 在生产环境的**动态配色**也是同样的原理：系统根据用户壁纸生成一整套角色值，应用用同样的方式换入。一套机制，两个功能——因为组件面向角色编写，而不是面向颜色。
+
+> **试一试：** 把上面的深色块加进练习，然后点切换按钮。卡片里所有颜色一起变化——注意你一行组件规则都没碰。
+
+## 实战练习：token 主题化的卡片
+
+起始代码提供了一张卡片——媒体占位、标题、辅助文字和两个按钮——外加一个不完整的 `:root` token 文件和一个主题切换按钮。从思路上看，构建步骤如下：
+
+1. **补全调色板。** 填上缺失的 token：`on-primary` 文字色、`error` 色对，以及缺失的字阶条目。
+2. **清剿硬编码值。** 卡片样式里散落着原始十六进制色、像素圆角和一条字面量阴影。把每一处替换成"按用途命名"的 token。
+3. **编写深色主题。** 一个只重定义 token 值的 `[data-theme="dark"]` 块。如果某个组件规则为了深色模式还需要改动，说明缺了一个 token。
+4. **接通切换。** 三行 JavaScript：翻转 `html` 元素上的 `data-theme`。
+5. **检查配对。** 在两套主题下各眯眼检查一遍：每一段文字都必须使用与其背景配对的 `on-*` 颜色，浅色深色皆然。
+
+## 常见错误
+
+**1. 按外观给 token 命名。** token 是*决策*，不是值；外观式命名在品牌更迭的那一刻就会失灵。
+
+```css
+/* 错误：换成青色品牌时怎么办？ */
+:root {
+  --purple: #5b4bd4;
+}
+
+/* 正确：名字说明用途 */
+:root {
+  --md-sys-color-primary: #5b4bd4;
+}
+```
+
+**2. 内容放在颜色上却不用它的 on 色。** 这正是整套系统要预防的对比度事故。
+
+```css
+/* 错误：在主题化背景上手挑文字颜色 */
+.button {
+  background: var(--md-sys-color-primary);
+  color: white;
+}
+
+/* 正确：配对关系保证任何主题下文字都可读 */
+.button {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+```
+
+**3. 迁移了一半的组件。** 规则角落里残留的一个硬编码十六进制值，会让那个元素静悄悄地游离在所有主题之外。
+
+```css
+/* 错误：深色模式下这条边框还是浅色的 */
+.card {
+  background: var(--md-sys-color-surface);
+  border: 1px solid #d0cbd7;
+}
+
+/* 正确：一切都引用角色 */
+.card {
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline);
+}
+```
+
+**4. 把深色模式写成组件覆盖。** 如果换深色主题要改组件，那么下一套主题、再下一套都要重演一遍。
+
+```css
+/* 错误：组件知道了主题的存在 */
+[data-theme='dark'] .card {
+  background: #141218;
+}
+
+/* 正确：只有 token 的值知道主题 */
+[data-theme='dark'] {
+  --md-sys-color-surface: #141218;
+}
+```
+
+**5. 每个组件自创数值。** 这里 10px 圆角、那里 14px，三种略有差异的正文字号——token 要消灭的正是这种漂移。
+
+```css
+/* 错误：两个组件，两种主见 */
+.card {
+  border-radius: 10px;
+}
+.dialog {
+  border-radius: 14px;
+}
+
+/* 正确：都去问形状阶梯 */
+.card {
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+.dialog {
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+```
+
+**6. 跳过对比度检查。** token 提供的是结构，不是自动的审美。主题完成后请真的去读页面：每种容器上的文字、两套主题，逐个眯眼检查。结构加检查，胜过只靠结构。
+
+## 小结
+
+- 设计 token 是存放在 CSS 自定义属性里的命名决策——颜色、字体、形状、深度的唯一真相来源。
+- M3 色彩角色成对工作（`primary` 配 `on-primary`，`surface` 配 `on-surface`）；内容永远使用其背景的 `on-*` 伙伴。
+- 字阶、形状阶梯和高度层级用共享词汇表取代了随手的像素决策。
+- 主题就是 `[data-theme="dark"]` 这类选择器背后的一组重定义的 token 值；组件永远不提主题。
+- 本平台正是这样主题化的——token 在前，组件在后，一致性免费奉送。

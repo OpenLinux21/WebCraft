@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lesson 22 - A token-themed card</title>
+    <link rel="stylesheet" href="starter.css" />
+  </head>
+  <body>
+    <!-- TODO in JS: this button flips data-theme on the html element. -->
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+      <span aria-hidden="true">&#9789;</span>
+    </button>
+
+    <main class="card">
+      <div class="media" aria-hidden="true">
+        <span class="media-glyph">&#10047;</span>
+      </div>
+
+      <div class="content">
+        <h2>Pothos plant</h2>
+        <p class="supporting">
+          Thrives on neglect. Water when the soil is dry and give it bright, indirect light.
+        </p>
+
+        <div class="actions">
+          <!-- TODO in CSS: the filled button needs the primary pair,
+               the outlined button the outline + primary roles, and the
+               delete button the error pair. -->
+          <button type="button" class="button filled">Add to cart</button>
+          <button type="button" class="button outlined">Details</button>
+          <button type="button" class="button delete">Remove</button>
+        </div>
+      </div>
+    </main>
+
+    <script src="starter.js"></script>
+  </body>
+</html>

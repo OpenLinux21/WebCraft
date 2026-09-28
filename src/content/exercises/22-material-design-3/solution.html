@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lesson 22 - A token-themed card (solution)</title>
+    <link rel="stylesheet" href="solution.css" />
+  </head>
+  <body>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+      <span aria-hidden="true">&#9789;</span>
+    </button>
+
+    <main class="card">
+      <div class="media" aria-hidden="true">
+        <span class="media-glyph">&#10047;</span>
+      </div>
+
+      <div class="content">
+        <h2>Pothos plant</h2>
+        <p class="supporting">
+          Thrives on neglect. Water when the soil is dry and give it bright, indirect light.
+        </p>
+
+        <div class="actions">
+          <button type="button" class="button filled">Add to cart</button>
+          <button type="button" class="button outlined">Details</button>
+          <button type="button" class="button delete">Remove</button>
+        </div>
+      </div>
+    </main>
+
+    <script src="solution.js"></script>
+  </body>
+</html>

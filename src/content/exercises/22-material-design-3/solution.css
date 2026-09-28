@@ -1,0 +1,146 @@
+/* Lesson 22 - A token-themed card (solution).
+   Components reference roles only; both themes are just two sets of
+   token values. */
+
+/* ------------------------------------------------------------------ */
+/* Token definitions                                                    */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* Color roles (light theme is the default) */
+  --md-sys-color-primary: #5b4bd4;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #e8def8;
+  --md-sys-color-on-primary-container: #21005d;
+  --md-sys-color-surface: #fef7ff;
+  --md-sys-color-surface-container: #f3edf7;
+  --md-sys-color-on-surface: #1d1b20;
+  --md-sys-color-on-surface-variant: #49454f;
+  --md-sys-color-outline: #79747e;
+  --md-sys-color-error: #b3261e;
+  --md-sys-color-on-error: #ffffff;
+
+  /* Type scale */
+  --md-sys-typescale-headline-small: 1.5rem;
+  --md-sys-typescale-body-medium: 0.875rem;
+  --md-sys-typescale-label-large: 0.875rem;
+
+  /* Shape and elevation */
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-full: 999px;
+  --md-sys-elevation-level-2: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+/* The dark theme redefines color values only. Components never
+   appear in this block - they cannot tell themes apart. */
+[data-theme='dark'] {
+  --md-sys-color-primary: #cbbeff;
+  --md-sys-color-on-primary: #260e6e;
+  --md-sys-color-primary-container: #4a3bb5;
+  --md-sys-color-on-primary-container: #e6deff;
+  --md-sys-color-surface: #141218;
+  --md-sys-color-surface-container: #211f26;
+  --md-sys-color-on-surface: #e6e0e9;
+  --md-sys-color-on-surface-variant: #cac4d0;
+  --md-sys-color-outline: #948f99;
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+}
+
+/* ------------------------------------------------------------------ */
+/* Component styles - every value is a token reference                  */
+/* ------------------------------------------------------------------ */
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: system-ui, sans-serif;
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.1rem;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+}
+
+.card {
+  width: min(20rem, calc(100% - 2rem));
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: var(--md-sys-elevation-level-2);
+  overflow: hidden;
+}
+
+.media {
+  display: grid;
+  place-items: center;
+  height: 8rem;
+  background: var(--md-sys-color-primary-container);
+}
+
+.media-glyph {
+  font-size: 3rem;
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.content {
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+h2 {
+  margin: 0 0 0.5rem;
+  font-size: var(--md-sys-typescale-headline-small);
+  line-height: 1.3;
+}
+
+.supporting {
+  margin: 0 0 1rem;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium);
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.button {
+  padding: 0.55rem 1rem;
+  font: inherit;
+  font-size: var(--md-sys-typescale-label-large);
+  font-weight: 600;
+  border-radius: var(--md-sys-shape-corner-full);
+  border: none;
+  cursor: pointer;
+}
+
+.filled {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.outlined {
+  background: transparent;
+  border: 1px solid var(--md-sys-color-outline);
+  color: var(--md-sys-color-primary);
+}
+
+.delete {
+  background: transparent;
+  color: var(--md-sys-color-error);
+}

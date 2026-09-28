@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lesson 21 - Keyboard-accessible disclosure (solution)</title>
+    <link rel="stylesheet" href="solution.css" />
+  </head>
+  <body>
+    <main class="card">
+      <h1>Frequently asked questions</h1>
+
+      <!-- Real button: Enter and Space activate it for free.
+           aria-expanded starts false, matching the hidden panel. -->
+      <button type="button" class="disclosure-trigger" aria-expanded="false" aria-controls="panel">
+        What is this widget called?
+        <span class="arrow" aria-hidden="true">&#9662;</span>
+      </button>
+
+      <div class="disclosure-panel" id="panel" hidden>
+        <p>
+          A disclosure: a button that toggles the visibility of a related region of content. The
+          button owns the state, and it reports that state through <code>aria-expanded</code> so
+          screen readers can announce it.
+        </p>
+        <p>
+          Keyboard users activate it with Enter or Space - both fire a click event on a real button
+          element.
+        </p>
+      </div>
+    </main>
+
+    <script src="solution.js"></script>
+  </body>
+</html>

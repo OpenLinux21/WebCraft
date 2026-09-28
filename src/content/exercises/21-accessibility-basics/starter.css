@@ -1,0 +1,74 @@
+/* Lesson 21 - Disclosure widget styles. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: system-ui, sans-serif;
+  background: #f2f4f8;
+  color: #1a202c;
+}
+
+.card {
+  width: min(30rem, calc(100% - 2rem));
+  padding: 1.75rem;
+  background: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 6px 18px rgba(26, 32, 44, 0.1);
+}
+
+h1 {
+  margin: 0 0 1rem;
+  font-size: 1.3rem;
+}
+
+.disclosure-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  color: #1a202c;
+  background: #edf1f7;
+  border: 1px solid #c8d2e0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.disclosure-trigger:hover {
+  background: #e2e9f3;
+}
+
+.arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+/* TODO 1: add a :focus-visible rule for .disclosure-trigger with a
+   clearly visible outline (for example 3px solid #1d4ed8 and an
+   outline-offset). Keyboard users need to see where they are. */
+
+/* TODO 2: when the button has the class "open", rotate .arrow by
+   180 degrees (transform: rotate(180deg)) so sighted users can see
+   the state that aria-expanded reports. */
+
+.disclosure-panel {
+  margin-top: 0.75rem;
+  padding: 0 1rem 0.25rem;
+  border-left: 3px solid #1d4ed8;
+}
+
+.disclosure-panel p {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #3d4756;
+}

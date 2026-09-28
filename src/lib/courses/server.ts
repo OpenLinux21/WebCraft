@@ -16,7 +16,12 @@ export function lessonIdOf(entry: LessonEntry): string {
 
 /** All lessons of one locale, ordered by their global `order`. */
 export async function getLessons(locale: AppLocale): Promise<LessonEntry[]> {
-  const entries = await getCollection('courses', (entry) => entry.id.startsWith(`${locale}/`));
+  // The content layer lowercases collection ids ('zh-CN' -> 'zh-cn'), so the
+  // locale prefix must be compared case-insensitively.
+  const prefix = `${locale.toLowerCase()}/`;
+  const entries = await getCollection('courses', (entry) =>
+    entry.id.toLowerCase().startsWith(prefix),
+  );
   return entries.sort((a, b) => a.data.order - b.data.order);
 }
 

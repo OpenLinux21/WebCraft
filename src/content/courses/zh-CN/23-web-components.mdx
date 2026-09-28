@@ -1,0 +1,283 @@
+---
+lessonId: 23-web-components
+order: 23
+module: advanced
+difficulty: intermediate
+minutes: 40
+title: '组件化思维：Web Components 入门'
+summary: '用 customElements.define、元素生命周期和 Shadow DOM 封装，创造你自己的 HTML 元素。'
+objectives:
+  - '用 customElements.define 定义自定义元素，并理解必须带连字符的命名规则。'
+  - '使用元素生命周期回调：constructor、connectedCallback、attributeChangedCallback、disconnectedCallback。'
+  - '把内容渲染进 Shadow DOM 根节点，并用 :host 限定样式作用域，让页面样式无法渗入。'
+  - '区分 attribute 与 property，通过 attribute 传递配置。'
+  - '构建一个能响应 attribute 变化的可复用 color-chip 元素。'
+exercise:
+  task: "构建一个名为 color-chip 的自定义元素。写作 <color-chip hex='#7c4dff' label='Violet'> 时，它渲染一个以该 hex 值填充的圆角色块，旁边显示 label 文字——没有 label 时显示 hex 值本身。全部内容渲染在它的 Shadow DOM 里并使用自己的局部样式，页面 CSS 无法干扰。元素连接后修改 hex 或 label attribute 必须立刻更新组件。在页面上用三种不同颜色各使用一次该元素。"
+  hints:
+    - "用 customElements.define('color-chip', ColorChip) 注册类——标签名必须包含连字符——并把初始渲染放在 connectedCallback() 里。"
+    - "添加一个静态 observedAttributes getter，返回字符串 'hex' 和 'label'；只有这样 attributeChangedCallback 才会在变化时触发，让它直接再次调用你的 render 方法即可。"
+    - "在构造函数里先调用 super()，再执行 attachShadow({ mode: 'open' })；用模板字符串把内容写进 this.shadowRoot.innerHTML，并用一条 :host 规则限定样式。"
+---
+
+## 概览
+
+一直以来，你都在用内置零件拼装界面：这里一个 `<button>`，那里一个 `<input>`，再用类名和脚本粘合起来。但看看任何一个现代应用，同样的小型机器处处重复——评分星、用户徽章、颜色样本——每个都带着本应同进同退的标记、样式和行为。组件化思维就是答案：把三者打包，给包裹起个名字，然后像内置元素一样复用它。
+
+浏览器对这个想法深表赞同，并把它标准化了：**Web Components**。三项平台特性——自定义元素、Shadow DOM、模板——让你无需框架、无需构建步骤、无需依赖就能发明自己的 HTML 元素。你今天写的 `<color-chip>`，明天就能在纯 HTML 页面、Astro 或 React 代码库里工作，因为它就是一个元素。
+
+本课将端到端地构建一个小元素：定义、生命周期、封装渲染、通过 attribute 传配置。这里的模式正是所有组件框架脚下的那套机制——学会它们，框架会变得不再神秘，而不是更加神秘。
+
+## 自定义元素：定义自己的标签
+
+自定义元素是一个继承 `HTMLElement` 的普通 ES 类，注册在你发明的名字之下。命名只有一条规则：**必须包含连字符**，所以 `<color-chip>` 合法而 `<colorchip>` 是语法错误。连字符保证你的元素永远不会与未来的 HTML 标签冲突。
+
+```html
+<like-button></like-button>
+
+<script>
+  class LikeButton extends HTMLElement {
+    count = 0;
+
+    connectedCallback() {
+      this.innerHTML = '<button type="button">Like · 0</button>';
+      this.querySelector('button').addEventListener('click', () => {
+        this.count += 1;
+        this.querySelector('button').textContent = 'Like · ' + this.count;
+      });
+    }
+  }
+
+  customElements.define('like-button', LikeButton);
+</script>
+```
+
+`define` 运行的那一刻，文档里的每一个 `<like-button>`——包括解析器还没到达的那些——都会被*升级*：接上你的类。你也可以先写标签、后加载定义；先于定义被解析的元素只会安静等待。已存在于 HTML 中的元素同样会自动挂上这个类，所以这里没有框架那套专门的"挂载"步骤。
+
+定义是全局且一次性的：第二次 `customElements.define("like-button", ...)` 会抛出错误。当你无法控制脚本会运行几次时，先问一句：
+
+```js
+if (!customElements.get('like-button')) {
+  customElements.define('like-button', LikeButton);
+}
+```
+
+> **试一试：** 在内置编辑器里往页面添加第二个 `<like-button>`。每个实例维护自己的 `count`——一个标签一个类实例，与内置元素别无二致。
+
+## 元素生命周期
+
+元素的一生有几个被认可的时刻，浏览器会在每个时刻调用你的类。这些回调正是自定义元素与普通 DOM 脚本差异最大的地方：
+
+| 回调                         | 触发时机                | 用途                                       |
+| ---------------------------- | ----------------------- | ------------------------------------------ |
+| `constructor()`              | 元素被创建或升级        | 初始化状态；调用 `super()`；`attachShadow` |
+| `connectedCallback()`        | 元素被插入文档          | 首次渲染；绑定事件监听                     |
+| `disconnectedCallback()`     | 元素从文档移除          | 清理：定时器、文档级监听                   |
+| `attributeChangedCallback()` | 被观察的 attribute 变化 | 配置变化时重新渲染                         |
+
+```js
+class LikeButton extends HTMLElement {
+  static observedAttributes = ['label'];
+
+  constructor() {
+    super(); // 必须在任何使用 this 之前
+    this.count = 0;
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (oldValue === newValue) return;
+    this.render();
+  }
+
+  disconnectedCallback() {
+    // 在这里移除定时器或文档级监听
+  }
+
+  render() {
+    const label = this.getAttribute('label') ?? 'Like';
+    this.innerHTML = `<button type="button">${label} · ${this.count}</button>`;
+  }
+}
+```
+
+其中两个值得强调。`constructor` 运行时元素可能还没进入文档，所以在这里渲染并不可靠——请在 `connectedCallback` 里渲染，它在元素进入文档时运行（被移走再放回来时也会再次运行）。而 `attributeChangedCallback` 只对静态 `observedAttributes` 数组中列出的 attribute 触发——未列出的 attribute 变化悄无声息，这反而是件好事，因为为每个无关的 attribute 重新渲染纯属浪费。
+
+> **试一试：** 在练习的每个回调里加一行 `console.log`，然后用 `append` 移动一个元素。观察 connected 和 disconnected 先后触发——生命周期跟随 DOM，而不是跟随你的直觉。
+
+## Shadow DOM：关起门来渲染
+
+到目前为止，`LikeButton` 用 `innerHTML` 写进自己的轻量 DOM——页面 CSS 能给它的按钮设置样式，页面 CSS 也能破坏它的按钮。**Shadow DOM** 给每个元素一个私有、封装的树：里面定义的样式不会外泄，页面样式也潜不进来。
+
+```js
+class UserBadge extends HTMLElement {
+  connectedCallback() {
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.innerHTML = `
+      <style>
+        :host {
+          display: inline-flex;
+        }
+        .badge {
+          padding: 0.2rem 0.6rem;
+          border-radius: 999px;
+          background: #5b4bd4;
+          color: white;
+          font-size: 0.8rem;
+        }
+      </style>
+      <span class="badge"><slot></slot></span>
+    `;
+  }
+}
+```
+
+值得掌握的机制有几点：
+
+- `attachShadow({ mode: "open" })` 创建私有树，并以 `this.shadowRoot` 的形式返回。渲染目标是 `shadowRoot`，而不是元素本身。
+- `:host` 选择器*从内部*为元素本身设置样式——页面上 `.user-badge { ... }` 的规则可以与它竞争，但在 shadow 内部，`:host` 是设置默认值的正道。
+- `<slot>` 元素标记元素子节点（它的*轻量 DOM*）出现的位置。写 `<user-badge>Ada</user-badge>`，文字"Ada"就被投射进徽章。
+
+封装是双向的，而且是刻意的。shadow 根里的按钮无法被页面的 `.card button { ... }` 规则命中——这恰恰是重点：组件的内部是组件自己的事。
+
+> **试一试：** 在编辑器里试着从页面样式表给徽章内部的 `.badge` 类设置样式。不会生效——然后改 shadow 里的 `<style>`，立刻生效。这条边界就是 Shadow DOM。
+
+## attribute 与 property
+
+页面如何*配置*一个组件？有两条通道，而且它们不是一回事：
+
+|                  | attribute                              | property      |
+| ---------------- | -------------------------------------- | ------------- |
+| 存在于           | HTML 标记                              | 仅 JavaScript |
+| 值类型           | 永远是字符串                           | 任意 JS 值    |
+| 谁能看到         | HTML、CSS 选择器、`getAttribute`       | 只有 JS 代码  |
+| 变化检测         | `attributeChangedCallback`（若被观察） | 自己动手实现  |
+| 能否随标记序列化 | 能——它就是标记的一部分                 | 不能          |
+
+```js
+const chip = document.querySelector('color-chip');
+
+chip.setAttribute('hex', '#7c4dff'); // 字符串，出现在 HTML 里，可被观察
+chip.hex = '#7c4dff'; // property：HTML 和回调都看不见它
+```
+
+实践中的约定是：**通过 attribute 配置组件**，因为 attribute 才是能在 HTML 里声明式书写、能被 `attributeChangedCallback` 观察的那部分。如果还想要顺手的 property API，就添加一对 getter/setter，把值*反射*到 attribute 上：
+
+```js
+get label() {
+  return this.getAttribute("label");
+}
+
+set label(value) {
+  this.setAttribute("label", value);
+}
+```
+
+现在 `chip.label = "Teal"` 与 `chip.setAttribute("label", "Teal")` 等价——殊途同归于一次 attribute 变化、一次重渲染、一个事实来源。attribute 的字符串本性里还藏着一个经典陷阱：`this.getAttribute("count")` 返回的是字符串 `"5"`。参与运算前请用 `Number(...)` 转换。
+
+## 实战练习：构建 color-chip 元素
+
+是时候把整套模式拼装起来了。起始页面已经用不同的 `hex` 和 `label` attribute 使用了三次 `<color-chip>`，并留了一个空类等你完成。从思路上看：
+
+1. **定义并设防。** 继承 `HTMLElement`，注册为 `color-chip`，并让 `define` 调用先用 `customElements.get` 设防。
+2. **构造。** 在 constructor 里调用 `super()` 和 `attachShadow({ mode: "open" })`——shadow 根必须在任何渲染之前就存在。
+3. **渲染。** 在 `connectedCallback`（以及之后的 `attributeChangedCallback`）里，从 `this.getAttribute("hex")` 和 `this.getAttribute("label")` 拼出芯片内容写进 `this.shadowRoot.innerHTML`，样式块放在里面并用 `:host` 开头。
+4. **label 回退。** `label` 缺席时显示 hex 值本身——读取 attribute 时用 `??` 兜底即可。
+5. **观察。** 声明 `static observedAttributes = ["hex", "label"]`，并在 `attributeChangedCallback` 里重新渲染。用行动证明：在控制台改一个 attribute，看芯片立刻更新。
+
+> **提示：** 保留唯一的 `render()` 方法作为唯一写 `shadowRoot` 的地方。connected 与 attribute 回调都只是调用它——一条渲染路径，没有陈旧状态。
+
+## 常见错误
+
+**1. 标签名不带连字符。** 解析器在代码运行之前就拒绝了它。
+
+```js
+// 错误：SyntaxError，自定义元素根本不存在
+customElements.define('colorchip', ColorChip);
+
+// 正确：连字符是强制的
+customElements.define('color-chip', ColorChip);
+```
+
+**2. 定义同名元素两次。** `define` 全局且一次性；第二次调用会抛错并中断脚本。
+
+```js
+// 错误：脚本只要跑两次就会崩溃
+customElements.define('color-chip', ColorChip);
+
+// 正确：注册前先问一句
+if (!customElements.get('color-chip')) {
+  customElements.define('color-chip', ColorChip);
+}
+```
+
+**3. 构造函数里忘了 `super()`。** `HTMLElement` 的构造函数必须先运行，否则元素无法初始化。
+
+```js
+// 错误：元素一升级就 ReferenceError
+constructor() {
+  this.count = 0;
+}
+
+// 正确：先 super，再写自己的状态
+constructor() {
+  super();
+  this.count = 0;
+}
+```
+
+**4. 在构造函数里渲染。** constructor 运行时元素可能尚未挂入文档；元素之后还可能被移动，导致 `connectedCallback` 再次运行。
+
+```js
+// 错误：此刻还没有父文档，重连时也不会重渲染
+constructor() {
+  super();
+  this.render();
+}
+
+// 正确：连接时渲染，每次连接都渲染
+connectedCallback() {
+  this.render();
+}
+```
+
+**5. 从页面给 shadow 内容设样式。** 样式不能双向穿越 shadow 边界；页面规则会静默失效。
+
+```css
+/* 错误：永远进不了 shadow 根内部 */
+color-chip .chip {
+  border-radius: 999px;
+}
+```
+
+```js
+// 正确：组件给自己设样式，用 :host 管住对外的脸
+shadowRoot.innerHTML = `
+  <style>
+    :host { display: inline-block; }
+    .chip { border-radius: 999px; }
+  </style>
+  <span class="chip"></span>
+`;
+```
+
+**6. 以为 attribute 值自带类型。** attribute 永远是字符串；`#7c4dff` 作为字符串没问题，但数字和布尔值需要转换，对象则完全放不进来。
+
+```js
+// 错误："5" + 1 的结果是 "51"
+const total = this.getAttribute('count') + 1;
+
+// 正确：显式转换，并给默认值
+const total = Number(this.getAttribute('count') ?? 0) + 1;
+```
+
+## 小结
+
+- `customElements.define` 把 `HTMLElement` 子类变成真正的标签——必须带连字符，定义全局且只有一次。
+- 生命周期为每个时刻提供钩子：构造状态、在 `connectedCallback` 里渲染、在 `disconnectedCallback` 里清理、在被观察的 attribute 变化时重渲染。
+- Shadow DOM 把标记与样式封装在元素之内，`:host` 管住对外的脸，`<slot>` 负责投射子内容。
+- attribute 是声明式、可观察的配置通道——永远是字符串——getter/setter 可以把 property 反射上去。
+- 一个由 attribute 驱动的 `render()` 方法就是全部架构：这正是框架自动化的那个循环，如今你亲手学了一遍。

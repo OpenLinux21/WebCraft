@@ -1,0 +1,253 @@
+---
+lessonId: 22-material-design-3
+order: 22
+module: advanced
+difficulty: intermediate
+minutes: 30
+title: 'Material Design 3: Tokens and Dynamic Color'
+summary: 'Theme interfaces with design tokens - M3 color roles, type scale, shape and elevation - using CSS custom properties as the single source of truth.'
+objectives:
+  - 'Explain what a design token is and how CSS custom properties implement one.'
+  - 'Use M3 color role pairs (primary and on-primary, surface and on-surface) to keep text readable on every background.'
+  - 'Apply the M3 type scale, shape scale, and elevation levels instead of ad-hoc values.'
+  - 'Build a light and dark theme by redefining tokens under a data-theme selector.'
+  - 'Refactor hardcoded component styles into token-based styles.'
+exercise:
+  task: "Complete a card component that is themed entirely by design tokens. Fill in the missing token definitions in the :root block (the on-color pair and the error pair), then replace every hardcoded color, corner radius, and shadow in the card styles with the matching token. Add a dark theme in a [data-theme='dark'] block that redefines only token values - no component rule may mention dark mode. A toggle button flips the theme by setting the data-theme attribute on the html element."
+  hints:
+    - 'Every visible value in the component CSS should be a var() reference - if a rule still contains a hex color or a pixel radius, that rule is not finished.'
+    - 'Color roles come in pairs: anything drawn with --md-sys-color-primary needs its text and icons in --md-sys-color-on-primary. Decide each missing role by asking what will sit on top of it.'
+    - "The dark theme is a [data-theme='dark'] selector that redefines token values only; the toggle script just sets document.documentElement.dataset.theme and CSS does the rest."
+---
+
+## Overview
+
+Have you wondered why this learning platform looks coherent - the same purples, the same corner roundness, the same comfortable text sizes on every page? It is not because a designer hand-tuned every value. It is because the interface is built on **design tokens**: named, reusable decisions like "primary color" or "corner radius, medium", defined once and referenced everywhere.
+
+Material Design 3 (M3), Google's design system, is the most thorough public demonstration of the token idea. M3 does not hand you a palette of hex codes; it hands you _roles_ - "the color that sits behind the page", "the color of text on that page" - and fills those roles with values. Change the values and the whole interface re-themes, including into dark mode or a palette generated from a single seed color (M3's famous dynamic color).
+
+You already know the one CSS feature that makes tokens work: custom properties. This lesson formalizes what you have been doing informally — and ends with you theming a card component the way this very platform is themed.
+
+## Design tokens: one source of truth
+
+A token is a named decision. Instead of a component saying "my button is `#5b4bd4`", it says "my button uses the primary color token". The definition lives in one place; every component consumes it:
+
+```css
+:root {
+  --md-sys-color-primary: #5b4bd4;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-shape-corner-medium: 12px;
+}
+
+.button {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+```
+
+The payoff multiplies as the interface grows. Rebrand to teal and you edit two lines, not forty. Ship dark mode and the components do not change at all — only the token values do. And consistency stops being a matter of discipline: the token file is the palette, the type sizes, and the corners, so drift simply has nowhere to come from.
+
+Naming matters. The `--md-sys-color-*` prefix follows M3's own convention (`md` = Material Design, `sys` = system-level), and the token describes _purpose_, not appearance: `primary`, not `purple`. The moment a token is called `--purple`, using it for a green brand is absurd — and rebrands are always absurd in hindsight.
+
+> **Try it:** In the built-in editor, change the value of one color token in the `:root` block and watch every element that references it update together.
+
+## M3 color roles: pairs, not swatches
+
+M3's color system is built from _roles_ — jobs a color performs. The crucial idea is that roles travel in pairs: a container color and the color of content drawn **on** that container. Text readability stops being luck and becomes structure:
+
+| Role                     | Job                                             | Paired with                        |
+| ------------------------ | ----------------------------------------------- | ---------------------------------- |
+| `primary`                | The brand's main color: key buttons, highlights | `on-primary` (text/icons on it)    |
+| `primary-container`      | A tinted surface for less emphasis              | `on-primary-container`             |
+| `secondary` / `tertiary` | Supporting accents with less weight             | their `on-*` partners              |
+| `surface`                | The page and card background                    | `on-surface` (default text)        |
+| `surface-variant`        | A subtly differentiated surface                 | `on-surface-variant` (softer text) |
+| `outline`                | Borders and dividers                            | -                                  |
+| `error`                  | Destructive and error states                    | `on-error`                         |
+
+```css
+:root {
+  --md-sys-color-primary: #5b4bd4;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-surface: #fef7ff;
+  --md-sys-color-on-surface: #1d1b20;
+  --md-sys-color-on-surface-variant: #49454f;
+  --md-sys-color-outline: #79747e;
+}
+
+.card {
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline);
+}
+
+.card .supporting {
+  color: var(--md-sys-color-on-surface-variant);
+}
+```
+
+If you internalize one rule, make it this: **never place content on a color without using that color's `on-*` partner.** White text on a light primary, dark text on a dark surface — these are exactly the contrast failures the pair system exists to prevent.
+
+> **Tip:** M3 reference implementations generate role values that meet contrast requirements automatically. You are writing them by hand here, so eyeball each pair: squint, and check the text still reads.
+
+## Type scale, shape, and elevation
+
+Color is only one token family. M3 also tokenizes type, shape, and depth:
+
+**Type scale.** Fifteen named styles in five families — `display`, `headline`, `title`, `body`, `label` — each with a size variant. Components ask for "title medium", not "17 pixels, semi-bold, roughly":
+
+```css
+:root {
+  --md-sys-typescale-headline-small: 1.5rem;
+  --md-sys-typescale-body-medium: 0.875rem;
+  --md-sys-typescale-label-large: 0.875rem;
+}
+
+.card h2 {
+  font-size: var(--md-sys-typescale-headline-small);
+  line-height: 1.3;
+}
+
+.card p {
+  font-size: var(--md-sys-typescale-body-medium);
+  line-height: 1.5;
+}
+```
+
+**Shape scale.** Corner roundness is a small vocabulary — none, extra small, small, medium, large, extra large, full — reused by every component, so buttons and cards and dialogs feel like one family.
+
+**Elevation.** Depth has six levels, from 0 (flat) to 5 (highest). In light theme M3 leans on a subtle shadow; in dark theme it leans on _lighter surface tones_. That is a component-detail a token can absorb: components say `box-shadow: var(--md-sys-elevation-level-2)` and each theme defines what that means.
+
+> **Try it:** Look at the exercise card: heading, body, button, and border. Identify which token family each property belongs to before you start replacing values.
+
+## Theming by swapping values
+
+Here is where tokens earn their name. A theme is nothing but a second set of token values, swapped in under a selector. The components never mention "dark" — they only ever reference roles:
+
+```css
+:root {
+  --md-sys-color-surface: #fef7ff;
+  --md-sys-color-on-surface: #1d1b20;
+}
+
+[data-theme='dark'] {
+  --md-sys-color-surface: #141218;
+  --md-sys-color-on-surface: #e6e0e9;
+}
+```
+
+```js
+const toggle = document.querySelector('#theme-toggle');
+toggle.addEventListener('click', () => {
+  const root = document.documentElement;
+  const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  root.dataset.theme = next;
+});
+```
+
+Flipping one attribute re-skins every component in the page. This is also how M3's **dynamic color** works in production: the system generates a full set of role values from the user's wallpaper, and the app swaps them in the same way. One mechanism, both features — because components were written against roles, not colors.
+
+> **Try it:** Add the dark block above to the exercise and use the toggle button. Every color in the card changes at once — notice you did not touch a single component rule.
+
+## The exercise: a token-themed card
+
+The starter gives you a card — media placeholder, headline, supporting text, and two buttons — plus a partial `:root` token file and a theme toggle. The build, conceptually:
+
+1. **Complete the palette.** Fill in the missing tokens: the `on-primary` text color, the `error` pair, and the missing type-scale entries.
+2. **Purge the hardcoded values.** The card styles contain raw hex colors, a pixel radius, and a literal shadow. Replace each with the token that names its _purpose_.
+3. **Write the dark theme.** A `[data-theme="dark"]` block that redefines token values only. If a component rule needs editing for dark mode, a token is missing.
+4. **Wire the toggle.** Three lines of JavaScript: flip `data-theme` on the `html` element.
+5. **Check the pairs.** Squint at both themes: every text must use an `on-*` color matching its background, in light and dark alike.
+
+## Common Mistakes
+
+**1. Naming tokens after their appearance.** The token is the _decision_, not the value; appearance-based names break the moment the brand does.
+
+```css
+/* Wrong: what happens on the rebrand to teal? */
+:root {
+  --purple: #5b4bd4;
+}
+
+/* Right: names state the purpose */
+:root {
+  --md-sys-color-primary: #5b4bd4;
+}
+```
+
+**2. Content on a color without its on-color.** The contrast failures this whole system exists to prevent.
+
+```css
+/* Wrong: hand-picked text on a themed background */
+.button {
+  background: var(--md-sys-color-primary);
+  color: white;
+}
+
+/* Right: the pair guarantees readable text in every theme */
+.button {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+```
+
+**3. A half-migrated component.** One hardcoded hex in a corner of a rule silently opts that element out of every theme.
+
+```css
+/* Wrong: this border stays light in dark mode */
+.card {
+  background: var(--md-sys-color-surface);
+  border: 1px solid #d0cbd7;
+}
+
+/* Right: everything references a role */
+.card {
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline);
+}
+```
+
+**4. Dark mode as component overrides.** If dark theming means editing components, you will do it again for the next theme — and the next.
+
+```css
+/* Wrong: components know about themes */
+[data-theme='dark'] .card {
+  background: #141218;
+}
+
+/* Right: only token values know about themes */
+[data-theme='dark'] {
+  --md-sys-color-surface: #141218;
+}
+```
+
+**5. Inventing values per component.** A 10px radius here, 14px there, three slightly different body sizes — the drift tokens exist to kill.
+
+```css
+/* Wrong: two components, two opinions */
+.card {
+  border-radius: 10px;
+}
+.dialog {
+  border-radius: 14px;
+}
+
+/* Right: both ask the shape scale */
+.card {
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+.dialog {
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+```
+
+**6. Skipping the contrast check.** Tokens give structure, not automatic taste. After theming, actually read the page: text on every container, in both themes, squint-tested. Structure plus a check beats structure alone.
+
+## Summary
+
+- Design tokens are named decisions stored in CSS custom properties — one source of truth for color, type, shape, and depth.
+- M3 color roles work in pairs (`primary` with `on-primary`, `surface` with `on-surface`); content always uses the `on-*` partner of its background.
+- The type scale, shape scale, and elevation levels replace ad-hoc pixel decisions with a shared vocabulary.
+- A theme is a block of redefined token values behind a selector like `[data-theme="dark"]`; components never mention themes.
+- This platform itself is themed exactly this way — tokens first, components second, and consistency for free.

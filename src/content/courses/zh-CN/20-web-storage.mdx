@@ -1,0 +1,221 @@
+---
+lessonId: 20-web-storage
+order: 20
+module: dom
+difficulty: intermediate
+minutes: 30
+title: 'Web 存储：localStorage 与 JSON'
+summary: '用 localStorage 让数据在刷新后依然存在，用 JSON 序列化结构，并抵御配额与解析层面的各种失败。'
+objectives:
+  - '根据作用域和生命周期差异，在 localStorage 与 sessionStorage 之间做出选择。'
+  - '用 JSON.stringify() 和 JSON.parse() 存取结构化数据。'
+  - '用 try/catch 包裹每一次存储访问，并在存储不可用时回退到内存数据。'
+  - '应对真实世界的失败场景：配额超限、已保存数据格式错误、存储被禁用。'
+  - "养成'每次变更都保存'的习惯，让保存的状态与屏幕内容永不脱节。"
+exercise:
+  task: '构建一个刷新后数据仍在的小型待办清单：用户可以添加任务、标记完成、删除任务。每次变更后把完整任务数组以 JSON 形式存入 localStorage，页面启动时再读回来。所有存储访问都要用 try/catch 包裹：如果 localStorage 不可用（比如沙箱 iframe 中）或已保存的数据格式错误，就回退到内存数组，保证应用继续工作。'
+  hints:
+    - '写一个 save() 函数，在 try/catch 中执行 localStorage.setItem(KEY, JSON.stringify(tasks))，并在每次添加、切换、删除之后调用它，而不是只在页面卸载时保存。'
+    - 'localStorage 只会返回字符串：保存就是 JSON.stringify(tasks)，读取就是 JSON.parse(saved)——而 parse 可能抛异常，所以它自己也需要 try/catch，失败时直接拒绝这份数据。'
+    - '解析之后做一次结构检查（Array.isArray，且每项都有 text 和 done），并让模块级的 tasks 数组同时充当渲染和保存的唯一数据源。'
+---
+
+## 概览
+
+到目前为止，你写的每个应用都有一个共同的隐患：页面一刷新，一切归零。待办清单忘了待办事项，设置面板忘了你的选择。真实的应用是有记忆的，而 Web 恰好为此准备了一种非常简单的机制：Web Storage——浏览器内置的一个小型键值数据库。
+
+Web Storage 有两种形态，主力是 `localStorage`：存进去的值能挺过页面刷新、浏览器重启甚至系统重启。由于它只能存字符串，结构化数据——列表、设置对象、嵌套状态——必须经过 `JSON.stringify()` 变成字符串再入库，取出时用 `JSON.parse()` 还原。
+
+持久化也带来了一类此前无需面对的失败模式：存储可能已满、可能被禁用、里面可能还躺着去年的陈旧数据。本课你将构建一个刷新后仍在的待办清单，更重要的是——当存储压根不存在时，它也能体面地降级运行。
+
+## 两个储藏室：localStorage 与 sessionStorage
+
+两个存储对象都挂在 `window` 上，共享同一套 API，并且都按源（origin）隔离——一个站点存的数据永远不会被另一个站点看到。它们唯一的区别在于数据的寿命：
+
+|          | `localStorage`                                 | `sessionStorage`       |
+| -------- | ---------------------------------------------- | ---------------------- |
+| 生命周期 | 永久，直到代码或用户清除                       | 关闭标签页或窗口即失效 |
+| 可见范围 | 同一源的所有标签页                             | 只有写入它的那个标签页 |
+| 容量上限 | 约 5 MB                                        | 约 5 MB                |
+| 适合存放 | 偏好设置、草稿、待办列表                       | 表单草稿、单次会话状态 |
+| API      | `getItem` / `setItem` / `removeItem` / `clear` | 完全相同               |
+
+```js
+localStorage.setItem('theme', 'dark');
+localStorage.getItem('theme'); // "dark"
+localStorage.removeItem('theme');
+localStorage.getItem('theme'); // null
+
+sessionStorage.setItem('scroll-position', '1420');
+```
+
+有三条性质决定了本课其余的内容。第一，存储里只有**字符串**——数字 `42` 存进去是 `"42"`，取出来还是字符串。第二，读写都是**同步**的：没有回调，没有 Promise，直接给值。第三，所有数据都绑定在**源**上，你的页面只能看到自家储藏室里的东西。
+
+> **提示：** `sessionStorage` 不是"小号 localStorage"，而是另一种工具。凡是逻辑上应该随标签页一起消亡的数据，比如未发送的表单草稿，都适合放它这里。
+
+> **试一试：** 在内置编辑器里用 `localStorage.setItem` 存一个值，再在控制台用 `localStorage.getItem` 读出来。刷新预览——值还在。
+
+## 用 JSON 搬运结构
+
+真实的状态很少只是一个字符串。待办清单是对象数组，设置面板是多个字段的对象。在 JavaScript 结构与存储字符串之间架桥的就是 JSON：
+
+```js
+const tasks = [
+  { id: 1, text: '学会 localStorage', done: true },
+  { id: 2, text: '做一个能记住我的应用', done: false },
+];
+
+// 存入：结构 -> 字符串
+localStorage.setItem('todos.v1', JSON.stringify(tasks));
+
+// 读出：字符串 -> 结构
+const raw = localStorage.getItem('todos.v1');
+const restored = JSON.parse(raw);
+console.log(restored[1].text); // "做一个能记住我的应用"
+```
+
+对"纯数据"——对象、数组、字符串、数字、布尔值、`null`——来说，`JSON.stringify()` 与 `JSON.parse()` 是严格的互逆操作。实践中有两个坑要留意：`Date` 对象序列化后变成字符串，回来时不再是 `Date`，需要时就自己转成时间戳字符串；而 `undefined`、函数、DOM 节点根本过不了这一关——这通常是好事，说明你正准备存一个本不该存的东西。
+
+键名值得讲究一点。当数据结构改变的那天，`"todos.v1"` 会优于 `"todos"`：升一个版本号，理解新结构的代码就不会被旧数据绊倒。
+
+> **试一试：** 在编辑器里把一个小对象 stringify 后存入，再 parse 回来，分别打印字符串和还原后的对象。注意存储里真正保存的其实是那串文本。
+
+## 安全地读写
+
+这是大多数教程都跳过的部分：**存储会失败**。写入超过约 5 MB 的配额会抛出 `QuotaExceededError`；浏览器在阻止 Cookie 时可能干脆拒绝提供存储；而且——这一点对本平台尤为重要——运行在拥有不透明源（opaque origin）的沙箱 iframe 中的页面**根本没有存储**：任何访问都可能抛出 `SecurityError`。本课程的预览窗口正是这样一个 iframe，所以假定 `localStorage` 可用的代码在这里会直接崩溃。
+
+防御手段对所有情况都一样：把每次访问包进 `try/catch`，并在内存里留一份回退数据。这样应用在顺利路径上表现如常，而在存储缺席时降级为"刷新即重置"，依旧可用。
+
+```js
+const STORAGE_KEY = 'todos.v1';
+let memoryStore = {}; // 存储不可用时的回退方案
+
+function loadAll() {
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch (error) {
+    console.warn('存储不可用，仅使用内存：', error.message);
+    return memoryStore[STORAGE_KEY] ?? null;
+  }
+}
+
+function saveAll(value) {
+  try {
+    localStorage.setItem(STORAGE_KEY, value);
+  } catch (error) {
+    memoryStore[STORAGE_KEY] = value;
+  }
+}
+```
+
+第二类危险是格式错误的数据。存储在程序之外——旧版本的应用，或者打开过开发者工具的用户，都可能在你的键下塞进任何东西。`JSON.parse(null)` 会礼貌地返回 `null`，但 `JSON.parse("{oops")` 会直接抛异常。所以读取还要多一层防护：在 `try/catch` 里解析，然后检查返回数据的结构，再决定是否信任它。
+
+```js
+function loadTasks() {
+  try {
+    const parsed = JSON.parse(loadAll());
+    if (Array.isArray(parsed) && parsed.every((t) => 'text' in t && 'done' in t)) {
+      return parsed;
+    }
+  } catch (error) {
+    // 走到这里：不是合法 JSON、结构不对，或者压根没存过
+  }
+  return []; // 一个体面的默认值胜过崩溃的应用
+}
+```
+
+> **试一试：** 在预览中打开练习并观察控制台。起始代码已经在存储不可用时发出警告——回退路径在这里不是假设，而是你真实所处的运行环境。
+
+## 每次变更都保存的节奏
+
+每个持久化应用里都藏着一个微妙的设计决策：*什么时候*保存？只靠 `beforeunload`（标签页关闭时）保存并不可靠——它并非在所有退出方式下都会触发，而且把保存行为绑在了你无法控制的浏览器行为上。
+
+更稳妥的习惯很简单：**每次变更之后立即保存**。添加任务，保存。切换任务，保存。删除任务，保存。每次写入只有几 KB，同步、本地，没有任何需要优化的开销。回报则是一条可以依赖的不变式：_屏幕上是什么，存的就是什么。_
+
+```js
+function addTask(text) {
+  tasks.push({ id: nextId++, text: text, done: false });
+  render();
+  save(); // 每次变更后都调用一次
+}
+
+function save() {
+  saveAll(JSON.stringify(tasks));
+}
+```
+
+> **提示：** 让一个 `tasks` 数组充当唯一数据源。渲染读它，变更改它，`save()` 写它。三个函数，一个数组，永不脱节。
+
+## 实战练习：刷新后仍在的待办清单
+
+起始页面已经备好完整界面——带 Add 按钮的输入框、每条任务带复选框和删除按钮的列表，以及一个等着你填充的空 `#task-list`。从思路上看，构建步骤如下：
+
+1. **数据先行。** 用一个 `{ id, text, done }` 对象组成的 `tasks` 数组保存状态，写一个 `render()` 从数组重建列表。用 `document.createElement` 创建元素，用 `textContent` 设置任务文字。
+2. **添加。** 监听表单的 `submit` 事件，调用 `preventDefault()`，对非空输入压入新任务。
+3. **切换与删除。** 让 `change` 和 `click` 事件冒泡到列表容器，从复选框或按钮上取 `id` 找到对应任务，再在数组中更新或移除。
+4. **持久化。** 写 `save()`（在 `try/catch` 里 stringify），每次变更后调用；写 `loadTasks()`（在 `try/catch` 里 parse，再检查结构），启动时先加载进 `tasks` 再做第一次渲染。
+5. **验证回退。** 添加一个任务并刷新预览。在沙箱 iframe 里刷新会清空它——这正是回退机制在按设计工作；而在普通浏览器标签页里，列表会原样回来。
+
+## 常见错误
+
+**1. 直接把对象存进去。** 存储会用 `toString()` 静默地把值字符串化，对象会变成毫无用处的 `"[object Object]"`。
+
+```js
+// 错误：存进去的是 "[object Object]"
+localStorage.setItem('settings', { theme: 'dark' });
+
+// 正确：由 JSON 负责携带结构
+localStorage.setItem('settings', JSON.stringify({ theme: 'dark' }));
+```
+
+**2. 不加保护地解析。** 只要不是合法 JSON——一次中断的写入、一个旧格式、一段垃圾数据——`JSON.parse` 就会抛异常，一个异常就能拖垮整个脚本。
+
+```js
+// 错误：一个坏字节就能让应用挂掉
+const tasks = JSON.parse(localStorage.getItem(KEY));
+
+// 正确：防御式解析，并保留默认值
+let tasks = [];
+try {
+  tasks = JSON.parse(localStorage.getItem(KEY)) ?? [];
+} catch (error) {
+  tasks = [];
+}
+```
+
+**3. 假定存储一定存在。** 在拥有不透明源的沙箱 iframe 里——比如本平台的预览——哪怕只是*碰到* `localStorage` 都可能抛出 SecurityError。
+
+```js
+// 错误：在禁用存储的环境里直接崩溃
+const saved = localStorage.getItem(KEY);
+
+// 正确：每次访问都有防护
+let saved = null;
+try {
+  saved = localStorage.getItem(KEY);
+} catch (error) {
+  saved = null; // 回退到内存数据
+}
+```
+
+**4. 只在页面卸载时保存。** `beforeunload` 事件不保证触发，用户最后几步操作可能凭空消失。改为每次变更后保存，存储状态就永远不会落后于屏幕。
+
+**5. 忘了数字回来时是字符串。** `getItem` 返回的要么是字符串，要么是 `null`——绝不是数字。要显式转换，并在运算前先处理 `null`。
+
+```js
+// 错误："0" + 1 的结果是 "01"
+const count = localStorage.getItem('count') + 1;
+
+// 正确：转换，并在首次访问时给默认值
+const count = Number(localStorage.getItem('count') ?? 0) + 1;
+```
+
+**6. 存 DOM 节点或派生值。** 函数、元素引用以及一切可以重新计算的东西（过滤后的列表、合计值）都不该进存储。持久化源数据，其余的在加载时重建。
+
+## 小结
+
+- `localStorage` 按源持久化、跨会话存在；`sessionStorage` 随标签页消亡——API 相同，寿命不同。
+- 存储只说字符串，结构靠 JSON 搬运：`JSON.stringify()` 进，`JSON.parse()` 出，`Date` 与非数据值是已知的"失踪人口"。
+- 用 `try/catch` 包住每一次访问：配额超限、存储被禁用、沙箱预览的不透明源都会抛异常，内存回退能让应用继续活着。
+- 把读回的数据当作不可信输入：防御式解析、检查结构、准备体面的默认值。
+- 以单一数据源数组为中心，每次变更后保存，让屏幕与存储永不分歧。

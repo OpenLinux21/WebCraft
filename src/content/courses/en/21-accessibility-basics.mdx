@@ -1,0 +1,211 @@
+---
+lessonId: 21-accessibility-basics
+order: 21
+module: advanced
+difficulty: intermediate
+minutes: 35
+title: 'Accessibility: Semantics, Keyboard and ARIA'
+summary: 'Make interfaces that work for everyone with semantic landmarks, keyboard operability, focus management, and pragmatic ARIA.'
+objectives:
+  - 'Reach for semantic HTML first and know what it buys you: landmarks, roles, and keyboard behavior for free.'
+  - 'Test interfaces with the keyboard alone and keep a visible focus indicator via :focus-visible.'
+  - 'Write useful alt text and label icon-only controls with aria-label.'
+  - 'Apply the most valuable ARIA attributes, such as aria-expanded and aria-label, where semantics alone fall short.'
+  - 'Build a fully keyboard-accessible disclosure widget whose state stays in sync with its ARIA attributes.'
+exercise:
+  task: "Build a keyboard-accessible disclosure widget: a button that shows and hides a panel of content. Clicking the button toggles the panel, the button's aria-expanded attribute must always mirror whether the panel is open, and the panel is hidden with the hidden attribute. The widget must be operable with the keyboard alone (a real button gives you Enter and Space for free) and the focused button needs a clearly visible :focus-visible outline."
+  hints:
+    - 'Use a real button element for the trigger: browsers give it Enter and Space activation and the correct role without a single line of extra code.'
+    - "Update panel.hidden and the button's aria-expanded attribute in the same toggle function so the visible state and what screen readers announce can never drift apart."
+    - 'Style the keyboard focus ring with :focus-visible (for example outline: 3px solid and outline-offset) instead of removing the outline, and verify by tabbing to the button and pressing Enter and Space.'
+---
+
+## Overview
+
+Accessibility is often imagined as a final checklist, a layer of compliance added at the end. It is more accurate to think of it as a property of the markup you write from the first line. Users interact with the web in far more ways than a mouse: screen reader users navigate by headings and landmarks, people with motor disabilities travel entirely by keyboard, and everyone benefits from labels, contrast, and predictable focus — especially on a phone in bright sunlight.
+
+The encouraging part: most of accessibility is not extra work, it is _choosing the right element_. A `<button>` already responds to Enter and Space, is announced as a button, and can take focus. A `<div>` pretending to be a button needs all of that rebuilt by hand. Semantics first, then keyboard support, and only then ARIA to fill the gaps.
+
+In this lesson you will sharpen all three instincts and apply them to a classic widget: a disclosure — the little "show more" control that expands a panel of content — made fully operable by keyboard and correctly announced to screen readers.
+
+## Semantics: accessibility you get for free
+
+Screen readers do not read your page character by character; they offer structured navigation: "jump to main", "list all headings", "list the buttons". That structure comes from your elements. Semantic HTML is the cheapest accessibility budget you will ever spend:
+
+| Element                                    | What assistive tech gets                   | Common wrong substitute          |
+| ------------------------------------------ | ------------------------------------------ | -------------------------------- |
+| `header`, `nav`, `main`, `aside`, `footer` | Landmarks for jumping between page regions | A sea of anonymous `<div>`s      |
+| `h1` to `h6` in order                      | A document outline to skim                 | Bold paragraphs as fake headings |
+| `button`                                   | Role, Enter/Space activation, focusability | `<div onclick>`                  |
+| `a href`                                   | "Link", Enter activation, middle-click     | `<button onclick="location">`    |
+| `ul` / `ol` / `li`                         | List size announced up front               | Rows of `<div>`s                 |
+| `label`                                    | An accessible name for every input         | Placeholder text                 |
+
+```html
+<body>
+  <header>
+    <nav aria-label="Main">…</nav>
+  </header>
+  <main>
+    <h1>Page title</h1>
+    <section aria-labelledby="summary-heading">
+      <h2 id="summary-heading">Summary</h2>
+    </section>
+  </main>
+  <footer>…</footer>
+</body>
+```
+
+> **Try it:** In the built-in editor, tab through the starter exercise and notice you can reach the trigger button without any code doing anything — that is the semantics working before a single line of JavaScript runs.
+
+The same principle decides clicks: anything that performs an action in place is a `<button>`; anything that navigates somewhere is an `<a href>`. Choose by behavior, not by how the element looks — CSS can restyle either one.
+
+## Focus and the keyboard
+
+Keyboard users move through a page with Tab (next control), Shift+Tab (previous), and Enter or Space (activate). The order they visit controls is the **DOM order** — not the visual order CSS created. A layout that looks fine but reads controls in a jumbled DOM sequence is a trap: always keep DOM order aligned with reading order.
+
+The `tabindex` attribute adjusts this, sparingly:
+
+| Value           | Effect                                                | Use when                          |
+| --------------- | ----------------------------------------------------- | --------------------------------- |
+| absent          | Native elements participate; `div` and friends do not | Almost always                     |
+| `0`             | Adds the element to tab order, in DOM position        | A custom widget becomes focusable |
+| `-1`            | Focusable by script only, out of tab order            | Moving focus programmatically     |
+| positive number | A promised order that becomes a maintenance debt      | Never, in practice                |
+
+The focus indicator is a keyboard user's cursor — you would never hide a mouse pointer, so never hide focus. The modern tool is `:focus-visible`, which applies an outline only when the browser expects keyboard focus, so mouse users do not see a ring on click:
+
+```css
+.disclosure-trigger:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+```
+
+> **Tip:** If you remove the default outline anywhere, you owe that state a replacement. `outline: none` with nothing in its place is one of the most damaging one-line changes in CSS.
+
+> **Try it:** Tab through the exercise starter. Then add the `:focus-visible` rule above and watch the ring appear exactly when you arrive by keyboard — and not when you click.
+
+## Text alternatives and accessible names
+
+A screen reader cannot guess what an image shows or what an icon-only button does; it reads the element's **accessible name**. Writing that name is your job:
+
+- **Meaningful images** get `alt` that conveys the same information the eye gets. "Chart of sales rising 20% in Q3" — not "image of chart".
+- **Decorative images** get `alt=""`, which makes screen readers skip them. An empty alt is a deliberate statement, not a forgotten one.
+- **Icon-only controls** — a magnifying glass submit button, an X that closes a dialog — get their name from `aria-label`:
+
+```html
+<button aria-label="Search">
+  <svg aria-hidden="true" viewBox="0 0 24 24">…</svg>
+</button>
+```
+
+Two details worth internalizing. The `aria-hidden="true"` on the icon says "this is decoration, skip it" — otherwise the screen reader might announce an empty graphic before reaching the label. And the accessible name should start with the important words, because screen reader users often jump control to control by name.
+
+> **Try it:** Hover the exercise trigger and read its text aloud to yourself. Would that sentence still make sense if you could not see the arrow icon next to it? If not, add an `aria-label`.
+
+## Pragmatic ARIA
+
+ARIA — Accessible Rich Internet Applications — is a set of attributes that patch the gaps where HTML semantics run out: state that changes, widgets HTML has no element for. Its first rule is famous for a reason: **do not use ARIA if a native element does the job.** ARIA does not add behavior; it adds announcements. A `role="button"` div still does nothing on Enter — you have written a promise the CSS cannot keep.
+
+Where native HTML falls short, a small set of attributes covers most real needs:
+
+| Attribute         | Goes on         | Announces                                      | Typical case                       |
+| ----------------- | --------------- | ---------------------------------------------- | ---------------------------------- |
+| `aria-label`      | Any control     | A name replacing or adding to the visible text | Icon-only buttons, regions         |
+| `aria-expanded`   | Trigger buttons | Whether the controlled thing is open           | Disclosures, menus, accordions     |
+| `aria-controls`   | Trigger buttons | Which element it opens (by id)                 | Linking trigger to panel           |
+| `aria-hidden`     | Decoration      | "Skip this entirely"                           | Icon fonts, duplicated text        |
+| `aria-labelledby` | Sections        | A name taken from a heading's id               | Naming sections without extra text |
+
+The disclosure widget uses the central pattern — a state attribute kept in sync with reality:
+
+```js
+toggleButton.addEventListener('click', () => {
+  const isOpen = panel.hidden;
+  panel.hidden = !isOpen;
+  toggleButton.setAttribute('aria-expanded', String(!isOpen));
+});
+```
+
+> **Tip:** `aria-expanded` on the trigger, not on the panel. The screen reader user is on the button asking "is the thing you open currently open?" — that is where the answer belongs.
+
+## The exercise: a keyboard-accessible disclosure
+
+The starter has a trigger button with an arrow and a panel of content below it. Nothing works yet. The build, conceptually:
+
+1. **Wire the toggle.** One function flips `panel.hidden` and sets `aria-expanded` to the matching string. Both change together, always.
+2. **Reflect state in the UI.** Rotate the arrow (a CSS class on the button, `transform: rotate`) so sighted users see the state too — ARIA announcements and visual affordance should agree.
+3. **Keyboard comes free — verify it.** Because the trigger is a real `<button>`, Enter and Space already fire `click`. Tab to it and try; if it does not activate, the bug is in your markup, not your JS.
+4. **Make focus visible.** Add a `:focus-visible` outline to the trigger and confirm it appears on keyboard focus.
+5. **Label honestly.** Give the button an `aria-expanded` initial value of `false` in the HTML and check the panel starts `hidden` — state must be correct before any interaction.
+
+A caution about scope: a disclosure reveals content that stays available afterwards. That is why the panel simply uses the `hidden` attribute rather than trapping focus — keyboard users tab into the revealed content as naturally as anything else on the page.
+
+## Common Mistakes
+
+**1. Click handlers on non-interactive elements.** A `div` with a click listener is invisible to keyboards and silent to screen readers.
+
+```html
+<!-- Wrong: no focus, no Enter, no announcement -->
+<div onclick="toggle()">Show details</div>
+
+<!-- Right: all of it, for free -->
+<button type="button">Show details</button>
+```
+
+**2. Deleting the focus outline.** Keyboard users then have no idea where they are on the page.
+
+```css
+/* Wrong: the keyboard cursor is gone */
+button:focus {
+  outline: none;
+}
+
+/* Right: a clear ring, only for keyboard focus */
+button:focus-visible {
+  outline: 3px solid #1d4ed8;
+}
+```
+
+**3. State that ARIA does not know about.** The panel opens and closes, but the button never says so — screen reader users cannot tell whether the click did anything.
+
+```html
+<!-- Wrong: the trigger announces no state -->
+<button type="button">Show details</button>
+
+<!-- Right: the trigger reports the panel state -->
+<button type="button" aria-expanded="false">Show details</button>
+```
+
+**4. Meaningless alt text.** "Image", "photo", or the file name wastes the one channel a blind user had for that content; decorative images with wordy alt text are noise.
+
+```html
+<!-- Wrong: repeats information the alt adds nothing to -->
+<img src="divider.svg" alt="a grey horizontal divider line" />
+
+<!-- Right: decoration is explicitly skipped -->
+<img src="divider.svg" alt="" />
+```
+
+**5. Fixing DOM order with positive tabindex.** Renumbering `tabindex="1"`, `2`, `3` by hand breaks the moment the layout changes.
+
+```html
+<!-- Wrong: a second, manual tab order to maintain -->
+<input tabindex="2" />
+<input tabindex="1" />
+
+<!-- Right: order the elements correctly in the HTML -->
+<input id="first" />
+<input id="second" />
+```
+
+**6. ARIA as a substitute for the wrong element.** `role="button"` changes what is announced, not what happens. If the element cannot take focus or respond to keys, no role will save it — swap in the real element first.
+
+## Summary
+
+- Semantic HTML is the foundation: landmarks, headings, lists, and native controls give structure and behavior for free.
+- Keyboard operability is a first-class requirement: DOM order, sparing `tabindex`, and a visible `:focus-visible` ring.
+- Every meaningful image and icon-only control needs a human-written accessible name; decoration is explicitly hidden.
+- ARIA fills genuine gaps — `aria-expanded`, `aria-label`, `aria-hidden` — but never replaces choosing the right element.
+- Keep state attributes in sync with the real UI in the same function that changes the UI, so announcements can never lie.
