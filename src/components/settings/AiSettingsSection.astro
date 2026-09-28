@@ -32,8 +32,8 @@ const t = createTranslator(locale);
   <div class="form-row">
     <label for="ai-provider">{t.t('settings.ai.provider')}</label>
     <md-outlined-select id="ai-provider" data-ai-field="provider">
-      <md-option value="openai-compatible">{t.t('settings.ai.providerOpenAI')}</md-option>
-      <md-option value="ollama">{t.t('settings.ai.providerOllama')}</md-option>
+      <md-select-option value="openai-compatible">{t.t('settings.ai.providerOpenAI')}</md-select-option>
+      <md-select-option value="ollama">{t.t('settings.ai.providerOllama')}</md-select-option>
     </md-outlined-select>
   </div>
 

@@ -32,9 +32,9 @@ const t = createTranslator(locale);
     <div class="form-row">
       <label for="setting-theme">{t.t('theme.label')}</label>
       <md-outlined-select id="setting-theme" data-setting="theme">
-        <md-option value="light">{t.t('theme.light')}</md-option>
-        <md-option value="dark">{t.t('theme.dark')}</md-option>
-        <md-option value="system">{t.t('theme.system')}</md-option>
+        <md-select-option value="light">{t.t('theme.light')}</md-select-option>
+        <md-select-option value="dark">{t.t('theme.dark')}</md-select-option>
+        <md-select-option value="system">{t.t('theme.system')}</md-select-option>
       </md-outlined-select>
     </div>
 
@@ -42,9 +42,9 @@ const t = createTranslator(locale);
       <label for="setting-language">{t.t('language.label')}</label>
       <md-outlined-select id="setting-language" data-setting="language" data-locale={locale}>
         {APP_LOCALES.map((option) => (
-          <md-option value={option} selected={option === locale}>
+          <md-select-option value={option} selected={option === locale}>
             {option === 'en' ? 'English' : '简体中文'}
-          </md-option>
+          </md-select-option>
         ))}
       </md-outlined-select>
     </div>
@@ -52,10 +52,10 @@ const t = createTranslator(locale);
     <div class="form-row">
       <label for="setting-live-preview">{t.t('workbench.autoRun')}</label>
       <md-outlined-select id="setting-live-preview" data-setting="live-preview">
-        <md-option value="0">{t.t('workbench.autoRunOff')}</md-option>
-        <md-option value="500">{t.t('workbench.autoRunFast')}</md-option>
-        <md-option value="1000">{t.t('workbench.autoRunNormal')}</md-option>
-        <md-option value="2000">{t.t('workbench.autoRunSlow')}</md-option>
+        <md-select-option value="0">{t.t('workbench.autoRunOff')}</md-select-option>
+        <md-select-option value="500">{t.t('workbench.autoRunFast')}</md-select-option>
+        <md-select-option value="1000">{t.t('workbench.autoRunNormal')}</md-select-option>
+        <md-select-option value="2000">{t.t('workbench.autoRunSlow')}</md-select-option>
       </md-outlined-select>
     </div>
   </section>

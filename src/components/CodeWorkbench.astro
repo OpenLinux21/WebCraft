@@ -77,7 +77,7 @@ const t = createTranslator(locale);
           <span>{t.t('workbench.autoRun')}</span>
           <md-outlined-select data-autorun>
             {LIVE_PREVIEW_OPTIONS.map((ms) => (
-              <md-option value={String(ms)}>
+              <md-select-option value={String(ms)}>
                 {ms === 0
                   ? t.t('workbench.autoRunOff')
                   : ms === 500
@@ -85,7 +85,7 @@ const t = createTranslator(locale);
                     : ms === 1000
                       ? t.t('workbench.autoRunNormal')
                       : t.t('workbench.autoRunSlow')}
-              </md-option>
+              </md-select-option>
             ))}
           </md-outlined-select>
         </label>
