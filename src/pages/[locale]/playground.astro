@@ -1,0 +1,45 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import CodeWorkbench from '@/components/CodeWorkbench.astro';
+import AiAssistantPanel from '@/components/AiAssistantPanel.astro';
+import { createTranslator } from '@/lib/i18n/core';
+import { APP_LOCALES, type AppLocale } from '@/lib/i18n/types';
+import { PLAYGROUND_DRAFT_KEY } from '@/lib/storage/repos/drafts';
+import type { CodeFiles } from '@/lib/courses/code-files';
+import '@/styles/pages.css';
+
+export function getStaticPaths() {
+  return APP_LOCALES.map((locale) => ({ params: { locale }, props: { locale } }));
+}
+
+interface Props {
+  locale: AppLocale;
+}
+
+const { locale } = Astro.props;
+const t = createTranslator(locale);
+
+const PLAYGROUND_STARTER: CodeFiles = {
+  html: '<main>\n  <h1>Hello, WebCraft!</h1>\n  <p id="greeting"></p>\n</main>\n',
+  css: 'main {\n  font-family: system-ui, sans-serif;\n  padding: 2rem;\n}\n\nh1 {\n  color: steelblue;\n}\n',
+  js: 'const greeting = document.getElementById("greeting");\ngreeting.textContent = "Edit the code and press Run.";\nconsole.log("Playground is ready!");\n',
+};
+---
+
+<BaseLayout
+  locale={locale}
+  title={t.t('meta.playgroundTitle')}
+  description={t.t('meta.playgroundDescription')}
+>
+  <h1 class="page-title">{t.t('playground.title')}</h1>
+  <p class="page-subtitle">{t.t('playground.subtitle')}</p>
+
+  <CodeWorkbench
+    locale={locale}
+    draftKey={PLAYGROUND_DRAFT_KEY}
+    instanceId="playground"
+    initial={PLAYGROUND_STARTER}
+  />
+
+  <AiAssistantPanel locale={locale} contextKey={PLAYGROUND_DRAFT_KEY} level="beginner" />
+</BaseLayout>

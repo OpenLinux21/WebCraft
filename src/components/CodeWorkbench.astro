@@ -1,0 +1,359 @@
+---
+import { createTranslator } from '@/lib/i18n/core';
+import type { AppLocale } from '@/lib/i18n/core';
+import type { CodeFiles } from '@/lib/courses/code-files';
+import { LIVE_PREVIEW_OPTIONS } from '@/lib/storage/settings';
+import '@/styles/workbench.css';
+
+interface Props {
+  locale: AppLocale;
+  /** Storage key for autosaved drafts (lesson id or `playground`). */
+  draftKey: string;
+  /** Unique model-URI base, e.g. `lesson-01-html-doc-structure`. */
+  instanceId: string;
+  /** Starter code shown when no draft exists. */
+  initial: CodeFiles;
+}
+
+interface TabDefinition {
+  lang: 'html' | 'css' | 'javascript';
+  key: 'workbench.tabHtml' | 'workbench.tabCss' | 'workbench.tabJs';
+}
+
+const TABS: readonly TabDefinition[] = [
+  { lang: 'html', key: 'workbench.tabHtml' },
+  { lang: 'css', key: 'workbench.tabCss' },
+  { lang: 'javascript', key: 'workbench.tabJs' },
+];
+
+const { locale, draftKey, instanceId, initial } = Astro.props;
+const t = createTranslator(locale);
+---
+
+<section
+  class="workbench"
+  data-workbench
+  data-draft-key={draftKey}
+  data-locale={locale}
+  data-instance-id={instanceId}
+>
+  <script type="application/json" data-initial set:html={JSON.stringify(initial)} />
+  <div class="workbench__layout">
+    <div class="workbench__editor-pane">
+      <div class="workbench__toolbar">
+        <div class="workbench__tabs" role="tablist" aria-label={t.t('workbench.editorLabel')}>
+          {TABS.map((tab) => (
+            <button
+              type="button"
+              class="workbench__tab"
+              role="tab"
+              data-tab={tab.lang}
+              aria-selected={tab.lang === 'html' ? 'true' : 'false'}
+            >
+              {t.t(tab.key)}
+            </button>
+          ))}
+        </div>
+        <div class="workbench__actions">
+          <md-filled-button type="button" data-action="run">
+            {t.t('workbench.run')}
+          </md-filled-button>
+          <md-outlined-button type="button" data-action="format">
+            {t.t('workbench.format')}
+          </md-outlined-button>
+          <md-outlined-button type="button" data-action="copy">
+            {t.t('common.copy')}
+          </md-outlined-button>
+          <md-text-button type="button" data-action="reset">
+            {t.t('workbench.reset')}
+          </md-text-button>
+        </div>
+      </div>
+
+      <div class="workbench__editor" data-editor></div>
+
+      <div class="workbench__statusbar">
+        <label class="workbench__autorun">
+          <span>{t.t('workbench.autoRun')}</span>
+          <md-outlined-select data-autorun>
+            {LIVE_PREVIEW_OPTIONS.map((ms) => (
+              <md-option value={String(ms)}>
+                {ms === 0
+                  ? t.t('workbench.autoRunOff')
+                  : ms === 500
+                    ? t.t('workbench.autoRunFast')
+                    : ms === 1000
+                      ? t.t('workbench.autoRunNormal')
+                      : t.t('workbench.autoRunSlow')}
+              </md-option>
+            ))}
+          </md-outlined-select>
+        </label>
+        <span class="workbench__hint">{t.t('workbench.runShortcutHint')}</span>
+      </div>
+    </div>
+
+    <div class="workbench__preview-pane">
+      <div class="workbench__pane-title">{t.t('workbench.previewLabel')}</div>
+      <iframe
+        class="workbench__preview"
+        data-preview
+        sandbox="allow-scripts"
+        title={t.t('workbench.previewAria')}
+      ></iframe>
+    </div>
+  </div>
+
+  <div class="console-panel" data-console>
+    <div class="console-panel__header">
+      <h3>{t.t('workbench.consoleTitle')}</h3>
+      <md-text-button type="button" data-console-clear>
+        {t.t('workbench.consoleClear')}
+      </md-text-button>
+    </div>
+    <ol class="console-panel__list" data-console-list></ol>
+    <p class="console-panel__empty" data-console-empty>
+      {t.t('workbench.consoleEmpty')}
+    </p>
+  </div>
+</section>
+
+<script>
+  import '@/components/material/register';
+  import type { MdOutlinedSelect } from '@/components/material/register';
+  import type { CodeFiles } from '@/lib/courses/code-files';
+  import { createTranslator, isAppLocale } from '@/lib/i18n/core';
+  import { generateToken } from '@/lib/utils/id';
+  import { debounce } from '@/lib/utils/debounce';
+  import { createConsolePanel } from '@/lib/preview/console-panel';
+  import { createPreviewController } from '@/lib/preview/controller';
+  import { createDraftRepo } from '@/lib/storage/repos/drafts';
+  import { getStorage } from '@/lib/storage/storage';
+  import { setSharedFiles } from '@/lib/editor/registry';
+  import {
+    loadPreviewSettings,
+    savePreviewSettings,
+    type LivePreviewMs,
+  } from '@/lib/storage/settings';
+  import { showToast } from '@/lib/ui/toast';
+  import type { EditorModels, EditorViewState, MonacoWorkbenchApi } from '@/lib/editor/monaco';
+
+  type Lang = 'html' | 'css' | 'javascript';
+
+  const isLang = (value: string): value is Lang =>
+    value === 'html' || value === 'css' || value === 'javascript';
+
+  function asCodeFiles(value: unknown): CodeFiles {
+    const record = (value ?? {}) as Record<string, unknown>;
+    const str = (key: string): string => {
+      const v = record[key];
+      return typeof v === 'string' ? v : '';
+    };
+    return { html: str('html'), css: str('css'), js: str('js') };
+  }
+
+  function filesFromModels(models: EditorModels): CodeFiles {
+    return {
+      html: models.html.getValue(),
+      css: models.css.getValue(),
+      js: models.javascript.getValue(),
+    };
+  }
+
+  function setModels(models: EditorModels, files: CodeFiles): void {
+    models.html.setValue(files.html);
+    models.css.setValue(files.css);
+    models.javascript.setValue(files.js);
+  }
+
+  async function initWorkbench(root: HTMLElement, monacoModule: MonacoWorkbenchApi): Promise<void> {
+    const { createCodeEditor, createModels, disposeModels } = monacoModule;
+    const localeRaw: unknown = root.dataset.locale;
+    const draftKey = root.dataset.draftKey ?? '';
+    const instanceId = root.dataset.instanceId ?? 'workbench';
+    if (!isAppLocale(localeRaw)) return;
+    const t = createTranslator(localeRaw);
+
+    const payload = root.querySelector<HTMLScriptElement>('[data-initial]');
+    let initial: CodeFiles = { html: '', css: '', js: '' };
+    try {
+      initial = asCodeFiles(JSON.parse(payload?.textContent ?? '{}'));
+    } catch {
+      // Malformed payload: fall back to empty files.
+    }
+
+    // Editor + models
+    const editorEl = root.querySelector<HTMLElement>('[data-editor]');
+    if (!editorEl) return;
+    const storage = await getStorage();
+    const drafts = createDraftRepo(storage);
+    const savedDraft = draftKey ? await drafts.get(draftKey) : undefined;
+    const filesAtStart = savedDraft
+      ? { html: savedDraft.html, css: savedDraft.css, js: savedDraft.js }
+      : initial;
+    if (savedDraft) showToast(t.t('workbench.draftRestored'));
+
+    const models = createModels(
+      { html: filesAtStart.html, css: filesAtStart.css, javascript: filesAtStart.js },
+      instanceId,
+    );
+    const editorInstance = createCodeEditor({
+      container: editorEl,
+      language: 'html',
+      value: models.html.getValue(),
+    });
+
+    // Tab switching keeps per-language view state.
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-tab]')];
+    const viewStates = new Map<Lang, EditorViewState>();
+    let activeLang: Lang = 'html';
+
+    const switchTo = (lang: Lang): void => {
+      if (lang === activeLang) return;
+      viewStates.set(activeLang, editorInstance.editor.saveViewState());
+      activeLang = lang;
+      editorInstance.editor.setModel(models[lang]);
+      const state = viewStates.get(lang);
+      if (state) editorInstance.editor.restoreViewState(state);
+      editorInstance.editor.focus();
+      for (const tab of tabs) {
+        tab.setAttribute(
+          'aria-selected',
+          isLang(tab.dataset.tab ?? '') && tab.dataset.tab === lang ? 'true' : 'false',
+        );
+      }
+    };
+    for (const tab of tabs) {
+      const lang = tab.dataset.tab ?? '';
+      if (isLang(lang)) tab.addEventListener('click', () => switchTo(lang));
+    }
+
+    // Preview + console
+    const iframe = root.querySelector<HTMLIFrameElement>('[data-preview]');
+    const consoleRoot = root.querySelector<HTMLElement>('[data-console]');
+    if (!iframe || !consoleRoot) return;
+    const consolePanel = createConsolePanel(consoleRoot, {
+      emptyText: t.t('workbench.consoleEmpty'),
+    });
+    const preview = createPreviewController(iframe, generateToken(), (message) => {
+      switch (message.kind) {
+        case 'console':
+          consolePanel.add(message.level, message.text);
+          break;
+        case 'error':
+          consolePanel.add(
+            'exception',
+            `${message.message}${message.line !== null ? ` (line ${message.line})` : ''}`,
+          );
+          break;
+        case 'unhandledrejection':
+          consolePanel.add('exception', `Unhandled rejection: ${message.message}`);
+          break;
+        case 'ready':
+          break;
+      }
+    });
+
+    const run = (): void => {
+      consolePanel.beginRun();
+      const files = filesFromModels(models);
+      setSharedFiles(draftKey, files);
+      preview.run(files);
+    };
+    run();
+
+    // Autosave (debounced) + live preview on every content change.
+    const persistDraft = draftKey
+      ? debounce(() => void drafts.set(draftKey, filesFromModels(models)), 800)
+      : null;
+    editorInstance.onContentChange(() => {
+      setSharedFiles(draftKey, filesFromModels(models));
+      persistDraft?.();
+      scheduleLivePreview();
+    });
+
+    // Live preview schedule (0 = off), shared with the settings page.
+    let liveTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleLivePreview = (): void => {
+      if (liveTimer !== null) clearTimeout(liveTimer);
+      const delay = loadPreviewSettings().livePreviewMs;
+      if (delay === 0) return;
+      liveTimer = setTimeout(run, delay);
+    };
+
+    // Toolbar
+    const button = (name: string): HTMLElement | null =>
+      root.querySelector<HTMLElement>(`[data-action="${name}"]`);
+    button('run')?.addEventListener('click', run);
+    button('format')?.addEventListener('click', () => editorInstance.format());
+    button('copy')?.addEventListener('click', () => {
+      const activeModel = models[activeLang];
+      void navigator.clipboard
+        .writeText(activeModel.getValue())
+        .then(() => showToast(t.t('common.copied')))
+        .catch((error: unknown) =>
+          showToast(
+            t.t('errors.copyFailed', {
+              reason: error instanceof Error ? error.message : String(error),
+            }),
+          ),
+        );
+    });
+    button('reset')?.addEventListener('click', () => {
+      if (!window.confirm(t.t('workbench.resetConfirm'))) return;
+      setModels(models, initial);
+      if (draftKey) void drafts.set(draftKey, initial);
+      run();
+      showToast(t.t('workbench.resetDone'));
+    });
+
+    editorInstance.addRunCommand(run);
+
+    // Live-preview interval selector (also updates the global default).
+    const autorunSelect = root.querySelector<MdOutlinedSelect>('[data-autorun]');
+    if (autorunSelect) {
+      autorunSelect.value = String(loadPreviewSettings().livePreviewMs);
+      autorunSelect.addEventListener('change', () => {
+        const ms = Number(autorunSelect.value) as LivePreviewMs;
+        savePreviewSettings({ livePreviewMs: ms });
+        if (ms === 0 && liveTimer !== null) {
+          clearTimeout(liveTimer);
+          liveTimer = null;
+        } else if (ms > 0) {
+          run();
+        }
+      });
+    }
+
+    // Reference-solution loading (dispatched by the exercise panel).
+    const loadSolution = (event: Event): void => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      if (!window.confirm(t.t('lesson.loadSolutionConfirm'))) return;
+      const files = asCodeFiles(detail);
+      setModels(models, files);
+      if (draftKey) void drafts.set(draftKey, files);
+      run();
+    };
+    window.addEventListener('webcraft:load-code', loadSolution);
+
+    // Cleanup on page exit.
+    window.addEventListener('pagehide', () => {
+      persistDraft?.cancel();
+      if (liveTimer !== null) clearTimeout(liveTimer);
+      preview.dispose();
+      editorInstance.dispose();
+      disposeModels(models);
+    });
+  }
+
+  async function initWorkbenches(): Promise<void> {
+    const roots = document.querySelectorAll<HTMLElement>('[data-workbench]');
+    if (roots.length === 0) return;
+    const monacoModule = await import('@/lib/editor/monaco');
+    for (const root of roots) {
+      await initWorkbench(root, monacoModule);
+    }
+  }
+
+  void initWorkbenches();
+</script>

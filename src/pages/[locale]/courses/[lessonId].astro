@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import CodeWorkbench from '@/components/CodeWorkbench.astro';
 import ExercisePanel from '@/components/ExercisePanel.astro';
 import LessonStatus from '@/components/LessonStatus.astro';
 import { getExerciseFiles } from '@/lib/courses/exercise-files';
@@ -82,6 +83,13 @@ const from = Astro.url.pathname;
   <article class="prose">
     <Content />
   </article>
+
+  <CodeWorkbench
+    locale={locale}
+    draftKey={lessonId}
+    instanceId={`lesson-${lessonId}`}
+    initial={exercise.starter}
+  />
 
   <ExercisePanel
     locale={locale}
