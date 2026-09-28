@@ -1,0 +1,287 @@
+---
+lessonId: 16-js-async-basics
+order: 16
+module: javascript
+difficulty: intermediate
+minutes: 35
+title: '异步基础：Promise 与定时器'
+summary: '理解 JavaScript 为何一次只做一件事，用 setTimeout 安排延时任务，用 Promise 与 async/await 处理稍后到来的结果。'
+objectives:
+  - '能从概念上解释事件循环如何把你的代码与被调度的任务交错执行。'
+  - '会用 `setTimeout` 延迟动作，并能预测 `console.log` 的输出顺序。'
+  - '会创建 `Promise`，并用 `.then` 和 `.catch` 消费它。'
+  - '会用 `async` 函数和 `await` 写出易读的异步代码。'
+exercise:
+  task: "实现 `wait(ms)` 函数，用 `setTimeout` 让返回的 Promise 在给定延迟后兑现。然后补全异步函数 `countdown()`：每隔一秒输出 3、2、1，最后输出 'Go!'。控制台面板还应立即显示 'countdown started'，出现在所有数字之前。"
+  hints:
+    - '把 `setTimeout` 包进 Promise：`new Promise((resolve) => { setTimeout(resolve, ms); })`——延迟结束后定时器会调用 `resolve`。'
+    - '在异步函数内部，每两条 `console.log` 之间放一句 `await wait(1000)`，让每个数字等待上一个数字。'
+    - "调用 `countdown()` 只是启动流程，不会阻塞：它后面的那行代码马上执行，所以 'countdown started' 会最先出现。"
+---
+
+## 概述
+
+到目前为止，你写的代码都是*同步*的：第一行执行完，第二行才开始。真实的浏览器可没这么规矩。定时器会触发，稍后还会有网络响应和点击事件在各种无法预测的时刻到达。JavaScript 运行在**单线程**上——一次只能做一件事——却让页面保持着流畅响应。诀窍就是*异步*：启动一件耗时的事，先去干别的，等结果就绪再回来。
+
+本节课用两个最友好的异步工具来建立这套思维模型：`setTimeout` 负责把工作安排到稍后，`Promise` 代表"一个还没到位的值"。最后你会学到 `async`/`await`——让异步代码读起来几乎和同步代码一样的现代写法。
+
+这一切都不需要网络——我们用定时器来模拟耗时操作。把每个示例放进内置编辑器运行，然后在控制台面板里读输出：对异步代码而言，*打印行的顺序*就是整个故事。
+
+## 默认是同步的
+
+JavaScript 自上而下、逐条语句地执行脚本。某一行如果很慢，它后面的所有代码都得跟着等：
+
+```js
+console.log('first');
+console.log('second');
+console.log('third');
+```
+
+控制台面板永远显示 `first`、`second`、`third`——毫无悬念。这种确定性是一种优点：你的代码运行期间，脚本里没有别的代码能插到这些行之间。
+
+问题出现在某个操作真的需要时间的时候。如果让浏览器在两次打印之间*干等*三秒，页面就会冻结——不能点击、没有动画，什么都做不了。与其干等，JavaScript 允许你把慢的部分*调度*出去，自己继续往下走。
+
+|      | 同步                   | 异步                     |
+| ---- | ---------------------- | ------------------------ |
+| 顺序 | 自上而下，板上钉钉     | 结果就绪时才到来         |
+| 阻塞 | 每行都要等上一行       | 耗时工作被调度，无人干等 |
+| 例子 | 算术、循环、字符串处理 | 定时器、点击、网络响应   |
+
+## 定时器与事件循环
+
+`setTimeout(callback, delay)` 对浏览器说："至少 `delay` 毫秒后运行这个函数。"关键词是*之后*——脚本其余部分不会等它：
+
+```js
+console.log('A: script starts');
+
+setTimeout(function () {
+  console.log('C: timer fires');
+}, 0);
+
+console.log('B: script ends');
+```
+
+即使延迟是 `0`，控制台面板也会按 `A`、`B`、`C` 的顺序打印。原因如下：浏览器先把脚本一口气跑完，定时器的回调被放进一个**队列**；只有当前工作全部结束，**事件循环**才会从队列里取出下一项并执行：
+
+1. 自上而下执行同步脚本。定时器只是被*登记*。
+2. 脚本执行完毕后，检查队列：有任务在等吗？
+3. 有就执行那个回调，执行到它结束为止。
+4. 回到第 2 步，永远循环。
+
+这个循环解释了为什么一段冗长的计算会让页面卡顿：事件循环卡在第 3 步，结束之前无法处理任何其他事情。
+
+被调度的定时器也可以在触发前取消——`setTimeout` 会返回一个 id，`clearTimeout` 拿着它即可收回任务：
+
+```js
+const timerId = setTimeout(() => console.log('too late'), 5000);
+clearTimeout(timerId); // 回调永远不会执行
+console.log('timer cancelled');
+```
+
+> **在编辑器中试试：** 粘贴上面的代码，把延迟改成 `1000`，确认顺序依然是 `A`、`B`、`C`——改变的只是时机。控制台面板不带时间戳，但你能感觉到那段等待。
+
+## Promise：一个"在路上"的值
+
+`Promise` 是代表"稍后才会有"的值的对象。它像一张回执：现在就可以拿着它传递，等它落定后再查看结果。Promise 起初处于 **pending**（待定）状态，随后要么变为 **fulfilled**（已兑现，带有值），要么变为 **rejected**（已拒绝，带有错误）：
+
+| 状态      | 含义         | 触发方式                |
+| --------- | ------------ | ----------------------- |
+| pending   | 结果尚未就绪 | 初始状态                |
+| fulfilled | 值已到达     | 调用了 `resolve(value)` |
+| rejected  | 出了问题     | 调用了 `reject(error)`  |
+
+下面是经典模式：把定时器包进 Promise，用 `.then` 声明它落定之后要做什么：
+
+```js
+const wait = (ms) => {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+};
+
+console.log('waiting...');
+
+wait(1000).then(() => {
+  console.log('one second later');
+});
+
+console.log('...but this prints before that');
+```
+
+`wait(1000)` 立即返回——返回的是 Promise，而不是值。`.then` 里的函数稍后才运行，时机是定时器调用 `resolve` 的时候。如果出了错，`.catch` 会代替它接收错误。链条还能继续生长：当某个 `.then` 返回另一个 Promise，下一个 `.then` 就会等它。
+
+```js
+wait(300)
+  .then(() => wait(300))
+  .then(() => console.log('about half a second in'))
+  .catch(() => console.log('something went wrong'));
+```
+
+这种"在回执上登记回调"的风格虽然可用，但长长的 `.then` 链很快就会变得难读——这正是下一节要解决的。
+
+## `async`/`await`：读起来像同步代码的异步写法
+
+函数标记为 `async` 之后，就可以在内部使用 `await`。`await` 会暂停*这个函数*——而不是整个页面——直到 Promise 落定：
+
+```js
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function run() {
+  console.log('step 1');
+  await wait(1000);
+  console.log('step 2: one second has passed');
+  await wait(500);
+  console.log('step 3: done');
+}
+
+run();
+console.log('run() has been started');
+```
+
+控制台面板会先显示 `step 1`，接着是 `run() has been started`，然后——经过两次等待——才是 `step 2` 和 `step 3`。注意两点。`run()` 后面那行立即执行，因为 `async` 函数一碰到第一个 `await` 就会返回一个 Promise。而在 `run` 内部，代码自上而下阅读，和第一课的同步脚本毫无二致——没有嵌套，没有链条。
+
+### 错误处理：用 `try`/`catch` 包住 `await`
+
+被 await 的代码出错时，用普通的错误处理代码块即可接住：
+
+```js
+async function risky() {
+  try {
+    await wait(100);
+    throw new Error('boom');
+  } catch (error) {
+    console.log('caught: ' + error.message);
+  }
+}
+
+risky();
+```
+
+`try` 块里无论哪里出错——包括某个 `await` 的 Promise 被拒绝——都会直接跳到 `catch`，与同步错误处理一模一样。控制台面板会显示 `caught: boom`。
+
+> **在编辑器中试试：** 再加一个自带 `await wait(2000)` 的第四步，观察控制台面板里的节奏。按下运行之前，先预测所有行的完整顺序。
+
+## 拆解练习
+
+起始文件给出了 `wait(ms)` 的骨架和一个异步的 `countdown()` 函数。目标：控制台面板先立即显示 `countdown started`，然后每隔一秒显示 `3`、`2`、`1`，最后是 `Go!`。
+
+1. **先搭 `wait`。** Promise 的构造函数接收一个函数，而这个函数会拿到 `resolve`；把 `resolve` 交给 `setTimeout`，让定时器在延迟结束时兑现这个 Promise。单独测试一下：`wait(500).then(() => console.log("half a second"))`。
+2. **再给倒计时配节奏。** 在 `countdown` 里先输出 `3`，然后 `await wait(1000)`，再输出 `2`，依此类推直到 `Go!`。每个 `await` 只让*这个函数*屏住呼吸，页面不会被冻结。
+3. **观察顺序。** 起始代码已经在 `countdown()` 之后输出了 `countdown started`。它应该出现在任何数字之前——这是"启动异步函数不会阻塞脚本"的直接证据。
+4. **调参再运行。** 迭代时把延迟改成 `300`，让控制台面板更新得更快；最终检查时再把 `1000` 改回来。
+5. **回头思考。** 倒计时运行期间，页面依然可以响应——没有任何东西被阻塞，数字只是按计划抵达。这叫异步，不叫多任务。
+
+如果所有数字一起蹦出来，多半是漏了某个 `await`。如果 `countdown started` 之后什么都没有，检查 `wait` 是否真的返回了那个 Promise。
+
+## 常见错误
+
+### 1. 指望 setTimeout 暂停整个程序
+
+```js
+// 错误："之后"不等于"等待"
+setTimeout(() => console.log('done'), 1000);
+console.log('next line'); // 立即先打印
+```
+
+```js
+// 正确：顺序重要时，在异步函数里 await
+await wait(1000);
+console.log('next line'); // 定时器结束后才打印
+```
+
+### 2. 创建了永远不会落定的 Promise
+
+```js
+// 错误：resolve 从未被调用，.then 永远不会执行
+const wait = (ms) => new Promise(() => {});
+```
+
+```js
+// 正确：由定时器触发 resolve
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+```
+
+### 3. 在非 async 函数里使用 await
+
+```js
+// 错误：普通函数不能暂停
+function countdown() {
+  await wait(1000); // SyntaxError
+}
+```
+
+```js
+// 正确：给函数加上 async 标记
+async function countdown() {
+  await wait(1000);
+}
+```
+
+### 4. 把异步函数的返回值当成现成结果
+
+```js
+// 错误：result 是 Promise，不是数字
+const result = countdown();
+console.log(result + 1); // "[object Promise]1"
+```
+
+```js
+// 正确：等它落定
+const result = await countdown();
+console.log(result + 1);
+```
+
+### 5. 混淆毫秒与秒
+
+```js
+// 错误：setTimeout 以毫秒计数，这样只等 1 毫秒
+setTimeout(resolve, 1);
+```
+
+```js
+// 正确：1 秒等于 1000 毫秒
+setTimeout(resolve, 1000);
+```
+
+### 6. 用嵌套定时器代替顺序执行
+
+```js
+// 错误：回调金字塔，难以扩展
+setTimeout(() => {
+  console.log(3);
+  setTimeout(() => {
+    console.log(2);
+  }, 1000);
+}, 1000);
+```
+
+```js
+// 正确：用 await 扁平又易读
+console.log(3);
+await wait(1000);
+console.log(2);
+```
+
+### 7. 把定时器并行启动，而不是顺序执行
+
+```js
+// 错误：两个定时器同时启动，总共只等约 1 秒
+wait(1000);
+wait(1000);
+console.log('one second later, not two');
+```
+
+```js
+// 正确：每个 await 都等上一个落定
+await wait(1000);
+await wait(1000);
+console.log('two seconds later');
+```
+
+## 小结
+
+- JavaScript 运行在单线程上：同步代码自上而下执行，耗时操作被调度而非阻塞。
+- `setTimeout` 把回调排进队列；事件循环要等当前脚本结束才处理队列——所以连 `0` 毫秒的定时器也是最后才跑。
+- `Promise` 是"未来之值"的回执：先 pending，随后经 `resolve` 兑现或经 `reject` 拒绝；用 `.then` 和 `.catch` 消费，`clearTimeout` 则可提前取消定时器。
+- `async` 函数可以 `await` Promise，得到扁平的、自上而下的异步代码，错误处理用普通的 `try`/`catch`。
+- 在练习里，控制台面板的输出顺序——`countdown started`，然后 `3`、`2`、`1`、`Go!`——就是以上所有结论的可见证明。

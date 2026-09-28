@@ -1,0 +1,282 @@
+---
+lessonId: 18-dom-events
+order: 18
+module: dom
+difficulty: beginner
+minutes: 35
+title: 'Events and Interaction'
+summary: 'Respond to clicks, typing and form submits with addEventListener, the event object and preventDefault.'
+objectives:
+  - 'Describe how the browser fires events and how listeners respond to them.'
+  - 'Attach handlers with `addEventListener` for events like `click`, `input` and `submit`.'
+  - 'Use the event object, including `event.target`, inside a handler.'
+  - "Prevent the browser's default behavior with `event.preventDefault()`."
+exercise:
+  task: "Wire up the starter page: each click on the like button must increase the count shown in `#like-count`, every keystroke in the text input must echo its value into `#echo-output`, and submitting the form must call `preventDefault` so the page does not reload (log 'Saved!' to the console panel instead)."
+  hints:
+    - "`likeBtn.addEventListener('click', handler)` runs the handler once per click; keep the count in a `let likes = 0` variable outside the handler."
+    - 'The `input` event fires on every keystroke, and the typed text lives in `input.value`.'
+    - "The submit handler receives the event: call `event.preventDefault()` on its first line, then `console.log('Saved!')`."
+---
+
+## Overview
+
+A page that only sits there is a document; a page that responds is an _application_. The mechanism behind all responding is the **event**: the browser notices something happened - a click, a key press, a form submit - and announces it. Your job is to listen for the announcements you care about and run code when they arrive.
+
+This is the last piece of the interactive puzzle. Lesson 17 taught you to select and change the DOM; events tell you _when_ to change it. "Update the counter when the button is clicked" is one `addEventListener` call away.
+
+As with the previous lesson, everything happens in the sandboxed preview: run the page, then _use_ it - click the buttons, type into the fields - and watch the page react. The console panel under the editor still shows your logs, which makes it perfect for verifying that a handler fired.
+
+## Events: The Browser Talks Back
+
+An **event** is a signal the browser sends when something happens to the page. Each event has a name and a target: "a `click` happened on that button". The flow is always the same:
+
+1. The user does something (or the browser itself does, like `DOMContentLoaded`).
+2. The browser creates an event object describing what happened.
+3. It delivers the object to every listener registered for that event on that element.
+
+You will meet many event names; these cover most beginner needs:
+
+| Event            | Fires when                                 | Typical target             |
+| ---------------- | ------------------------------------------ | -------------------------- |
+| `click`          | an element is clicked                      | buttons, links, anything   |
+| `input`          | the value changes on every keystroke       | text fields                |
+| `change`         | the value changed and the field lost focus | selects, checkboxes        |
+| `submit`         | a form is submitted                        | the `form`, not the button |
+| `keydown`        | a key is pressed down                      | the document or a field    |
+| `mouseover`      | the pointer moves onto an element          | any element                |
+| `focus` / `blur` | a field gains / loses focus                | inputs, textareas          |
+
+> **Try it in the editor:** the starter page has a button and an input. Before wiring anything, guess which events each will produce - the next sections give you the tools to verify.
+
+## Listening with `addEventListener`
+
+`element.addEventListener(eventName, handler)` registers a function to run each time that event fires on that element:
+
+```js
+const likeBtn = document.querySelector('#like-btn');
+const likeCount = document.querySelector('#like-count');
+
+let likes = 0;
+
+likeBtn.addEventListener('click', function () {
+  likes += 1;
+  likeCount.textContent = String(likes);
+});
+```
+
+Three things to notice. The first argument is the event _name_ - `"click"`, not `"onclick"`. The second argument is the handler function itself, _without_ parentheses: you are handing over the recipe, not cooking it now. And the state (`likes`) lives outside the handler so it survives from click to click, while the visible page is updated inside the handler - the same select-then-change move you learned last lesson, now triggered by the user.
+
+> **Try it in the editor:** wire the click handler above, run the preview, and click the button several times. The number in the page should grow, and nothing needs to be logged to prove it - the page itself is the output.
+
+### Naming the Handler
+
+An anonymous function is fine for a short handler, but naming it unlocks `removeEventListener` later:
+
+```js
+function onLike() {
+  likes += 1;
+  likeCount.textContent = String(likes);
+}
+
+likeBtn.addEventListener('click', onLike);
+// when the listener is no longer needed:
+likeBtn.removeEventListener('click', onLike);
+```
+
+The _same_ function reference must go in and come out - passing a freshly written anonymous function to `removeEventListener` removes nothing, because the browser compares by identity.
+
+## The Event Object: What Exactly Happened
+
+The browser passes an **event object** to your handler as the first argument. It describes the occurrence: which element was hit, which key was pressed, where the pointer was:
+
+```js
+const output = document.querySelector('#echo-output');
+const input = document.querySelector('#echo-input');
+
+input.addEventListener('input', function (event) {
+  output.textContent = event.target.value;
+});
+```
+
+The `input` event fires on _every_ keystroke, so this tiny handler builds live typing feedback: `event.target` is the element the event came from - the input field - and `.value` is its current text. Naming the parameter `event` (or `e`) is a strong convention; whether you use `event.target.value` or read directly from the `input` variable, the page updates as you type.
+
+> **Try it in the editor:** add `console.log(event.target)` inside the handler and click through the preview while watching the console panel - you will see one event per keystroke.
+
+### Keyboard Events
+
+The same pattern works for keys. `keydown` fires while a key is pressed, and `event.key` tells you which one:
+
+```js
+document.addEventListener('keydown', function (event) {
+  if (event.key === 'Enter') {
+    console.log('Enter pressed');
+  }
+});
+```
+
+Listening on `document` catches keys anywhere on the page, which is exactly what you want for shortcuts like "press Enter to save".
+
+## Forms and `preventDefault`
+
+Forms have an old default behavior: submitting reloads the page with the data packed into the URL. In a dynamic app you usually want to handle the data yourself, so the first line of a submit handler is almost always `event.preventDefault()`:
+
+```js
+const form = document.querySelector('#echo-form');
+
+form.addEventListener('submit', function (event) {
+  event.preventDefault(); // stay on the page
+  console.log('Saved: ' + input.value);
+});
+```
+
+Note the target carefully: the `submit` event fires on the **form**, so the listener attaches to the form - not to its submit button. Clicking the button (or pressing Enter in a field) triggers the form's submit event, your handler runs, the reload is cancelled, and the preview stays exactly where it is.
+
+> **Try it in the editor:** comment out `event.preventDefault()`, submit the form, and watch the preview reset - then put it back. Feeling the difference once is worth a page of explanation.
+
+## A Glimpse of Event Delegation
+
+What if a list has 100 items and each needs a click handler? Attaching 100 listeners is wasteful - and items added later would need their own. Luckily, events _bubble up_: after firing on the target, an event travels through its ancestors. One listener on the parent can therefore serve every child:
+
+```js
+const list = document.querySelector('#song-list');
+
+list.addEventListener('click', function (event) {
+  console.log('clicked: ' + event.target.textContent);
+});
+```
+
+Click any `li` and the event bubbles up to the `ul`, where `event.target` still knows exactly which item was hit. This pattern is called **event delegation**: the parent listens on behalf of its children - present and future. You will meet it again the moment you render dynamic lists.
+
+## Walking Through the Exercise
+
+The starter page has three interactive pieces: a like button with a count, a text input with an echo paragraph, and a small form. Your script wires all three:
+
+1. **Select everything first.** Grab all five elements with `document.querySelector` and log the ones you are unsure about to the console panel - a `null` here means a typo you want to catch early.
+2. **The like button.** Keep `likes = 0` in a variable outside the handler, add one inside the `click` handler, and write the new total into `#like-count` with `textContent`.
+3. **The live echo.** Listen for `input` on the text field and copy `input.value` into `#echo-output` on every keystroke. When the field is empty, the paragraph will simply go blank - that is correct.
+4. **The form.** Attach a `submit` listener to the form, call `event.preventDefault()` first, and `console.log("Saved!")`. Test by typing and pressing the Save button: the preview must _not_ flash or reset.
+
+Work in that order and test each wiring in the preview before starting the next. If a handler never fires, the two usual suspects are a wrong selector (check the console panel for `null`) or attaching to the wrong element - remember, `submit` belongs to the form.
+
+## Common Mistakes
+
+### 1. Calling the handler instead of passing it
+
+```js
+// Wrong: runs once now, hands the return value to the listener
+likeBtn.addEventListener('click', handleLike());
+```
+
+```js
+// Right: pass the function itself, no parentheses
+likeBtn.addEventListener('click', handleLike);
+```
+
+### 2. Attaching `submit` to the button
+
+```js
+// Wrong: the submit event belongs to the form
+saveBtn.addEventListener('submit', onSubmit);
+```
+
+```js
+// Right
+form.addEventListener('submit', onSubmit);
+```
+
+### 3. Letting the form reload the page
+
+```js
+// Wrong: the page resets and your state is gone
+form.addEventListener('submit', function () {
+  console.log('Saved!');
+});
+```
+
+```js
+// Right: cancel the default first
+form.addEventListener('submit', function (event) {
+  event.preventDefault();
+  console.log('Saved!');
+});
+```
+
+### 4. Using the wrong property for text
+
+```js
+// Wrong: inputs are read through .value
+const typed = input.textContent; // always empty string
+```
+
+```js
+// Right: value for form fields, textContent for page elements
+const typed = input.value;
+```
+
+### 5. Registering the listener before the element exists
+
+```js
+// Wrong: in head scripts, document.querySelector returns null
+const likeBtn = document.querySelector('#like-btn');
+likeBtn.addEventListener('click', onLike); // TypeError
+```
+
+```js
+// Right: keep the script tag at the end of body
+// (like the starter file does)
+```
+
+### 6. Declaring the counter inside the handler
+
+```js
+// Wrong: a fresh likes = 0 on every click, stuck at 1
+likeBtn.addEventListener('click', function () {
+  let likes = 0;
+  likes += 1;
+  likeCount.textContent = String(likes);
+});
+```
+
+```js
+// Right: the counter lives outside, the click mutates it
+let likes = 0;
+likeBtn.addEventListener('click', function () {
+  likes += 1;
+  likeCount.textContent = String(likes);
+});
+```
+
+### 7. Expecting the second listener to replace the first
+
+```js
+// Wrong assumption: this "overwrites" the first listener
+likeBtn.addEventListener('click', sayHello);
+likeBtn.addEventListener('click', sayGoodbye); // both fire!
+```
+
+```js
+// Right: use the onclick property if you want replacement
+likeBtn.onclick = sayGoodbye;
+```
+
+### 8. A plain button inside a form
+
+```html
+<!-- Wrong: inside a form, this button submits it -->
+<button>Clear</button>
+```
+
+```html
+<!-- Right: opt out of the submit behavior explicitly -->
+<button type="button">Clear</button>
+```
+
+## Summary
+
+- Events are the browser's announcements - `click`, `input`, `change`, `submit` - each with a name and a target element.
+- `addEventListener(eventName, handler)` runs your function each time the event fires; pass the function itself, never a call.
+- The handler receives an event object: `event.target` identifies where it came from, and form fields expose their text through `.value`.
+- `event.preventDefault()` cancels the browser's default action, above all the page reload on form `submit`.
+- Events bubble from the target up through its ancestors, which enables delegation: one listener on a parent serves all its children.
+- The exercise combines all of it in the sandboxed preview: a click counter, a live input echo and a form that stays on the page - with the console panel confirming what fired.

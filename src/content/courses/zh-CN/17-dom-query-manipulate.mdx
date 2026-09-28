@@ -1,0 +1,280 @@
+---
+lessonId: 17-dom-query-manipulate
+order: 17
+module: dom
+difficulty: beginner
+minutes: 35
+title: 'DOM 查询与操作'
+summary: '用 querySelector 选中页面元素，修改文本与类名，再用 createElement 和 append 生成新元素。'
+objectives:
+  - '能解释 DOM 是由 HTML 构建的、可实时更新的对象树。'
+  - '会用 `querySelector` 和 `querySelectorAll` 选取单个或多个元素。'
+  - '能通过 `textContent`、`classList` 和内联样式更新页面显示。'
+  - '会用 `createElement` 创建新元素，填充后用 `append` 挂载到页面。'
+exercise:
+  task: '在给定页面中，用 `document.querySelector` 选中 `#song-list` 列表和 `#status` 状态行。使用 `createElement` 和 `append` 为 `songs` 数组中的每首歌创建一个 `<li>`，然后把状态行的 `textContent` 设为列表中有多少首歌。预览中必须能看到三首歌和一行状态文字。'
+  hints:
+    - "`document.querySelector('#song-list')` 返回那个 `<ul>`；`#` 表示'按 id 匹配'——语法和 CSS 选择器一样。"
+    - '对每首歌：先创建元素，设置 `item.textContent = song`，然后再 `list.append(item)`。'
+    - "状态文字要用 `songs.length` 拼出来，这样数组变长后文字依然正确，例如 `songs.length + ' songs in the list'`。"
+---
+
+## 概述
+
+到目前为止，你的 JavaScript 只和控制台对话。现在它要与*页面*对话了。桥梁就是 **DOM**——文档对象模型（Document Object Model）：浏览器读取你的 HTML，把每个标签构建成一个对象，组成一棵实时更新的树。JavaScript 可以抓住这棵树的任意枝条进行修改，屏幕随之立刻更新。你在网上用过的所有交互功能——列表自动填充、点赞数字增长——本质都是同一个循环：_选中、修改、让浏览器重新渲染_。
+
+本节课你将在平台的沙盒预览中练习。编辑器把 HTML、CSS 和 JavaScript 三个文件配成一组；按下运行后，预览窗格渲染页面，你的脚本就在其中执行。有一个细节让这一切成为可能：`<script>` 标签位于 **body 的末尾**，因此当你的代码运行时，位于它上方的 HTML 已经存在于 DOM 之中。请记住这个顺序——这不是风格偏好，而是下面那些选择器能找到元素的根本原因。
+
+DOM 课程是可视化的：练习结果必须*看得见*地出现在预览窗格中，而不只是打印在控制台。让我们开始爬这棵树。
+
+## DOM：把页面看作一棵树
+
+拿一个简单的 HTML 文件。浏览器把每个标签变成节点，并按照标记的嵌套关系组织它们：
+
+```html
+<body>
+  <main>
+    <h1>My Top Songs</h1>
+    <ul id="song-list">
+      <li>Sunny Morning</li>
+    </ul>
+  </main>
+</body>
+```
+
+这里 `main` 是 `h1` 和 `ul` 的**父节点**；`li` 是 `ul` 的**子节点**。DOM 就是这同一个结构以对象的形式暴露给 JavaScript——所以"操作 DOM"无非是改变这棵树的形状或内容。文本变了、类名加上了、`<ul>` 里多了一个孩子：浏览器察觉后重绘页面受影响的那一小块。
+
+> **在编辑器中试试：** 打开本课起始文件的预览，在写任何代码之前，先找出 `#status` 段落的父节点是谁。
+
+## 选取元素
+
+要修改某样东西，必须先*找到*它。`document.querySelector(cssSelector)` 会遍历这棵树，返回**第一个**匹配 CSS 风格选择器的元素：
+
+```js
+const list = document.querySelector('#song-list'); // 按 id
+const title = document.querySelector('h1'); // 按标签
+const tip = document.querySelector('.hint'); // 按类名
+```
+
+参数就是你在 CSS 里写的选择器：`#id` 对应 id，`.class` 对应类名，直接写名字对应标签。要一次拿到*所有*匹配，用 `document.querySelectorAll`，它返回一个可以遍历的列表：
+
+```js
+const items = document.querySelectorAll('li');
+for (const item of items) {
+  console.log(item.textContent);
+}
+```
+
+老式的 DOM 方法依然存在，但 `querySelector` 家族用一套语法就能覆盖所有场景：
+
+| 任务             | `querySelector` 写法        | 老式 DOM 方法                    |
+| ---------------- | --------------------------- | -------------------------------- |
+| 按 id 取一个元素 | `querySelector("#status")`  | `getElementById("status")`       |
+| 按类名取全部元素 | `querySelectorAll(".song")` | `getElementsByClassName("song")` |
+| 按标签取全部元素 | `querySelectorAll("li")`    | `getElementsByTagName("li")`     |
+
+| 选择器                      | 匹配对象              | 返回值               |
+| --------------------------- | --------------------- | -------------------- |
+| `"#status"`                 | 具有该 id 的元素      | 第一个匹配或 `null`  |
+| `".song"`                   | 所有具有该类名的元素  | 第一个匹配或 `null`  |
+| `"ul li"`                   | `ul` 内部的 `li` 元素 | 第一个匹配或 `null`  |
+| `querySelectorAll(".song")` | 同样的匹配规则        | 一个列表（可能为空） |
+
+如果没有任何匹配，`querySelector` 返回 `null`——而对 `null` 调用 `.textContent` 是 DOM 代码中最常见的运行时错误，罪魁祸首几乎都是选择器拼错。
+
+> **在编辑器中试试：** 选中元素后立刻把它 `console.log` 到控制台面板。看到打印出来的元素对象，就能确信选择器生效了。
+
+## 修改内容、类名与样式
+
+拿到元素之后，三个属性覆盖了日常的绝大多数修改：
+
+```js
+const title = document.querySelector('h1');
+
+title.textContent = 'Top Songs of 2026'; // 替换文本
+title.classList.add('highlight'); // 添加 CSS 类
+title.style.color = 'crimson'; // 内联样式
+```
+
+- `textContent` 设置或读取元素内的纯文本，是安全的默认选择。
+- `classList` 管理类名：`add`、`remove`、`toggle`——这是改变外观的地道方式，因为真正的样式规则留在你的 CSS 文件里。
+- `style` 直接设置内联 CSS，属性名要写成驼峰：`style.backgroundColor`，而不是 `style.background-color`。
+
+为什么推荐 `textContent` 而不是 `innerHTML`？`innerHTML` 会把你给的字符串当作 HTML 解析——功能强大，但它会重新渲染子树，而且当字符串包含用户输入时是安全隐患。对于纯文本，`textContent` 既简单又安全。
+
+> **在编辑器中试试：** 在 CSS 文件里添加 `.highlight { color: crimson; }` 规则，然后在 JS 里用 `classList.toggle` 切换它，观察预览的变化。
+
+### 属性与 `dataset`
+
+标准属性可以直接读写，而 HTML 里每个 `data-*` 属性都会进入 `element.dataset`：
+
+```js
+const item = document.querySelector('li');
+item.dataset.songId = '7'; // 在 HTML 里变成 data-song-id="7"
+console.log(item.dataset.songId); // "7"
+```
+
+JavaScript 里的驼峰命名会转成 HTML 里的短横线命名：`dataset.songId` 存进去的属性名是 `data-song-id`。想让元素随身携带一小块数据，这就是最地道的做法。
+
+## 创建并添加元素
+
+选择器只能找到已存在的东西。要*生长*这棵树，你需要自己创建节点再挂上去：
+
+```js
+const list = document.querySelector('#song-list');
+
+const item = document.createElement('li'); // 还不可见，处于游离状态
+item.textContent = 'Neon Rain'; // 先填内容……
+list.append(item); // ……再挂载
+```
+
+节奏永远是：**创建、填充、挂载**。刚创建的元素悬浮在文档之外——如果忘了 `append`，屏幕上什么都不会出现，而且不会报任何错。要创建多个，就把 `createElement` 和数据循环搭配起来：
+
+```js
+const songs = ['Sunny Morning', 'Neon Rain', 'Paper Planes'];
+
+for (const song of songs) {
+  const item = document.createElement('li');
+  item.textContent = song;
+  list.append(item);
+}
+```
+
+这个"根据数组渲染列表"的模式是 Web 上被复用最多的 DOM 代码——在你的职业生涯里会写上几百遍。
+
+### 批量修改与删除元素
+
+`querySelectorAll` 返回一个列表，用循环就能把修改应用到每一个匹配：
+
+```js
+const items = document.querySelectorAll('li');
+for (const item of items) {
+  item.classList.add('song');
+}
+```
+
+删除则是创建的镜像操作——`remove()` 把元素从树上摘下来，页面随之更新：
+
+```js
+const first = document.querySelector('li');
+first.remove();
+```
+
+> **在编辑器中试试：** 让上面的循环在起始页面上跑一遍，然后只注释掉 `append` 那一行再运行，对比预览的差异。
+
+## 拆解练习
+
+起始页面在 `My Top Songs` 下孤零零地挂着一条 `<li>`，外加一个空的 `#status` 段落。你的脚本完成后，页面应显示三首歌和一行类似 `3 songs in the list` 的状态文字。思路如下：
+
+1. **先选中。** 用 `document.querySelector` 拿到 `#song-list` 和 `#status`，分别存进 `const` 变量。把它们打印到控制台面板，确认都不是 `null`。
+2. **渲染数组。** 起始代码给了你一个 `songs` 数组。遍历它，对每首歌执行创建——填充——挂载：`createElement("li")`、设置 `textContent`、`append` 到列表。HTML 里那条硬编码的 `<li>` 可以保留；你是在往列表里*追加*，不是替换它。
+3. **汇报数量。** 用 `songs.length` 来设置 `statusLine.textContent`，别写死数字 `3`，这样将来加第四首歌文字也不会错。
+4. **检查预览。** 结果必须可见：三条列表项加一句状态文字。如果页面毫无变化，多半是选择器写错了；如果列表出来了而状态文字没有，回头检查第 3 步。
+5. **回头思考。** 整个过程没有改动 HTML 文件——所有变化都是运行时通过对象树发生的。这种"活"的特质，正是"DOM 就是页面"的含义。
+
+因为 script 标签位于 body 末尾，这一切不需要任何额外设置——在你的第一行代码运行之前，元素就已经存在。忍住别把 `<li>` 标记拼成一大串 HTML 字符串；这个练习练的就是 `createElement`。
+
+## 常见错误
+
+### 1. 脚本在 HTML 之前运行
+
+```html
+<!-- 错误：head 里的脚本先于 body 解析执行 -->
+<head>
+  <script src="starter.js"></script>
+</head>
+```
+
+```html
+<!-- 正确：script 标签放在 body 末尾 -->
+<body>
+  <main>...</main>
+  <script src="starter.js"></script>
+</body>
+```
+
+### 2. 选择器拼错
+
+```js
+// 错误：id 是 "song-list"，这样只会得到 null
+const list = document.querySelector('#songlist');
+list.append(item); // TypeError: null is not an object
+```
+
+```js
+// 正确：id 原样照抄，# 也不能少
+const list = document.querySelector('#song-list');
+```
+
+### 3. 创建了元素却从未挂载
+
+```js
+// 错误：元素游离在外，页面依旧空白
+const item = document.createElement('li');
+item.textContent = 'Neon Rain';
+```
+
+```js
+// 正确：挂到文档中存在的父元素上
+list.append(item);
+```
+
+### 4. 指望 querySelector 返回所有匹配
+
+```js
+// 错误：只会返回第一个匹配的元素
+const items = document.querySelector('.song');
+```
+
+```js
+// 正确：querySelectorAll 返回全部匹配
+const items = document.querySelectorAll('.song');
+```
+
+### 5. 在 classList 和 createElement 里带上点号或井号
+
+```js
+// 错误：classList 要的是不带符号的类名
+title.classList.add('.highlight');
+```
+
+```js
+// 正确：# 和 . 属于选择器语法，不属于这里
+title.classList.add('highlight');
+```
+
+### 6. 把本该来自数据的值写死
+
+```js
+// 错误：一旦加了一首歌就错了
+statusLine.textContent = '3 songs in the list';
+```
+
+```js
+// 正确：文字从数组推导而来
+statusLine.textContent = songs.length + ' songs in the list';
+```
+
+### 7. 在循环里反复重建 HTML 字符串
+
+```js
+// 错误：每次迭代都要重新解析整个列表，
+// 而且注入的是未转义的 HTML
+list.innerHTML += '<li>' + song + '</li>';
+```
+
+```js
+// 正确：创建一个节点，挂载一次
+const item = document.createElement('li');
+item.textContent = song;
+list.append(item);
+```
+
+## 小结
+
+- DOM 是浏览器根据你的 HTML 构建的实时对象树；修改它就是修改页面。
+- `document.querySelector` 按选择器找第一个匹配，`querySelectorAll` 找全部；返回 `null` 意味着"没找到——检查选择器"。
+- `textContent` 安全地修改纯文本，`classList.add`/`remove`/`toggle` 通过 CSS 类改变外观，`style` 设置内联属性。
+- 新元素用 `createElement` 创建、用 `textContent` 填充、用 `append` 挂载：创建、填充、挂载。
+- 属性直接挂在元素上，`data-*` 属性可通过 `dataset` 访问，`remove()` 把元素从树上摘除。
+- 沙盒预览之所以能运行你的脚本，是因为 `<script>` 标签在 body 末尾——代码动手之前，树已经长好了。

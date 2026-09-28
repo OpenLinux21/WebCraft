@@ -1,0 +1,283 @@
+---
+lessonId: 14-js-control-flow
+order: 14
+module: javascript
+difficulty: beginner
+minutes: 30
+title: '条件与循环'
+summary: '用 if/else 与 switch 让程序学会决策，用 for 与 while 循环重复执行任务。'
+objectives:
+  - '会用 `if`、`else if` 和 `else` 在多条代码路径中做选择。'
+  - '会用 `&&`、`||` 和 `!` 组合条件，用 `===` 比较值。'
+  - '能写出按受控次数重复执行的 `for` 和 `while` 循环。'
+  - '会用 `break` 和 `continue` 提前退出或跳过某次迭代。'
+exercise:
+  task: "编写 `classify(n)` 函数：`n` 能被 3 整除时返回 'fizz'，能被 5 整除时返回 'buzz'，两者都能整除时返回 'fizzbuzz'，否则返回数字本身组成的字符串。然后用 `for` 循环把 1 到 15 的每个数以 '3 -> fizz' 这样的格式逐行输出到控制台面板。"
+  hints:
+    - "取余运算符 `%` 可以回答'能否整除'：只有当 3 整除 `n` 时，`n % 3 === 0` 才为真。"
+    - "先判断'同时被 3 和 5 整除'的情况，因为能被 15 整除的数也能被 3 和 5 整除。"
+    - "循环里用 `classify(n)` 生成标签，再用 `console.log(n + ' -> ' + classify(n))` 输出。"
+---
+
+## 概述
+
+如果每次运行都做完全一样的事，程序就太无趣了。软件之所以显得"聪明"，是因为它会*决策*："密码匹配就登录，否则提示错误。"还会*重复*："100 个条目，每个渲染一行。"本节课要讲的就是这两类行为背后的控制流工具：**条件语句**和**循环**。
+
+条件语句负责选择路径，循环负责重复执行。日常脚本里的大部分逻辑都由它们构成，而且两者配合得天衣无缝——"循环体里包含条件判断"正是数据处理最经典的形态。
+
+本节所有代码都在内置编辑器中离线运行。老规矩，编辑器下方的控制台面板是你的观察台：每个示例都会打印出"程序走了哪条路"的证据。
+
+## 用 `if` 和 `else` 做决策
+
+`if` 语句只有在括号里的条件为真时才执行它的代码块。`else` 提供了另一条兜底路径。
+
+```js
+const temperature = 17;
+
+if (temperature > 20) {
+  console.log('Warm day - shorts are fine');
+} else {
+  console.log('Take a jacket');
+}
+```
+
+条件由**比较运算符**构成，每个比较都会产生 `true` 或 `false`：
+
+| 运算符      | 含义                | 示例                    |
+| ----------- | ------------------- | ----------------------- |
+| `===`       | 严格相等            | `5 === 5` 为 `true`     |
+| `!==`       | 严格不等            | `"a" !== "b"` 为 `true` |
+| `>` / `<`   | 大于 / 小于         | `temperature > 20`      |
+| `>=` / `<=` | 大于等于 / 小于等于 | `age >= 18`             |
+
+请始终用 `===` 而不是 `==`：严格相等不会对不同类型擅自"猜测"，所以 `"5" === 5` 是 `false`，而不是一句模糊的"大概算相等吧"。
+
+> **在编辑器中试试：** 把 `temperature` 改成几个不同的值分别运行，观察控制台面板里出现的是哪一条消息。
+
+## 组合条件
+
+真实的决策往往取决于多个事实。三个**逻辑运算符**负责把比较粘合起来：
+
+```js
+const age = 20;
+const hasTicket = true;
+
+if (age >= 18 && hasTicket) {
+  console.log('Enjoy the movie');
+}
+
+if (!hasTicket || age < 18) {
+  console.log('Sorry, no entry');
+}
+```
+
+- `&&`（与）：只有*两边都*为真才为真。
+- `||`（或）：*至少一边*为真即为真。
+- `!`（非）：把布尔值取反。
+
+> **在编辑器中试试：** 把 `hasTicket` 改成 `false` 再运行。在控制台面板揭晓答案之前，先预测一下会看到哪条消息。
+
+## 用 `else if` 和 `switch` 分支
+
+当路径多于两条时，把 `else if` 串成阶梯。JavaScript 会自上而下逐个检查，只执行*第一个*命中的分支：
+
+```js
+const score = 78;
+
+if (score >= 90) {
+  console.log('Grade: A');
+} else if (score >= 80) {
+  console.log('Grade: B');
+} else if (score >= 70) {
+  console.log('Grade: C');
+} else {
+  console.log('Keep practicing');
+}
+```
+
+当同一个值要与一列固定取值比较时，`switch` 是另一种选择：
+
+```js
+const fruit = 'apple';
+
+switch (fruit) {
+  case 'apple':
+    console.log('Red and crunchy');
+    break;
+  case 'banana':
+    console.log('Yellow and soft');
+    break;
+  default:
+    console.log('Unknown fruit');
+}
+```
+
+| 对比项           | `if / else if`             | `switch`                        |
+| ---------------- | -------------------------- | ------------------------------- |
+| 比较方式         | 任意条件                   | 一个值对一组固定取值            |
+| 是否需要 `break` | 不需要                     | 需要，否则会"贯穿"到下一个 case |
+| 适合场景         | 范围判断，如 `score >= 90` | 固定菜单，如 `"apple"`          |
+
+> **在编辑器中试试：** 删掉 switch 里的一个 `break`，看看控制台输出有什么变化——这种"贯穿"现象正是 `break` 存在的意义。
+
+## 用循环重复执行
+
+`for` 循环把三件事写在一行里：起点、继续条件和步进。
+
+```js
+for (let i = 1; i <= 3; i += 1) {
+  console.log('Lap ' + i);
+}
+// Lap 1
+// Lap 2
+// Lap 3
+```
+
+`while` 循环只要条件成立就一直运行，所以*你得*负责在循环体里改变点什么：
+
+```js
+let cups = 3;
+while (cups > 0) {
+  console.log('Drinking a cup, ' + cups + ' left');
+  cups -= 1;
+}
+```
+
+`for...of` 循环则逐个遍历列表中的值：
+
+```js
+const snacks = ['apple', 'cookie', 'tea'];
+for (const snack of snacks) {
+  console.log("Today's snack: " + snack);
+}
+```
+
+| 循环                           | 适用场景       | 小心                   |
+| ------------------------------ | -------------- | ---------------------- |
+| `for (let i = 0; ...; i += 1)` | 已知循环次数   | 边界差一错误           |
+| `while (condition)`            | 只知道*何时停* | 忘了更新条件导致死循环 |
+| `for (const item of list)`     | 遍历列表       | 拿不到当前下标         |
+
+两个关键字可以微调循环：`break` 立即退出整个循环，`continue` 跳过本次迭代进入下一次。两者都很适合在编辑器里做小实验，从控制台面板验证结果。
+
+> **在编辑器中试试：** 在跑圈循环里加上 `if (i === 2) continue;`，运行前先预测输出。
+
+## 拆解练习
+
+本次练习是经典的 **FizzBuzz**：从 1 数到 15，但把某些数字替换成单词。思路如下：
+
+1. **先写 `classify(n)`**，做成一个*返回*字符串的纯函数。想清楚四种情况：能被 3 整除、能被 5 整除、同时被两者整除，以及其余所有数字。
+2. **顺序很关键。** 能被 15 整除的数必然能被 3 整除，所以要先判断"两者都整除"的情况，否则你的 `fizzbuzz` 分支永远不会执行。
+3. **然后写循环。** 用 `for` 循环让 `n` 从 1 数到 15，把 `n` 和 `classify(n)` 组合成 `3 -> fizz` 的形状，每行输出一个数。
+4. **在控制台面板核对。** 应该有 15 行输出：3 的倍数是 `fizz`，5 的倍数是 `buzz`，而 `fizzbuzz` 只出现一次，就在 15 上。
+
+别用除法（`n / 3`）来判断整除，取余运算符 `%` 给出的条件干净利落、非真即假。如果循环什么都没打印，请检查 `for` 头部的中间部分——这个条件必须存在某一刻为假的可能。
+
+## 常见错误
+
+### 1. 把赋值当成了比较
+
+```js
+// 错误：= 是赋值，条件永远为真
+if ((answer = 42)) {
+  console.log('correct');
+}
+```
+
+```js
+// 正确：=== 才是比较
+if (answer === 42) {
+  console.log('correct');
+}
+```
+
+### 2. 循环边界差一
+
+```js
+// 错误：想要下标 0..3 共 4 次，实际跑了 5 次
+for (let i = 0; i <= 4; i += 1) {
+  console.log(i);
+}
+```
+
+```js
+// 正确：边界要与次数匹配
+for (let i = 0; i < 4; i += 1) {
+  console.log(i);
+}
+```
+
+### 3. switch 里忘了 break
+
+```js
+// 错误：执行会贯穿到下一个 case
+case "apple":
+  console.log("Red and crunchy");
+case "banana":
+  console.log("Yellow and soft"); // 这行也会执行！
+```
+
+```js
+// 正确：每个 case 以 break 结尾
+case "apple":
+  console.log("Red and crunchy");
+  break;
+```
+
+### 4. 永远停不下来的 while 循环
+
+```js
+// 错误：cups 从不变化，条件永远为真
+let cups = 3;
+while (cups > 0) {
+  console.log('Drinking...');
+}
+```
+
+```js
+// 正确：向退出条件靠近
+while (cups > 0) {
+  console.log('Drinking...');
+  cups -= 1;
+}
+```
+
+### 5. 特殊情况判断得太晚
+
+```js
+// 错误：15 先命中 n % 3 === 0，永远轮不到 "fizzbuzz"
+if (n % 3 === 0) return 'fizz';
+if (n % 5 === 0) return 'buzz';
+if (n % 15 === 0) return 'fizzbuzz';
+```
+
+```js
+// 正确：最特殊的条件放在最前面
+if (n % 15 === 0) return 'fizzbuzz';
+if (n % 3 === 0) return 'fizz';
+if (n % 5 === 0) return 'buzz';
+```
+
+### 6. 该用 `||` 时写成了 `&&`
+
+```js
+// 错误：一天不可能既是周六又是周日
+if (day === 'Saturday' && day === 'Sunday') {
+  console.log('Weekend!');
+}
+```
+
+```js
+// 正确：满足任意一个就算，所以用或运算连接
+if (day === 'Saturday' || day === 'Sunday') {
+  console.log('Weekend!');
+}
+```
+
+## 小结
+
+- `if` / `else if` / `else` 负责选择路径；条件是由 `===`、`!==`、`<`、`>` 等构成的布尔表达式。
+- `&&`、`||` 和 `!` 把简单判断组合成复合决策。
+- `else if` 阶梯适合范围判断；`switch` 适合一个值对固定取值的比较，且每个 case 需要 `break`。
+- `for` 循环计数，`while` 循环等待停止条件，`for...of` 遍历列表；`break` 提前退出，`continue` 跳过本次。
+- FizzBuzz 练习把以上内容串在一起：一个循环、一个分支顺序讲究的函数，以及在控制台面板里可逐行核对的 `console.log` 输出。

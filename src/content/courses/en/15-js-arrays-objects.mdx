@@ -1,0 +1,281 @@
+---
+lessonId: 15-js-arrays-objects
+order: 15
+module: javascript
+difficulty: beginner
+minutes: 35
+title: 'Arrays and Objects'
+summary: 'Store lists in arrays and labeled data in objects, then combine them and transform collections with map and filter.'
+objectives:
+  - 'Create arrays, read items by index, and add or remove items with `push` and `pop`.'
+  - 'Describe things with object literals and read or write their properties.'
+  - 'Combine both into arrays of objects, the most common data shape on the web.'
+  - 'Build new collections from old ones with `map` and `filter`.'
+exercise:
+  task: "Using the `books` array in starter.js, log every book as 'Title by Author' with a `for...of` loop. Then use `filter` to keep only the books published in 2021 or later, use `map` to build an array of their titles, and log both results to the console panel."
+  hints:
+    - 'Inside the loop you can reach two properties of each book: `book.title` and `book.author`.'
+    - '`filter` takes a function that returns `true` for the items you want to keep, for example `(book) => book.year >= 2021`.'
+    - '`map` returns a new array built from whatever its callback returns, so `(book) => book.title` produces an array of titles.'
+---
+
+## Overview
+
+Almost everything a program does, it does to _data_: a shopping cart, a list of messages, a player's score history. JavaScript gives you two workhorse structures for organizing it. **Arrays** hold ordered lists - first item, second item, third. **Objects** hold labeled things - a name here, a price there. Most real data, from an API response to a row in a database, is a combination: an _array of objects_.
+
+On top of storage, arrays come with a toolkit of methods that build new collections from old ones. Two of them - `map` and `filter` - will change how you write loops: instead of describing _how_ to collect results step by step, you describe _what you want_.
+
+As before, everything runs offline in the built-in editor, and the console panel under the editor shows what your code produced. Type the examples out rather than skimming - muscle memory matters.
+
+## Arrays: Ordered Lists
+
+An array is a list of values in a specific order, written with square brackets. Positions start at **0**, and `array.length` tells you how many items there are.
+
+```js
+const colors = ['red', 'green', 'blue'];
+
+console.log(colors[0]); // red     (first item)
+console.log(colors[2]); // blue    (third item)
+console.log(colors.length); // 3
+
+colors.push('yellow'); // add to the end
+console.log(colors.length); // 4
+
+const last = colors.pop(); // remove from the end
+console.log(last); // yellow
+```
+
+Reading `colors[3]` when the array only has three items gives `undefined` - the browser will not complain, so watch your bounds. `push` and `pop` mutate the array in place, which is why `const` arrays can still change: `const` locks the _binding_, not the contents.
+
+> **Try it in the editor:** paste the snippet and print `colors[1]` and `colors[colors.length - 1]` - that second expression is the idiomatic way to say "the last item".
+
+## Looping Over Arrays
+
+You already know `for...of` from the previous lesson; it is the friendliest way to visit every item:
+
+```js
+const todo = ['water plants', 'read', 'stretch'];
+
+for (const task of todo) {
+  console.log('Today: ' + task);
+}
+```
+
+Arrays also carry their own loop method, `forEach`, which takes a function to run per item:
+
+```js
+todo.forEach(function (task, index) {
+  console.log(index + 1 + '. ' + task);
+});
+```
+
+Both do the same job. `for...of` reads naturally; `forEach` has the advantage of handing you the index as a bonus argument. (There is also a classic counting `for (let i = 0; i < todo.length; i += 1)` loop - you will still see it everywhere.) Reach for `for...of` by default and switch when you need something the others do better.
+
+## Objects: Labeled Data
+
+An object groups related values under named keys, written with curly braces:
+
+```js
+const person = {
+  name: 'Ada',
+  role: 'student',
+  hoursStudied: 12,
+};
+
+console.log(person.name); // Ada
+console.log(person['role']); // student
+console.log(person.hoursStudied); // 12
+
+person.hoursStudied += 1; // properties can be updated
+console.log(person.hoursStudied); // 13
+```
+
+Two ways to read a property: **dot notation** `person.name` when you know the key, and **bracket notation** `person[key]` when the key is stored in a variable or computed. Mixing them up is a classic bug - `person."name"` is a syntax error, and `person[role]` looks up the _variable_ named `role`, not the string `"role"`.
+
+Objects also nest: a property can hold another object, and you keep chaining dots to dig deeper.
+
+```js
+const course = {
+  title: 'Web Foundations',
+  mentor: { name: 'Ada', officeHours: 4 },
+};
+
+console.log(course.mentor.name); // Ada
+```
+
+> **Try it in the editor:** add a `city` property to `person` and log it in the console panel, then try reading a property the object does not have (you will get `undefined`).
+
+## Arrays of Objects
+
+Put the two together and you get the shape of most real-world data - a list of records:
+
+```js
+const students = [
+  { name: 'Ada', score: 91 },
+  { name: 'Lin', score: 84 },
+  { name: 'Mika', score: 77 },
+];
+
+for (const student of students) {
+  console.log(student.name + ' scored ' + student.score);
+}
+```
+
+The pattern is always the same: the array is the _list_, each object is one _thing_, and a loop or method walks the list while dot notation digs into each thing. JSON, the format web APIs speak, looks exactly like this.
+
+> **Try it in the editor:** add a fourth student object to the array and re-run - the loop picks it up with no other change to the code.
+
+## Transforming Arrays with `map` and `filter`
+
+`map` builds a new array by running each item through a function; `filter` builds a new array of the items for which the function returned `true`. Neither changes the original array.
+
+```js
+const scores = [85, 42, 97, 63];
+
+const doubled = scores.map((score) => score * 2);
+console.log(doubled); // [170, 84, 194, 126]
+
+const passing = scores.filter((score) => score >= 60);
+console.log(passing); // [85, 97, 63]
+```
+
+The two chain nicely, because each returns an array:
+
+| Method    | Question it answers               | Returns                  |
+| --------- | --------------------------------- | ------------------------ |
+| `forEach` | do something _with_ each item     | nothing (`undefined`)    |
+| `map`     | a transformed item for each input | new array, same length   |
+| `filter`  | which items pass the test?        | new array, maybe shorter |
+| `find`    | the first item that matches       | one item or `undefined`  |
+
+> **Try it in the editor:** chain them - `scores.filter((s) => s >= 60).map((s) => s * 10)` - and inspect the result in the console panel before moving on.
+
+### Finding and Checking
+
+Sometimes you do not want a new collection, just an answer. Arrays have small helpers for that too:
+
+```js
+const scores = [85, 42, 97, 63];
+
+console.log(scores.includes(97)); // true
+console.log(scores.find((s) => s < 60)); // 42
+console.log(scores.some((s) => s > 90)); // true
+```
+
+`includes` answers "is this value in the array?", `find` returns the _first_ item that passes the test (or `undefined`), and `some` answers "does anything pass?". They are the right tool when a whole `filter` would be more than you need.
+
+## Walking Through the Exercise
+
+The starter file contains a `books` array - each book is an object with `title`, `author` and `year` properties. Your job has three parts, and each one prints to the console panel:
+
+1. **List everything.** With a `for...of` loop, visit each book and log it in the shape `Title by Author`. Every property you need is one dot away.
+2. **Narrow down.** Call `books.filter(...)` with a callback that returns `true` for books from 2021 onward, and store the result in a variable named `recent`. Log the whole array so you can eyeball which books survived.
+3. **Extract.** Call `recent.map(...)` with a callback that returns just the title, store it as `recentTitles`, and log it. You should see an array of plain strings.
+4. **Reflect.** Notice that step 3 consumed the _filtered_ array, not the original - that chaining of small steps is exactly how real data processing reads.
+
+Keep the three steps as separate statements with their own `console.log` - if something goes wrong, the console panel will show you exactly which step drifted. And remember: `filter` and `map` _return_ new arrays, so their results must be captured in variables or logged directly.
+
+## Common Mistakes
+
+### 1. Thinking indexes start at 1
+
+```js
+// Wrong: the first item lives at index 0
+const first = colors[1];
+```
+
+```js
+// Right
+const first = colors[0];
+```
+
+### 2. Using dot notation with a dynamic key
+
+```js
+// Wrong: looks for a property literally named "key"
+const value = settings.keyName;
+```
+
+```js
+// Right: brackets evaluate the variable first
+const value = settings[keyName];
+```
+
+### 3. Forgetting `return` inside `map`
+
+```js
+// Wrong: the callback yields undefined for every item
+const names = books.map((book) => {
+  book.title;
+});
+```
+
+```js
+// Right: an arrow without braces returns implicitly
+const names = books.map((book) => book.title);
+```
+
+### 4. Expecting `filter` or `map` to change the original
+
+```js
+// Wrong: books is untouched, the result was thrown away
+books.filter((book) => book.year >= 2021);
+```
+
+```js
+// Right: capture the new array
+const recent = books.filter((book) => book.year >= 2021);
+```
+
+### 5. Off-by-one on the last item
+
+```js
+// Wrong: undefined - there is no item at index length
+const last = books[books.length];
+```
+
+```js
+// Right: the last index is length - 1
+const last = books[books.length - 1];
+```
+
+### 6. Missing commas between object properties
+
+```js
+// Wrong: the separator between properties is required
+const book = {
+  title: "JS Basics"
+  author: "Ada"
+};
+```
+
+```js
+// Right: comma after every property except the last
+const book = {
+  title: 'JS Basics',
+  author: 'Ada',
+};
+```
+
+### 7. Copying an array by assignment
+
+```js
+// Wrong: both variables point at the same array
+const copy = original;
+copy.push('extra'); // original changed too!
+```
+
+```js
+// Right: spread syntax makes a new, shallow copy
+const copy = [...original];
+copy.push('extra'); // original is untouched
+```
+
+## Summary
+
+- Arrays are ordered lists with zero-based indexes; `length` counts items, `push`/`pop` add and remove at the end.
+- `for...of` and `forEach` visit every item; the counting `for` loop still works when you need the index.
+- Objects store labeled data; read with dot notation for known keys and bracket notation for computed ones.
+- Arrays of objects are the everyday data shape of the web - loop over the list, dot into each record.
+- `map` transforms every item, `filter` keeps the ones that pass a test, and both return new arrays without touching the original; `includes`, `find` and `some` answer quick yes/no or first-match questions.
+- Assigning an array to a new variable shares it; spread `[...original]` copies it.

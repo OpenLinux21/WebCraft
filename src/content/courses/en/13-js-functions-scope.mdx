@@ -1,0 +1,288 @@
+---
+lessonId: 13-js-functions-scope
+order: 13
+module: javascript
+difficulty: beginner
+minutes: 35
+title: 'Functions, Scope and Closures'
+summary: 'Wrap code into reusable functions, learn how scope decides which variables a function can see, and use closures to keep data private.'
+objectives:
+  - 'Declare functions with the `function` keyword and with arrow functions.'
+  - 'Move data in and out of functions using parameters, default values and `return`.'
+  - 'Predict which variables a line of code can see, using local and global scope.'
+  - 'Write a factory function whose returned function remembers a private variable through a closure.'
+exercise:
+  task: "Finish `createGreeting(name)` so it returns a string like 'Hello, Ada!', and finish `makeCounter()` so the function it returns produces 1, 2 and 3 on three successive calls. Log both results with `console.log` so they appear in the console panel."
+  hints:
+    - 'Start with the simplest possible `return` statement inside `createGreeting`; joining strings with `+` is enough.'
+    - '`makeCounter` should declare `let count = 0` before returning its inner function, so every call of the inner function updates that one shared variable.'
+    - 'The inner function should add one to `count` and then `return count` - not return `0`.'
+---
+
+## Overview
+
+So far, every script you have written runs once, top to bottom. That works for tiny programs, but real applications perform the same actions again and again: greeting users, adding taxes, counting scores. **Functions** let you wrap a piece of behavior in a name, tune it with parameters, and run it as many times as you like.
+
+Functions also introduce the first big mental-model question in JavaScript: when a line of code runs, _which variables can it actually see?_ The answer is called **scope**, and it is what keeps the variables of one part of your program from stomping on another part. Scope then has a beautiful consequence: a function can _remember_ the variables that surrounded it when it was created, even after that surrounding code has finished. That memory is called a **closure**.
+
+In this lesson you will work inside the built-in editor. Type the examples, run them, and read the results in the console panel under the editor - almost every example here is designed to print something.
+
+## Defining and Calling Functions
+
+A function declaration is a recipe: it describes the steps but does not run them. You _call_ the function to actually cook. The values you pass in are **arguments**; the names in the recipe are **parameters**.
+
+Read a declaration piece by piece:
+
+- `function greet(name)` - the keyword, the name you will call it by, and the parameter list in parentheses.
+- The body between the braces - the steps, one per line.
+- `return message` - the value the call produces. Every function returns something, even if it is just `undefined`.
+
+```js
+function greet(name) {
+  const message = 'Hello, ' + name + '!';
+  return message;
+}
+
+console.log(greet('Ada')); // Hello, Ada!
+console.log(greet('Grace')); // Hello, Grace!
+console.log(greet('Lin')); // Hello, Lin!
+```
+
+The `return` keyword hands a value back to whoever called the function. That is different from `console.log`, which only _prints_ - it gives the caller nothing to work with. A function that returns a value can be stored in a variable, passed to another function, or combined with other values in bigger expressions.
+
+> **Try it in the editor:** paste the snippet above into the built-in editor, run it, and add a fourth call with your own name. The console panel should show a new greeting line.
+
+## Parameters, Default Values and Return
+
+Parameters can have **default values**, which are used when the caller leaves an argument out. Without a default, a missing argument is simply `undefined`, which is a common source of surprises.
+
+```js
+function makeTea(kind, sugarCubes = 0) {
+  return kind + ' tea with ' + sugarCubes + ' sugar cube(s)';
+}
+
+console.log(makeTea('green')); // green tea with 0 sugar cube(s)
+console.log(makeTea('black', 2)); // black tea with 2 sugar cube(s)
+```
+
+A function stops at its first `return` - any code below that line inside the function body never runs. Small functions that mostly compute and return a value are the easiest to test: call them from the bottom of your script, look at the console panel, adjust, and run again.
+
+## Arrow Functions: A Shorter Syntax
+
+Arrow functions are a compact way to write the same idea, and they are everywhere in modern JavaScript, especially as short callbacks:
+
+```js
+const add = (a, b) => {
+  return a + b;
+};
+
+const double = (n) => n * 2; // no braces: implicit return
+
+console.log(add(2, 3)); // 5
+console.log(double(21)); // 42
+```
+
+The two styles are equivalent - most teams pick one and stay consistent:
+
+| Aspect           | Function declaration                   | Arrow function                           |
+| ---------------- | -------------------------------------- | ---------------------------------------- |
+| Looks like       | `function add(a, b) { return a + b; }` | `const add = (a, b) => a + b;`           |
+| `return` needed? | Yes                                    | Only when you write braces               |
+| Typical use      | Named steps of a program               | Short callbacks like `map((x) => x * 2)` |
+
+> **Try it in the editor:** rewrite `greet` from earlier as an arrow function stored in a `const`, and confirm the console output looks exactly the same as before.
+
+## Scope: Where Variables Live
+
+**Scope** is the set of rules that decides which variables a piece of code can see. A variable declared at the top level of your script lives in the _global scope_ and is visible everywhere. A variable declared inside a function lives in the _function scope_ and is visible only inside that function.
+
+```js
+const appName = 'WebCraft'; // global scope
+
+function describeApp() {
+  const version = '1.0'; // function scope
+  console.log(appName + ' v' + version);
+}
+
+describeApp(); // WebCraft v1.0
+// console.log(version);
+// ReferenceError: version is not defined
+```
+
+Reading works in one direction only: inner scopes can see outward, so `describeApp` finds `appName`, but the outer code cannot reach in and see `version`. Variables declared with `let` and `const` are additionally confined to the nearest `{}` _block_ - the body of an `if` or a loop - which is called **block scope**.
+
+| Declaration site             | Scope    | Visible from outside? |
+| ---------------------------- | -------- | --------------------- |
+| Top level of the script      | global   | yes, everywhere       |
+| Inside a function            | function | no                    |
+| Inside an `if` or loop block | block    | no                    |
+
+> **Try it in the editor:** uncomment the last line of the snippet and read the `ReferenceError` in the console panel. Errors like this are the fastest way to learn scope boundaries.
+
+## Closures: Functions That Remember
+
+When a function is created inside another function, it keeps a live link to the variables of its birthplace. The function together with those captured variables is a **closure**. The captured variables stay alive for as long as the inner function exists.
+
+```js
+function makeCounter() {
+  let count = 0; // captured by the inner function
+
+  return function () {
+    count += 1;
+    return count;
+  };
+}
+
+const nextScore = makeCounter();
+const nextVisit = makeCounter(); // a second, independent count
+
+console.log(nextScore()); // 1
+console.log(nextScore()); // 2
+console.log(nextScore()); // 3
+console.log(nextVisit()); // 1 - separate closure, separate count
+```
+
+Two things are remarkable here. First, `count` is not reachable from outside: there is no way to write `count = 100` and cheat, so closures give you **privacy**. Second, every call to `makeCounter` creates a _fresh_ `count`, which is why the two counters above never interfere. Factory functions like this - functions that build and return other functions - are one of the most useful patterns in JavaScript.
+
+> **Try it in the editor:** make a third counter and call it five times. Then try to print `count` directly from outside and observe what the console panel tells you.
+
+## Walking Through the Exercise
+
+The exercise asks you to complete two functions in the editor - `createGreeting(name)` and `makeCounter()` - and to print their results with `console.log`. Here is a sensible way to approach it without copying a solution:
+
+1. **Start with `createGreeting`.** It is a small, _pure_ function: take the `name` parameter, glue it between `"Hello, "` and `"!"`, and `return` the result. Run the script once and check that the console panel shows the greeting.
+2. **Then shape `makeCounter`.** Before the `return`, declare `let count = 0`. The function should return an inner function whose only job is to increase `count` and return it. Resist the urge to `console.log` inside the inner function - _return_ the number.
+3. **Test the closure.** Store the returned function in a variable, call it three times on one `console.log` line, and expect `1 2 3`. Then call `makeCounter()` again to prove the second counter starts from scratch.
+4. **Reflect.** Ask yourself where `count` lives and why the two counters cannot see each other's numbers. If you can answer that in one sentence, you own the concept.
+
+Change one thing at a time and run after every change. If the console panel shows `undefined` where you expected a number, the most likely culprit is a missing or misplaced `return` - the next section has you covered.
+
+## Common Mistakes
+
+### 1. Defining a function but never calling it
+
+```js
+// Wrong: the recipe is written, but the meal is never cooked
+function addTax(price) {
+  return price * 1.2;
+}
+// (nothing else happens - no output at all)
+```
+
+```js
+// Right: call it and use the result
+console.log(addTax(10)); // 12
+```
+
+### 2. Printing instead of returning
+
+```js
+// Wrong: the caller gets nothing useful back
+function total(a, b) {
+  console.log(a + b);
+}
+const result = total(2, 3); // result is undefined
+```
+
+```js
+// Right: return the value, print it at the call site
+function total(a, b) {
+  return a + b;
+}
+const result = total(2, 3); // result is 5
+```
+
+### 3. Reaching into a local variable from outside
+
+```js
+// Wrong: secret only exists inside the function
+function hideSecret() {
+  const secret = 'cake';
+}
+console.log(secret); // ReferenceError
+```
+
+```js
+// Right: hand the value out with return
+function getSecret() {
+  const secret = 'cake';
+  return secret;
+}
+console.log(getSecret()); // cake
+```
+
+### 4. Shadowing a variable by accident
+
+```js
+const count = 10;
+function bump() {
+  let count = 0; // a brand-new local variable, not the outer one
+  count += 1;
+  return count;
+}
+console.log(bump()); // 1
+console.log(count); // still 10 - the outer variable never changed
+```
+
+If you meant to work with the outer variable, do not redeclare it; if you did mean a local one, pick a distinct name so the shadowing is obvious.
+
+### 5. Curly braces on an arrow function swallow the return
+
+```js
+// Wrong: the braces create a body with no return
+const double = (n) => {
+  n * 2;
+};
+console.log(double(4)); // undefined
+```
+
+```js
+// Right: either drop the braces or write return explicitly
+const double = (n) => n * 2;
+const triple = (n) => {
+  return n * 3;
+};
+```
+
+### 6. Expecting a call to change the argument
+
+```js
+let n = 5;
+function tryToDouble(value) {
+  value = value * 2; // only changes the local copy
+}
+tryToDouble(n);
+console.log(n); // still 5
+```
+
+```js
+// Right: return the new value and assign it
+function double(value) {
+  return value * 2;
+}
+n = double(n);
+console.log(n); // 10
+```
+
+### 7. Referencing a function instead of calling it
+
+```js
+// Wrong: message holds the function itself, nothing ran
+const message = greet;
+console.log(message); // the function object, not a greeting
+```
+
+```js
+// Right: the parentheses do the calling
+const message = greet('Ada');
+console.log(message); // Hello, Ada!
+```
+
+## Summary
+
+- Functions wrap behavior in a reusable name: declare with `function name() {...}` or as an arrow function, and _call_ them with parentheses.
+- Data flows in through parameters (with optional defaults) and out through `return`; `console.log` prints, it does not return.
+- Scope decides visibility: global variables are visible everywhere, function-local variables only inside, and inner scopes can read outward but not inward.
+- A closure is a function bundled with the variables around it when it was created - the basis of private state and factory functions like `makeCounter`.
+- Calling with `()` runs the function; without the parentheses you only hold a reference to it.
+- Read every example in the console panel under the built-in editor; errors and unexpected `undefined` values are your best teachers.

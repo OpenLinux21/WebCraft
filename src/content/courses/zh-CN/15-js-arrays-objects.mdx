@@ -1,0 +1,281 @@
+---
+lessonId: 15-js-arrays-objects
+order: 15
+module: javascript
+difficulty: beginner
+minutes: 35
+title: '数组与对象'
+summary: '用数组存列表、用对象存带标签的数据，把它们组合起来，并用 map 和 filter 变换集合。'
+objectives:
+  - '会创建数组、按索引读取元素，并用 `push` 和 `pop` 增删元素。'
+  - '会用对象字面量描述事物，并能读写其属性。'
+  - '把两者组合成对象数组——Web 上最常见的数据形态。'
+  - '会用 `map` 和 `filter` 从旧集合生成新集合。'
+exercise:
+  task: "使用 starter.js 中的 `books` 数组，用 `for...of` 循环把每本书按 'Title by Author' 的格式逐行输出。然后用 `filter` 筛出 2021 年及以后出版的书，用 `map` 提取书名组成新数组，并把这两个结果都输出到控制台面板。"
+  hints:
+    - '在循环里可以访问每本书的两个属性：`book.title` 和 `book.author`。'
+    - '`filter` 接收一个函数，为要保留的元素返回 `true`，例如 `(book) => book.year >= 2021`。'
+    - '`map` 用回调的返回值组成新数组，所以 `(book) => book.title` 会得到一个书名数组。'
+---
+
+## 概述
+
+程序做的事，几乎都是在处理*数据*：购物车、消息列表、玩家的历史得分。JavaScript 提供了两个主力结构来组织数据。**数组**存放有序列表——第一个、第二个、第三个；**对象**存放带标签的东西——名字在这、价格在那。大多数真实数据，无论是接口返回值还是数据库里的一行，都是两者的组合：_对象数组_。
+
+除了存储，数组还自带一套方法，可以从旧集合构建新集合。其中两个——`map` 和 `filter`——会改变你写循环的方式：你不再一步步描述*怎样*收集结果，而是直接描述*你想要什么*。
+
+和之前一样，所有代码都在内置编辑器中离线运行，编辑器下方的控制台面板会展示代码的产出。请把示例亲手敲一遍，别只是扫一眼——肌肉记忆很重要。
+
+## 数组：有序列表
+
+数组是按顺序排列的一组值，用方括号书写。位置从 **0** 开始，`array.length` 告诉你有多少个元素。
+
+```js
+const colors = ['red', 'green', 'blue'];
+
+console.log(colors[0]); // red     （第一个元素）
+console.log(colors[2]); // blue    （第三个元素）
+console.log(colors.length); // 3
+
+colors.push('yellow'); // 追加到末尾
+console.log(colors.length); // 4
+
+const last = colors.pop(); // 从末尾移除
+console.log(last); // yellow
+```
+
+如果数组只有三个元素，读 `colors[3]` 会得到 `undefined`——浏览器不会报错，所以要留意边界。`push` 和 `pop` 会原地修改数组，这也是 `const` 数组仍能变化的原因：`const` 锁住的是*绑定*，不是内容。
+
+> **在编辑器中试试：** 粘贴上面的代码，再打印 `colors[1]` 和 `colors[colors.length - 1]`——第二个表达式正是"最后一个元素"的地道写法。
+
+## 遍历数组
+
+上一节学过的 `for...of` 是访问每个元素最友好的方式：
+
+```js
+const todo = ['water plants', 'read', 'stretch'];
+
+for (const task of todo) {
+  console.log('Today: ' + task);
+}
+```
+
+数组还自带一个遍历方法 `forEach`，它接收一个函数，对每个元素执行一次：
+
+```js
+todo.forEach(function (task, index) {
+  console.log(index + 1 + '. ' + task);
+});
+```
+
+两者做的是同一件事。`for...of` 读起来更自然；`forEach` 的优势是把下标作为额外的参数送给你。（经典的计数循环 `for (let i = 0; i < todo.length; i += 1)` 依然可用——你在各种代码里仍会频繁见到它。）默认用 `for...of`，等发现别的写法更合适时再换。
+
+## 对象：带标签的数据
+
+对象把相关的值归拢到命名的键下，用花括号书写：
+
+```js
+const person = {
+  name: 'Ada',
+  role: 'student',
+  hoursStudied: 12,
+};
+
+console.log(person.name); // Ada
+console.log(person['role']); // student
+console.log(person.hoursStudied); // 12
+
+person.hoursStudied += 1; // 属性可以更新
+console.log(person.hoursStudied); // 13
+```
+
+读属性有两种写法：键名已知时用**点语法** `person.name`；键名存在变量里或需要计算时用**方括号语法** `person[key]`。两者混用是经典错误——`person."name"` 是语法错误，而 `person[role]` 查找的是名为 `role` 的*变量*，不是字符串 `"role"`。
+
+对象还可以嵌套：一个属性的值可以是另一个对象，继续用点一路挖下去即可。
+
+```js
+const course = {
+  title: 'Web Foundations',
+  mentor: { name: 'Ada', officeHours: 4 },
+};
+
+console.log(course.mentor.name); // Ada
+```
+
+> **在编辑器中试试：** 给 `person` 加一个 `city` 属性并输出到控制台面板，然后试着读取一个对象上不存在的属性（你会得到 `undefined`）。
+
+## 对象数组
+
+把两者组合起来，就得到大多数真实数据的形态——一列记录：
+
+```js
+const students = [
+  { name: 'Ada', score: 91 },
+  { name: 'Lin', score: 84 },
+  { name: 'Mika', score: 77 },
+];
+
+for (const student of students) {
+  console.log(student.name + ' scored ' + student.score);
+}
+```
+
+套路永远一样：数组是*列表*，每个对象是*一个事物*，循环或方法走完列表，点语法深入每个事物。Web 接口使用的 JSON 格式看起来就和这个一模一样。
+
+> **在编辑器中试试：** 往数组里加第四个学生对象再运行——循环会自动带上它，代码其他部分一行都不用改。
+
+## 用 `map` 和 `filter` 变换数组
+
+`map` 让每个元素经过一个函数的处理，生成新数组；`filter` 把函数返回 `true` 的元素挑出来组成新数组。两者都不会改动原数组。
+
+```js
+const scores = [85, 42, 97, 63];
+
+const doubled = scores.map((score) => score * 2);
+console.log(doubled); // [170, 84, 194, 126]
+
+const passing = scores.filter((score) => score >= 60);
+console.log(passing); // [85, 97, 63]
+```
+
+因为都返回数组，两者可以漂亮地链式调用：
+
+| 方法      | 回答的问题             | 返回值                 |
+| --------- | ---------------------- | ---------------------- |
+| `forEach` | 对每个元素*做点什么*   | 无（`undefined`）      |
+| `map`     | 每个输入对应的变换结果 | 新数组，长度不变       |
+| `filter`  | 哪些元素通过了测试？   | 新数组，可能更短       |
+| `find`    | 第一个匹配的元素       | 单个元素或 `undefined` |
+
+> **在编辑器中试试：** 链式调用一把——`scores.filter((s) => s >= 60).map((s) => s * 10)`——先在控制台面板里检查结果，再继续往下学。
+
+### 查找与判断
+
+有时你并不想要一个新集合，只想得到一个答案。数组也为此准备了小工具：
+
+```js
+const scores = [85, 42, 97, 63];
+
+console.log(scores.includes(97)); // true
+console.log(scores.find((s) => s < 60)); // 42
+console.log(scores.some((s) => s > 90)); // true
+```
+
+`includes` 回答"数组里有没有这个值？"，`find` 返回*第一个*通过测试的元素（找不到就是 `undefined`），`some` 回答"是否存在能通过的元素？"。当一整个 `filter` 未免小题大做时，它们才是趁手的工具。
+
+## 拆解练习
+
+起始文件里有一个 `books` 数组——每本书是一个带有 `title`、`author`、`year` 属性的对象。任务分三步，每一步都要输出到控制台面板：
+
+1. **列出全部。** 用 `for...of` 循环访问每本书，按 `Title by Author` 的格式输出。需要的每个属性都只隔一个点。
+2. **缩小范围。** 调用 `books.filter(...)`，回调函数对 2021 年及以后的书返回 `true`，结果存进名为 `recent` 的变量。把整个数组打印出来，肉眼确认哪些书被留下了。
+3. **提取信息。** 调用 `recent.map(...)`，回调只返回书名，结果存为 `recentTitles` 并输出。你应该看到一个纯字符串组成的数组。
+4. **回头思考。** 注意第 3 步消费的是*筛选后*的数组，而不是原数组——这种小步骤的衔接，正是真实数据处理代码的读法。
+
+把三步写成三条独立语句，各自配一个 `console.log`——一旦出错，控制台面板会准确告诉你哪一步跑偏了。记住：`filter` 和 `map` 会*返回*新数组，所以结果必须存进变量或直接打印。
+
+## 常见错误
+
+### 1. 以为索引从 1 开始
+
+```js
+// 错误：第一个元素在下标 0
+const first = colors[1];
+```
+
+```js
+// 正确
+const first = colors[0];
+```
+
+### 2. 用点语法读取动态键
+
+```js
+// 错误：会去找名为 "keyName" 的字面属性
+const value = settings.keyName;
+```
+
+```js
+// 正确：方括号会先求出变量的值
+const value = settings[keyName];
+```
+
+### 3. 在 `map` 的回调里忘了 return
+
+```js
+// 错误：每个元素的回调结果都是 undefined
+const names = books.map((book) => {
+  book.title;
+});
+```
+
+```js
+// 正确：不带大括号的箭头函数隐式返回
+const names = books.map((book) => book.title);
+```
+
+### 4. 指望 `filter` 或 `map` 改动原数组
+
+```js
+// 错误：books 原封不动，返回结果被丢弃了
+books.filter((book) => book.year >= 2021);
+```
+
+```js
+// 正确：把新数组接住
+const recent = books.filter((book) => book.year >= 2021);
+```
+
+### 5. 取最后一个元素时差一位
+
+```js
+// 错误：undefined - 下标为 length 的元素不存在
+const last = books[books.length];
+```
+
+```js
+// 正确：最后一个下标是 length - 1
+const last = books[books.length - 1];
+```
+
+### 6. 对象属性之间漏了逗号
+
+```js
+// 错误：属性之间必须有分隔符
+const book = {
+  title: "JS Basics"
+  author: "Ada"
+};
+```
+
+```js
+// 正确：除最后一个属性外，每个属性后面都加逗号
+const book = {
+  title: 'JS Basics',
+  author: 'Ada',
+};
+```
+
+### 7. 用赋值的方式"复制"数组
+
+```js
+// 错误：两个变量指向同一个数组
+const copy = original;
+copy.push('extra'); // original 也变了！
+```
+
+```js
+// 正确：展开语法生成一份新的浅拷贝
+const copy = [...original];
+copy.push('extra'); // original 毫发无损
+```
+
+## 小结
+
+- 数组是有序列表，下标从零开始；`length` 统计个数，`push`/`pop` 在末尾增删。
+- `for...of` 和 `forEach` 遍历每个元素；需要下标时，计数式 `for` 循环依然好用。
+- 对象存放带标签的数据；键名已知用点语法，键名需要计算用方括号语法。
+- 对象数组是 Web 世界日常的数据形态——遍历列表，点进每条记录。
+- `map` 变换每个元素，`filter` 留下通过测试的元素，两者都返回新数组、不碰原数组；`includes`、`find` 和 `some` 负责回答"有没有""第一个在哪"这类快问快答。
+- 直接赋值会让两个变量共享同一个数组；展开写法 `[...original]` 才是复制。

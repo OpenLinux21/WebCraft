@@ -1,0 +1,282 @@
+---
+lessonId: 18-dom-events
+order: 18
+module: dom
+difficulty: beginner
+minutes: 35
+title: '事件与交互'
+summary: '用 addEventListener 响应点击、输入与表单提交，掌握事件对象和 preventDefault 的用法。'
+objectives:
+  - '能描述浏览器如何触发事件、监听器如何作出响应。'
+  - '会用 `addEventListener` 为 `click`、`input`、`submit` 等事件绑定处理函数。'
+  - '会在处理函数中使用事件对象，包括 `event.target`。'
+  - '会用 `event.preventDefault()` 阻止浏览器的默认行为。'
+exercise:
+  task: "为起始页面接上交互：点击点赞按钮时，`#like-count` 显示的数字必须加一；在文本输入框中每敲一个字符，都要把当前值同步到 `#echo-output`；提交表单时必须调用 `preventDefault` 阻止页面刷新（改为在控制台面板输出 'Saved!'）。"
+  hints:
+    - "`likeBtn.addEventListener('click', handler)` 每次点击执行一次 handler；把计数放在 handler 外部的 `let likes = 0` 变量里。"
+    - '`input` 事件在每敲一个字符时触发，输入的文字就在 `input.value` 里。'
+    - "submit 处理函数会收到事件对象：第一行调用 `event.preventDefault()`，然后 `console.log('Saved!')`。"
+---
+
+## 概述
+
+只会静静躺着的页面是文档；会回应的页面才是*应用*。所有"回应"背后的机制都是**事件**（event）：浏览器察觉到某件事发生——一次点击、一次按键、一次表单提交——并对外宣布。你的职责是监听那些你关心的宣告，并在它们到来时执行代码。
+
+这是交互拼图的最后一块。第 17 课教你选取并修改 DOM；事件则告诉你*何时*去修改。"按钮被点击时更新计数器"——离你只有一次 `addEventListener` 调用的距离。
+
+和上一课一样，一切都在沙盒预览中进行：运行页面，然后去*使用*它——点击按钮、在输入框里打字——看页面做出反应。编辑器下方的控制台面板依旧显示你的日志，非常适合验证某个处理函数是否被触发。
+
+## 事件：浏览器的反向汇报
+
+**事件**是浏览器在页面上发生某件事时发出的信号。每个事件都有名字和目标："那个按钮上发生了一次 `click`"。流程永远相同：
+
+1. 用户做了某件事（或浏览器自身触发了某个事件，例如 `DOMContentLoaded`）。
+2. 浏览器创建一个描述所发生事情的事件对象。
+3. 浏览器把这个对象交付给在该元素上注册了该事件监听的每一个监听器。
+
+你会遇到很多事件名；下面这些覆盖了初学者的绝大多数需求：
+
+| 事件             | 触发时机             | 典型目标             |
+| ---------------- | -------------------- | -------------------- |
+| `click`          | 元素被点击           | 按钮、链接、任意元素 |
+| `input`          | 每敲一个字符值就变化 | 文本框               |
+| `change`         | 值变化且字段失去焦点 | 下拉框、复选框       |
+| `submit`         | 表单被提交           | `form`，而非按钮     |
+| `keydown`        | 按键被按下           | document 或某个字段  |
+| `mouseover`      | 指针移到元素上       | 任意元素             |
+| `focus` / `blur` | 字段获得 / 失去焦点  | 输入框、文本域       |
+
+> **在编辑器中试试：** 起始页面有一个按钮和一个输入框。在动手接线之前，先猜猜它们各自会触发哪些事件——接下来几节会给你验证的工具。
+
+## 用 `addEventListener` 监听
+
+`element.addEventListener(eventName, handler)` 注册一个函数，每当该事件在该元素上触发时就执行一次：
+
+```js
+const likeBtn = document.querySelector('#like-btn');
+const likeCount = document.querySelector('#like-count');
+
+let likes = 0;
+
+likeBtn.addEventListener('click', function () {
+  likes += 1;
+  likeCount.textContent = String(likes);
+});
+```
+
+注意三点。第一个参数是事件*名字*——`"click"`，不是 `"onclick"`。第二个参数是处理函数本身，*不带*圆括号：你交出的是菜谱，不是现在就炒的菜。状态变量（`likes`）放在 handler 外面，才能从一次点击存活到下一次；而页面的可见部分在 handler 内部更新——正是上一课"先选中再修改"的动作，只是这次由用户触发。
+
+> **在编辑器中试试：** 接好上面的 click 处理函数，运行预览，多按几次按钮。页面上的数字应当增长，而且无需任何日志来证明——页面本身就是输出。
+
+### 给处理函数起个名字
+
+匿名函数胜任简短的处理逻辑，但给它起个名字，日后才能用 `removeEventListener` 摘掉它：
+
+```js
+function onLike() {
+  likes += 1;
+  likeCount.textContent = String(likes);
+}
+
+likeBtn.addEventListener('click', onLike);
+// 不再需要这个监听器时：
+likeBtn.removeEventListener('click', onLike);
+```
+
+放进取出必须是*同一个*函数引用——传一个新写的匿名函数给 `removeEventListener` 什么也删不掉，因为浏览器按身份进行比较。
+
+## 事件对象：到底发生了什么
+
+浏览器会把一个**事件对象**作为第一个参数传给你的处理函数。它描述了事情的经过：点到了哪个元素、按了哪个键、指针在哪里：
+
+```js
+const output = document.querySelector('#echo-output');
+const input = document.querySelector('#echo-input');
+
+input.addEventListener('input', function (event) {
+  output.textContent = event.target.value;
+});
+```
+
+`input` 事件在*每次*敲键时都会触发，所以这个小小的处理函数就能做出实时输入反馈：`event.target` 是事件来源的元素——那个输入框——而 `.value` 是它当前的文字。把参数命名为 `event`（或 `e`）是约定俗成的做法；无论你用 `event.target.value` 还是直接读 `input` 变量，页面都会随着打字即时更新。
+
+> **在编辑器中试试：** 在处理函数里加一句 `console.log(event.target)`，操作预览的同时观察控制台面板——每敲一个字符就有一条事件记录。
+
+### 键盘事件
+
+同一套模式也适用于按键。`keydown` 在按键被按住时触发，`event.key` 会告诉你是哪个键：
+
+```js
+document.addEventListener('keydown', function (event) {
+  if (event.key === 'Enter') {
+    console.log('Enter pressed');
+  }
+});
+```
+
+绑在 `document` 上能捕捉页面里任意位置的按键，正适合"按回车即保存"这类快捷键。
+
+## 表单与 `preventDefault`
+
+表单有一个古老默认行为：提交时会带着数据重新加载页面。在动态应用里你通常想自己处理数据，所以 submit 处理函数的第一行几乎总是 `event.preventDefault()`：
+
+```js
+const form = document.querySelector('#echo-form');
+
+form.addEventListener('submit', function (event) {
+  event.preventDefault(); // 留在当前页面
+  console.log('Saved: ' + input.value);
+});
+```
+
+目标元素要看仔细：`submit` 事件发生在**表单**上，所以监听器要绑到表单——而不是它的提交按钮。点击按钮（或在字段里按回车）会触发表单的 submit 事件，你的处理函数开始运行，刷新被取消，预览停在原地。
+
+> **在编辑器中试试：** 注释掉 `event.preventDefault()`，提交表单，看预览如何被重置——然后把它恢复原样。亲身感受一次，胜过一整页的解释。
+
+## 事件委托初窥
+
+如果一个列表有 100 个条目，每个都需要点击处理呢？绑 100 个监听器太浪费——而且后来新增的条目还得再绑。好在事件会*向上冒泡*：在目标上触发之后，事件会沿着祖先一路传播。因此父元素上的一个监听器就能服务所有孩子：
+
+```js
+const list = document.querySelector('#song-list');
+
+list.addEventListener('click', function (event) {
+  console.log('clicked: ' + event.target.textContent);
+});
+```
+
+点击任意一个 `li`，事件冒泡到 `ul`，而 `event.target` 依然知道被点中的是哪一条。这个模式叫**事件委托**：父元素替孩子们监听——无论现在的还是将来的。等你开始渲染动态列表时，会立刻再遇到它。
+
+## 拆解练习
+
+起始页面有三个交互部件：一个带计数的点赞按钮、一个文本输入框和它的回显段落、一个小表单。你的脚本要接通全部三处：
+
+1. **先选中一切。** 用 `document.querySelector` 拿到全部五个元素，拿不准的就打印到控制台面板——这里的 `null` 意味着拼写错误，越早发现越好。
+2. **点赞按钮。** 把 `likes = 0` 放在 handler 外部，在 `click` 处理函数里加一，并用 `textContent` 把新总数写进 `#like-count`。
+3. **实时回显。** 在文本框上监听 `input` 事件，每次敲键都把 `input.value` 复制到 `#echo-output`。当输入框为空时，段落会跟着变空——这是正确的行为。
+4. **表单。** 给表单绑定 `submit` 监听器，第一行调用 `event.preventDefault()`，然后 `console.log("Saved!")`。测试方法是输入文字后按下 Save 按钮：预览*绝不能*闪动或重置。
+
+按这个顺序做，每接通一处就在预览里测一遍再进行下一处。如果某个处理函数从不触发，两个头号嫌疑人是：选择器写错（在控制台面板里找 `null`）或绑错了元素——记住，`submit` 属于表单。
+
+## 常见错误
+
+### 1. 调用了处理函数而不是传递它
+
+```js
+// 错误：现在立即执行一次，交给监听器的是返回值
+likeBtn.addEventListener('click', handleLike());
+```
+
+```js
+// 正确：传递函数本身，不加圆括号
+likeBtn.addEventListener('click', handleLike);
+```
+
+### 2. 把 submit 绑到了按钮上
+
+```js
+// 错误：submit 事件属于表单
+saveBtn.addEventListener('submit', onSubmit);
+```
+
+```js
+// 正确
+form.addEventListener('submit', onSubmit);
+```
+
+### 3. 放任表单刷新页面
+
+```js
+// 错误：页面被重置，你的状态全部丢失
+form.addEventListener('submit', function () {
+  console.log('Saved!');
+});
+```
+
+```js
+// 正确：第一行先取消默认行为
+form.addEventListener('submit', function (event) {
+  event.preventDefault();
+  console.log('Saved!');
+});
+```
+
+### 4. 用错了读取文字的属性
+
+```js
+// 错误：输入框要通过 .value 读取
+const typed = input.textContent; // 永远是空字符串
+```
+
+```js
+// 正确：表单字段用 value，页面元素用 textContent
+const typed = input.value;
+```
+
+### 5. 在元素存在之前注册监听器
+
+```js
+// 错误：head 里的脚本执行时，querySelector 返回 null
+const likeBtn = document.querySelector('#like-btn');
+likeBtn.addEventListener('click', onLike); // TypeError
+```
+
+```js
+// 正确：把 script 标签放在 body 末尾
+// （起始文件正是这么做的）
+```
+
+### 6. 把计数变量声明在处理函数里
+
+```js
+// 错误：每次点击都新建 likes = 0，永远停在 1
+likeBtn.addEventListener('click', function () {
+  let likes = 0;
+  likes += 1;
+  likeCount.textContent = String(likes);
+});
+```
+
+```js
+// 正确：计数器放在外部，点击时修改它
+let likes = 0;
+likeBtn.addEventListener('click', function () {
+  likes += 1;
+  likeCount.textContent = String(likes);
+});
+```
+
+### 7. 指望第二个监听器顶替第一个
+
+```js
+// 错误想法：这样会"覆盖"第一个监听器
+likeBtn.addEventListener('click', sayHello);
+likeBtn.addEventListener('click', sayGoodbye); // 两个都会触发！
+```
+
+```js
+// 正确：想覆盖就用 onclick 属性
+likeBtn.onclick = sayGoodbye;
+```
+
+### 8. 表单里放了一个普通按钮
+
+```html
+<!-- 错误：在表单里，这个按钮会提交表单 -->
+<button>Clear</button>
+```
+
+```html
+<!-- 正确：显式退出提交行为 -->
+<button type="button">Clear</button>
+```
+
+## 小结
+
+- 事件是浏览器的宣告——`click`、`input`、`change`、`submit`——每个事件都有名字和目标元素。
+- `addEventListener(eventName, handler)` 在事件每次触发时执行你的函数；传递函数本身，绝不是一次调用。
+- 处理函数会收到事件对象：`event.target` 指明来源，表单字段的文字通过 `.value` 读取。
+- `event.preventDefault()` 取消浏览器默认行为，尤其是表单 `submit` 引发的页面刷新。
+- 事件从目标出发沿祖先向上冒泡，由此诞生了事件委托：父元素上的一个监听器服务所有孩子。
+- 本课练习在沙盒预览里把这一切串起来：点击计数器、实时输入回显、以及一个留在原页面的表单——控制台面板则负责确认哪些事件真的触发了。

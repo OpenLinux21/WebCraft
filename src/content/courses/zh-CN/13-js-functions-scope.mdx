@@ -1,0 +1,288 @@
+---
+lessonId: 13-js-functions-scope
+order: 13
+module: javascript
+difficulty: beginner
+minutes: 35
+title: '函数、作用域与闭包'
+summary: '把代码打包成可复用的函数，理解作用域如何决定变量可见性，并用闭包实现私有数据。'
+objectives:
+  - '会用 `function` 关键字和箭头函数两种方式声明函数。'
+  - '通过参数、默认值和 `return` 把数据传入并带出函数。'
+  - '能预测某行代码能看到哪些变量，区分全局作用域与局部作用域。'
+  - '会编写工厂函数，让返回的函数通过闭包记住一个私有变量。'
+exercise:
+  task: "补全 `createGreeting(name)`，让它返回类似 'Hello, Ada!' 的字符串；再补全 `makeCounter()`，让返回的函数在连续调用时依次产生 1、2、3。用 `console.log` 输出结果，在控制台面板中查看。"
+  hints:
+    - '先在 `createGreeting` 里写出最简单的 `return` 语句，用 `+` 拼接字符串就足够了。'
+    - '`makeCounter` 应该在返回内部函数之前声明 `let count = 0`，这样内部函数每次调用都更新同一个变量。'
+    - '内部函数要把 `count` 加一然后 `return count`，而不是返回 `0`。'
+---
+
+## 概述
+
+到目前为止，你写的每个脚本都只从头到尾执行一次。这对小程序够用了，但真实的应用会反复做同样的事：向用户问好、计算税费、统计得分。**函数**让你把一段行为装进一个名字里，用参数调节它，想运行多少次就运行多少次。
+
+函数还引出了 JavaScript 中第一个重要的思维问题：某一行代码运行时，_它究竟能看到哪些变量？_ 答案叫做**作用域**（scope），正是它保证了程序某处的变量不会被另一处的变量破坏。作用域还带来一个漂亮的推论：函数可以*记住*它诞生之处的变量，哪怕那部分代码早已执行完毕。这份记忆就叫做**闭包**（closure）。
+
+本节课你将在内置编辑器中练习。把示例敲进去、运行，然后在编辑器下方的控制台面板里查看输出——这里的几乎每个示例都会打印内容。
+
+## 定义与调用函数
+
+函数声明就像一份菜谱：它描述步骤，但不会真的开火。你需要*调用*函数才能做菜。调用时传入的值叫**实参**（argument），菜谱里的名字叫**形参**（parameter）。
+
+把一条声明拆开逐段读：
+
+- `function greet(name)`——关键字、将来调用时用的名字，以及圆括号里的参数列表。
+- 大括号之间的函数体——具体步骤，一行一步。
+- `return message`——这次调用产出的值。每个函数都有返回值，哪怕只是 `undefined`。
+
+```js
+function greet(name) {
+  const message = 'Hello, ' + name + '!';
+  return message;
+}
+
+console.log(greet('Ada')); // Hello, Ada!
+console.log(greet('Grace')); // Hello, Grace!
+console.log(greet('Lin')); // Hello, Lin!
+```
+
+`return` 关键字把一个值交还给调用者。这一点和 `console.log` 完全不同——后者只是*打印*，不会给调用者任何可用的东西。有返回值的函数可以被存进变量、传给别的函数，或者参与更大的表达式运算。
+
+> **在编辑器中试试：** 把上面的代码粘贴到内置编辑器里运行，再加一行用你自己名字的调用，控制台面板应该会多出一行问候语。
+
+## 参数、默认值与返回值
+
+参数可以设置**默认值**：当调用者省略某个实参时就会启用默认值。如果没有默认值，缺失的实参就是 `undefined`，这是新手常见的困惑来源。
+
+```js
+function makeTea(kind, sugarCubes = 0) {
+  return kind + ' tea with ' + sugarCubes + ' sugar cube(s)';
+}
+
+console.log(makeTea('green')); // green tea with 0 sugar cube(s)
+console.log(makeTea('black', 2)); // black tea with 2 sugar cube(s)
+```
+
+函数在第一个 `return` 处就会停止——函数体内位于它下方的代码永远不会执行。那些"主要是计算并返回结果"的小函数最容易测试：在脚本末尾调用它们、观察控制台面板、稍作修改、再次运行。
+
+## 箭头函数：更短的写法
+
+箭头函数是同一思想的紧凑写法，在现代 JavaScript 中随处可见，尤其是作为简短的回调函数：
+
+```js
+const add = (a, b) => {
+  return a + b;
+};
+
+const double = (n) => n * 2; // 没有大括号：隐式返回
+
+console.log(add(2, 3)); // 5
+console.log(double(21)); // 42
+```
+
+两种写法等价——大多数团队会选定一种并保持一致：
+
+| 对比项            | function 声明                          | 箭头函数                           |
+| ----------------- | -------------------------------------- | ---------------------------------- |
+| 长相              | `function add(a, b) { return a + b; }` | `const add = (a, b) => a + b;`     |
+| 是否需要 `return` | 需要                                   | 写了大括号才需要                   |
+| 典型用途          | 程序中的具名步骤                       | 简短的回调，如 `map((x) => x * 2)` |
+
+> **在编辑器中试试：** 把前面的 `greet` 改写成存放在 `const` 里的箭头函数，确认控制台输出和之前完全一样。
+
+## 作用域：变量在哪里可见
+
+**作用域**是一套决定"某段代码能看到哪些变量"的规则。在脚本顶层声明的变量处于*全局作用域*，处处可见；在函数内部声明的变量处于*函数作用域*，只有函数内部能看到。
+
+```js
+const appName = 'WebCraft'; // 全局作用域
+
+function describeApp() {
+  const version = '1.0'; // 函数作用域
+  console.log(appName + ' v' + version);
+}
+
+describeApp(); // WebCraft v1.0
+// console.log(version);
+// ReferenceError: version is not defined
+```
+
+可见性是单向的：内层可以看到外层，所以 `describeApp` 能找到 `appName`；但外部代码无法伸进来看到 `version`。用 `let` 和 `const` 声明的变量还被限制在最近的 `{}` *代码块*里——比如 `if` 或循环的函数体——这叫做**块级作用域**。
+
+| 声明位置          | 作用域 | 外部可见？   |
+| ----------------- | ------ | ------------ |
+| 脚本顶层          | 全局   | 是，处处可见 |
+| 函数内部          | 函数   | 否           |
+| `if` 或循环块内部 | 块级   | 否           |
+
+> **在编辑器中试试：** 取消代码片段最后一行的注释，在控制台面板里读一读 `ReferenceError`。这类报错是理解作用域边界最快的方式。
+
+## 闭包：会记住环境的函数
+
+当一个函数在另一个函数内部创建时，它会保留一条指向出生地变量的活链接。这个函数连同它捕获的变量，就构成一个**闭包**。只要内部函数还存在，被捕获的变量就一直活着。
+
+```js
+function makeCounter() {
+  let count = 0; // 被内部函数捕获
+
+  return function () {
+    count += 1;
+    return count;
+  };
+}
+
+const nextScore = makeCounter();
+const nextVisit = makeCounter(); // 第二个独立的计数器
+
+console.log(nextScore()); // 1
+console.log(nextScore()); // 2
+console.log(nextScore()); // 3
+console.log(nextVisit()); // 1 - 另一个闭包，另一个计数
+```
+
+这里有两点值得注意。第一，`count` 从外部无法访问：你没办法写 `count = 100` 来作弊，所以闭包带来了**私有性**。第二，每次调用 `makeCounter` 都会创建一个*全新的* `count`，这就是上面两个计数器互不干扰的原因。像这样"生成并返回另一个函数"的工厂函数，是 JavaScript 中最有用的模式之一。
+
+> **在编辑器中试试：** 再创建第三个计数器并连续调用五次。然后尝试从外部直接打印 `count`，看看控制台面板会告诉你什么。
+
+## 拆解练习
+
+本次练习要求你在编辑器中补全两个函数——`createGreeting(name)` 和 `makeCounter()`——并用 `console.log` 打印结果。下面是一个合理的思路（不是答案）：
+
+1. **先做 `createGreeting`。** 它是一个小而*纯粹*的函数：接收 `name` 参数，把它拼在 `"Hello, "` 和 `"!"` 之间，然后 `return` 结果。运行一次，确认控制台面板显示了问候语。
+2. **再搭 `makeCounter`。** 在 `return` 之前声明 `let count = 0`。函数应返回一个内部函数，它的唯一职责是把 `count` 加一并返回。别在内部函数里用 `console.log`——要*返回*那个数字。
+3. **验证闭包。** 把返回的函数存进一个变量，在同一行 `console.log` 里连续调用三次，应该得到 `1 2 3`。然后再调用一次 `makeCounter()`，证明第二个计数器从零开始。
+4. **回头思考。** 问一问自己：`count` 存放在哪里？为什么两个计数器互相看不见对方的数字？如果能用一句话答出来，这个概念就真正属于你了。
+
+每次只改一处，改完就运行。如果控制台面板在你期望数字的位置显示了 `undefined`，八成是 `return` 写丢或写错了位置——下一节正好讲到这些。
+
+## 常见错误
+
+### 1. 只定义函数，从不调用
+
+```js
+// 错误：菜谱写好了，饭却没做
+function addTax(price) {
+  return price * 1.2;
+}
+// （什么都不会发生——没有任何输出）
+```
+
+```js
+// 正确：调用它并使用结果
+console.log(addTax(10)); // 12
+```
+
+### 2. 只打印，不返回
+
+```js
+// 错误：调用者拿不到有用的东西
+function total(a, b) {
+  console.log(a + b);
+}
+const result = total(2, 3); // result 是 undefined
+```
+
+```js
+// 正确：函数返回值，在调用处打印
+function total(a, b) {
+  return a + b;
+}
+const result = total(2, 3); // result 是 5
+```
+
+### 3. 从外部伸手去拿局部变量
+
+```js
+// 错误：secret 只存在于函数内部
+function hideSecret() {
+  const secret = 'cake';
+}
+console.log(secret); // ReferenceError
+```
+
+```js
+// 正确：用 return 把值递出来
+function getSecret() {
+  const secret = 'cake';
+  return secret;
+}
+console.log(getSecret()); // cake
+```
+
+### 4. 不小心遮蔽了同名变量
+
+```js
+const count = 10;
+function bump() {
+  let count = 0; // 一个全新的局部变量，不是外面那个
+  count += 1;
+  return count;
+}
+console.log(bump()); // 1
+console.log(count); // 仍然是 10 - 外面的变量从没变过
+```
+
+如果你本意是使用外层变量，就不要重新声明；如果你确实想要局部变量，就换个不同的名字，让遮蔽关系一目了然。
+
+### 5. 箭头函数加大括号后"吞掉"了返回值
+
+```js
+// 错误：大括号构成函数体，但里面没有 return
+const double = (n) => {
+  n * 2;
+};
+console.log(double(4)); // undefined
+```
+
+```js
+// 正确：要么去掉大括号，要么显式写 return
+const double = (n) => n * 2;
+const triple = (n) => {
+  return n * 3;
+};
+```
+
+### 6. 指望一次调用能改变实参本身
+
+```js
+let n = 5;
+function tryToDouble(value) {
+  value = value * 2; // 只改动了局部副本
+}
+tryToDouble(n);
+console.log(n); // 仍然是 5
+```
+
+```js
+// 正确：返回新值并重新赋值
+function double(value) {
+  return value * 2;
+}
+n = double(n);
+console.log(n); // 10
+```
+
+### 7. 只引用了函数，却没有调用
+
+```js
+// 错误：message 存的是函数本身，什么都没执行
+const message = greet;
+console.log(message); // 打印出函数对象，而不是问候语
+```
+
+```js
+// 正确：圆括号负责调用
+const message = greet('Ada');
+console.log(message); // Hello, Ada!
+```
+
+## 小结
+
+- 函数把行为装进可复用的名字：用 `function name() {...}` 或箭头函数声明，用圆括号*调用*。
+- 数据通过参数（可带默认值）流入，通过 `return` 流出；`console.log` 只负责打印，不负责返回。
+- 作用域决定可见性：全局变量处处可见，函数内变量只在函数内可见；内层可以向外看，外层不能向内看。
+- 闭包是函数连同它创建时所处环境变量的打包——这是私有状态和 `makeCounter` 这类工厂函数的基础。
+- 带上 `()` 才是调用；少了圆括号，你手里只是函数的一个引用。
+- 在内置编辑器下方的控制台面板里阅读每个示例的输出；报错和意料之外的 `undefined` 是你最好的老师。

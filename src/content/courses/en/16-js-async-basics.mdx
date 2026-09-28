@@ -1,0 +1,287 @@
+---
+lessonId: 16-js-async-basics
+order: 16
+module: javascript
+difficulty: intermediate
+minutes: 35
+title: 'Asynchronous Basics: Promises and Timers'
+summary: 'See why JavaScript runs one thing at a time, schedule work with setTimeout, and handle later results with Promises and async/await.'
+objectives:
+  - 'Explain, at a high level, how the event loop interleaves your code with scheduled work.'
+  - 'Delay actions with `setTimeout` and predict the order of `console.log` output.'
+  - 'Create a `Promise` and consume it with `.then` and `.catch`.'
+  - 'Write readable asynchronous code with `async` functions and `await`.'
+exercise:
+  task: "Implement a `wait(ms)` function that returns a Promise resolving after the given delay using `setTimeout`. Then complete the async `countdown()` function so it logs 3, 2 and 1 one second apart, followed by 'Go!'. The console panel should also show 'countdown started' printed immediately, before the numbers."
+  hints:
+    - 'Wrap `setTimeout` in a Promise: `new Promise((resolve) => { setTimeout(resolve, ms); })` - the timer calls `resolve` when the delay is over.'
+    - 'Inside the async function, put `await wait(1000)` between each `console.log` so each number waits for the previous one.'
+    - "The call `countdown()` starts the process but does not block: the line after it runs right away, which is why 'countdown started' appears first."
+---
+
+## Overview
+
+Everything you have written so far has been _synchronous_: line one finishes before line two starts. The real browser is not so orderly. Timers fire, and later on, network responses and clicks arrive at unpredictable moments. JavaScript handles all of this while running on a **single thread** - it can only do one thing at a time, yet pages feel responsive. The trick is _asynchrony_: start something slow, move on, and come back when the result is ready.
+
+This lesson builds that mental model with the two friendliest async tools: `setTimeout`, which schedules work for later, and `Promise`, which represents "a value that is not here yet". You will finish with `async`/`await`, the modern syntax that makes asynchronous code read almost like synchronous code.
+
+No network is needed for any of this - we simulate slowness with timers. Run each example in the built-in editor and read the console panel: with async code, _the order_ of the printed lines is the whole story.
+
+## Synchronous by Default
+
+JavaScript executes your script top to bottom, one statement at a time. A slow line would block everything after it:
+
+```js
+console.log('first');
+console.log('second');
+console.log('third');
+```
+
+The console panel always shows `first`, `second`, `third` - no surprises here. This determinism is a feature: while your code runs, nothing else in your script can sneak in between these lines.
+
+The problem appears when an operation genuinely takes time. If we made the browser _wait_ for three seconds between the logs, the page would freeze - no clicks, no animation, nothing. Instead of waiting, JavaScript lets you _schedule_ the slow part and continue.
+
+|          | Synchronous                          | Asynchronous                        |
+| -------- | ------------------------------------ | ----------------------------------- |
+| Order    | top to bottom, guaranteed            | results arrive when ready           |
+| Blocking | each line waits for the previous one | slow work is scheduled, not awaited |
+| Examples | arithmetic, loops, string work       | timers, clicks, network replies     |
+
+## Timers and the Event Loop
+
+`setTimeout(callback, delay)` tells the browser: "run this function after at least `delay` milliseconds." The key word is _after_ - the rest of your script does not wait for it:
+
+```js
+console.log('A: script starts');
+
+setTimeout(function () {
+  console.log('C: timer fires');
+}, 0);
+
+console.log('B: script ends');
+```
+
+Even with a delay of `0`, the console panel prints `A`, `B`, `C`. Here is why. The browser runs your script to the end first; the timer callback is placed into a **queue**. Only when the current work is finished does the **event loop** pull the next item from the queue and run it:
+
+1. Run the synchronous script, top to bottom. Timers just get _scheduled_.
+2. When the script is done, check the queue: is anything waiting?
+3. If yes, run that callback to completion.
+4. Repeat from step 2, forever.
+
+This loop is why a long calculation makes the page stutter: the event loop is stuck in step 3 and cannot process anything else until it finishes.
+
+A scheduled timer can also be cancelled before it fires - `setTimeout` returns an id, and `clearTimeout` takes it back:
+
+```js
+const timerId = setTimeout(() => console.log('too late'), 5000);
+clearTimeout(timerId); // the callback never runs
+console.log('timer cancelled');
+```
+
+> **Try it in the editor:** paste the snippet, then change the delay to `1000` and confirm the order stays `A`, `B`, `C` - only the timing changes. The console panel timestamps nothing, but you will feel the wait.
+
+## Promises: A Value on the Way
+
+A `Promise` is an object representing a value that will exist later. It is a receipt: hand it around now, inspect it when it settles. A promise is **pending** at first, then becomes either **fulfilled** (with a value) or **rejected** (with an error):
+
+| State     | Meaning                     | Trigger                     |
+| --------- | --------------------------- | --------------------------- |
+| pending   | the result is not ready yet | initial state               |
+| fulfilled | the value arrived           | `resolve(value)` was called |
+| rejected  | something went wrong        | `reject(error)` was called  |
+
+Here is the classic pattern: wrap a timer in a promise, and use `.then` to say what happens when it settles:
+
+```js
+const wait = (ms) => {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+};
+
+console.log('waiting...');
+
+wait(1000).then(() => {
+  console.log('one second later');
+});
+
+console.log('...but this prints before that');
+```
+
+`wait(1000)` returns immediately - with a promise, not with a value. The function inside `.then` runs later, when the timer calls `resolve`. If something fails, `.catch` receives the error instead. Chains can also grow: when a `.then` returns another promise, the next `.then` waits for it.
+
+```js
+wait(300)
+  .then(() => wait(300))
+  .then(() => console.log('about half a second in'))
+  .catch(() => console.log('something went wrong'));
+```
+
+This "register callbacks on a receipt" style works, but long chains of `.then` get hard to follow - which is where the next section comes in.
+
+## `async`/`await`: Async Code That Reads Straight
+
+Marking a function `async` lets you use `await` inside it. `await` pauses _that function_ - not the whole page - until the promise settles:
+
+```js
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function run() {
+  console.log('step 1');
+  await wait(1000);
+  console.log('step 2: one second has passed');
+  await wait(500);
+  console.log('step 3: done');
+}
+
+run();
+console.log('run() has been started');
+```
+
+In the console panel you will see `step 1`, then `run() has been started`, then - after the waits - `step 2` and `step 3`. Notice two things. The line after `run()` executes immediately, because `async` functions return a promise the moment they hit their first `await`. And inside `run`, the code reads top-to-bottom, just like the synchronous scripts from lesson one - no nesting, no chains.
+
+### Errors: `try`/`catch` Around `await`
+
+Failures in awaited code are caught with the ordinary error-handling block:
+
+```js
+async function risky() {
+  try {
+    await wait(100);
+    throw new Error('boom');
+  } catch (error) {
+    console.log('caught: ' + error.message);
+  }
+}
+
+risky();
+```
+
+Whatever goes wrong inside the `try` block - including a rejection from an `await` - jumps straight to `catch`, exactly like synchronous error handling. The console panel will show `caught: boom`.
+
+> **Try it in the editor:** add a fourth step with its own `await wait(2000)` and watch the pacing in the console panel. Predict the full order of lines before you press run.
+
+## Walking Through the Exercise
+
+The starter gives you a `wait(ms)` skeleton and an async `countdown()` function. The goal: the console panel shows `3`, `2`, `1` one second apart, then `Go!`, with `countdown started` appearing immediately at the start.
+
+1. **Build `wait` first.** A promise constructor takes a function that receives `resolve`; hand `resolve` to `setTimeout` so the timer itself settles the promise when the delay elapses. Test it alone: `wait(500).then(() => console.log("half a second"))`.
+2. **Then pace the countdown.** Inside `countdown`, log `3`, then `await wait(1000)`, then log `2`, and so on until `Go!`. Each `await` makes _this function_ hold its breath without freezing the page.
+3. **Watch the ordering.** The starter already logs `countdown started` right after `countdown()`. It should print before any number appears - direct proof that starting an async function does not block the script.
+4. **Tune and re-run.** Change the delay to `300` while iterating so the console panel updates quickly, then put the `1000`s back for the final check.
+5. **Reflect.** While the countdown runs, the page stays responsive - nothing is blocked, the numbers simply arrive on schedule. That is asynchrony, not multitasking.
+
+If your numbers all print at once, you probably dropped an `await`. If nothing prints after `countdown started`, check that `wait` actually returns the promise.
+
+## Common Mistakes
+
+### 1. Expecting `setTimeout` to pause the whole program
+
+```js
+// Wrong: "after" does not mean "wait"
+setTimeout(() => console.log('done'), 1000);
+console.log('next line'); // prints first, immediately
+```
+
+```js
+// Right: await inside an async function when order matters
+await wait(1000);
+console.log('next line'); // prints after the timer
+```
+
+### 2. Creating a promise that never settles
+
+```js
+// Wrong: resolve is never called, .then never runs
+const wait = (ms) => new Promise(() => {});
+```
+
+```js
+// Right: the timer triggers resolve
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+```
+
+### 3. Using `await` outside an `async` function
+
+```js
+// Wrong: plain functions cannot pause
+function countdown() {
+  await wait(1000); // SyntaxError
+}
+```
+
+```js
+// Right: mark the function async
+async function countdown() {
+  await wait(1000);
+}
+```
+
+### 4. Treating an async function's return value as ready
+
+```js
+// Wrong: result is a Promise, not the number
+const result = countdown();
+console.log(result + 1); // "[object Promise]1"
+```
+
+```js
+// Right: wait for it
+const result = await countdown();
+console.log(result + 1);
+```
+
+### 5. Mixing up milliseconds and seconds
+
+```js
+// Wrong: setTimeout counts milliseconds, this waits 1 millisecond
+setTimeout(resolve, 1);
+```
+
+```js
+// Right: one second is 1000 milliseconds
+setTimeout(resolve, 1000);
+```
+
+### 6. Nesting timers instead of sequencing them
+
+```js
+// Wrong: callback pyramid, hard to extend
+setTimeout(() => {
+  console.log(3);
+  setTimeout(() => {
+    console.log(2);
+  }, 1000);
+}, 1000);
+```
+
+```js
+// Right: flat and readable with await
+console.log(3);
+await wait(1000);
+console.log(2);
+```
+
+### 7. Starting timers in parallel instead of in sequence
+
+```js
+// Wrong: both timers start at once, the total wait is ~1 second
+wait(1000);
+wait(1000);
+console.log('one second later, not two');
+```
+
+```js
+// Right: each await waits for the previous one to settle
+await wait(1000);
+await wait(1000);
+console.log('two seconds later');
+```
+
+## Summary
+
+- JavaScript runs on one thread: synchronous code executes top to bottom, and slow operations are scheduled rather than blocking.
+- `setTimeout` queues a callback for later; the event loop pulls queued callbacks only after the current script finishes - which is why even a `0` ms timer runs last.
+- A `Promise` is a receipt for a future value: pending, then fulfilled via `resolve` or rejected via `reject`; consume it with `.then` and `.catch`, and cancel timers early with `clearTimeout`.
+- `async` functions can `await` promises, giving you flat, top-to-bottom asynchronous code with ordinary `try`/`catch` for errors.
+- In the exercise, the console panel order - `countdown started`, then `3`, `2`, `1`, `Go!` - is the visible proof of everything above.

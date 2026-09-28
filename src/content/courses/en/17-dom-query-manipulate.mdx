@@ -1,0 +1,280 @@
+---
+lessonId: 17-dom-query-manipulate
+order: 17
+module: dom
+difficulty: beginner
+minutes: 35
+title: 'Querying and Manipulating the DOM'
+summary: 'Reach into the page with querySelector, change text and classes, and build new elements with createElement and append.'
+objectives:
+  - 'Explain the DOM as a live tree of objects built from your HTML.'
+  - 'Select single and multiple elements with `querySelector` and `querySelectorAll`.'
+  - 'Update what is on screen through `textContent`, `classList` and inline styles.'
+  - 'Create new elements with `createElement`, fill them, and attach them with `append`.'
+exercise:
+  task: "In the provided page, select the `#song-list` element and the `#status` line with `document.querySelector`. Create one `<li>` per song in the `songs` array using `createElement` and `append`, then set the status line's `textContent` to report how many songs the list holds. The preview must show three songs and a status line."
+  hints:
+    - "`document.querySelector('#song-list')` returns the `<ul>`; the `#` means 'match this id' - the same syntax as CSS selectors."
+    - 'For each song: create the element, set `item.textContent = song`, and only then `list.append(item)`.'
+    - "Build the status text from `songs.length` so it stays correct if the array grows, for example `songs.length + ' songs in the list'`."
+---
+
+## Overview
+
+So far your JavaScript has talked to the console. Now it gets to talk to the _page_. The bridge is the **DOM** - the Document Object Model: the browser reads your HTML and builds a live tree of objects, one per tag. JavaScript can grab any branch of that tree, change it, and the screen updates instantly. Every interactive thing you have ever used on the web - tabs filling in lists, labels counting likes - is this loop: _select, change, let the browser re-render_.
+
+In this lesson you work in the platform's sandboxed preview. The editor pairs an HTML file, a CSS file and a JavaScript file; when you press run, the preview pane renders the page and your script executes inside it. One detail makes this possible: the `<script>` tag sits at the **end of the body**, so by the time your code runs, the HTML above it already exists in the DOM. Keep that order in mind - it is not a stylistic quirk, it is why the selectors below can find anything at all.
+
+DOM lessons are visual: the exercise result must be _visible_ in the preview pane, not just logged. Let's start climbing the tree.
+
+## The DOM: Your Page as a Tree
+
+Take a simple HTML file. The browser turns each tag into a node and nests them exactly as the markup does:
+
+```html
+<body>
+  <main>
+    <h1>My Top Songs</h1>
+    <ul id="song-list">
+      <li>Sunny Morning</li>
+    </ul>
+  </main>
+</body>
+```
+
+Here, `main` is the **parent** of both the `h1` and the `ul`; the `li` is a **child** of the `ul`. The DOM is this same structure exposed to JavaScript as objects - so "manipulating the DOM" simply means changing the shape or the content of the tree. Text changes, a class appears, a new child is born into a `<ul>`: the browser notices and repaints the affected corner of the page.
+
+> **Try it in the editor:** open the preview with the starter files of this lesson and identify the parent of the `#status` paragraph before writing any code.
+
+## Selecting Elements
+
+To change something you must first _find_ it. `document.querySelector(cssSelector)` walks the tree and returns the **first** element matching a CSS-style selector:
+
+```js
+const list = document.querySelector('#song-list'); // by id
+const title = document.querySelector('h1'); // by tag
+const tip = document.querySelector('.hint'); // by class
+```
+
+The argument is exactly the selector you would write in CSS: `#id` for ids, `.class` for classes, plain names for tags. To grab _all_ matches, use `document.querySelectorAll`, which returns a list you can loop over:
+
+```js
+const items = document.querySelectorAll('li');
+for (const item of items) {
+  console.log(item.textContent);
+}
+```
+
+Older DOM methods still exist, but the `querySelector` family covers every case with one syntax:
+
+| Task                  | `querySelector` style       | Older DOM method                 |
+| --------------------- | --------------------------- | -------------------------------- |
+| one element by id     | `querySelector("#status")`  | `getElementById("status")`       |
+| all elements by class | `querySelectorAll(".song")` | `getElementsByClassName("song")` |
+| all elements by tag   | `querySelectorAll("li")`    | `getElementsByTagName("li")`     |
+
+| Selector                    | Matches                      | Returns                 |
+| --------------------------- | ---------------------------- | ----------------------- |
+| `"#status"`                 | the element with that id     | first match or `null`   |
+| `".song"`                   | all elements with that class | first match or `null`   |
+| `"ul li"`                   | `li` elements inside a `ul`  | first match or `null`   |
+| `querySelectorAll(".song")` | same idea                    | a list (possibly empty) |
+
+If nothing matches, `querySelector` returns `null` - and calling `.textContent` on `null` is the most common runtime error in DOM code, usually caused by a typo in the selector.
+
+> **Try it in the editor:** log `list` to the console panel right after selecting it. Seeing the actual element object printed is reassuring proof the selector worked.
+
+## Changing Content, Classes and Styles
+
+Once you hold an element, three properties cover most everyday changes:
+
+```js
+const title = document.querySelector('h1');
+
+title.textContent = 'Top Songs of 2026'; // replace the text
+title.classList.add('highlight'); // add a CSS class
+title.style.color = 'crimson'; // inline style
+```
+
+- `textContent` sets or reads the plain text inside an element. It is the safe default.
+- `classList` manages classes: `add`, `remove`, `toggle` - the idiomatic way to change looks, because the actual styling stays in your CSS file.
+- `style` sets inline CSS directly, camelCased: `style.backgroundColor`, not `style.background-color`.
+
+Why prefer `textContent` over `innerHTML`? `innerHTML` parses the string you give it as HTML - powerful, but it re-renders the subtree and is a security hole when the string contains user input. For plain text, `textContent` is both simpler and safer.
+
+> **Try it in the editor:** add a `.highlight { color: crimson; }` rule to the CSS file, then toggle it from JS with `classList.toggle` and watch the preview change.
+
+### Attributes and `dataset`
+
+Standard attributes can be read and written directly, and every `data-*` attribute in the HTML lands in `element.dataset`:
+
+```js
+const item = document.querySelector('li');
+item.dataset.songId = '7'; // becomes data-song-id="7" in the HTML
+console.log(item.dataset.songId); // "7"
+```
+
+camelCase in JavaScript turns into kebab-case in HTML: `dataset.songId` is stored as the attribute `data-song-id`. This is the idiomatic way for an element to carry a small piece of data with it.
+
+## Creating and Adding Elements
+
+Selectors can only find what exists. To _grow_ the tree you build nodes yourself and attach them:
+
+```js
+const list = document.querySelector('#song-list');
+
+const item = document.createElement('li'); // still invisible, detached
+item.textContent = 'Neon Rain'; // fill it in...
+list.append(item); // ...then attach it
+```
+
+The rhythm is always: **create**, **fill**, **attach**. A freshly created element floats outside the document - if you forget the `append`, nothing appears on screen, and no error is thrown. To build several, pair `createElement` with a loop over your data:
+
+```js
+const songs = ['Sunny Morning', 'Neon Rain', 'Paper Planes'];
+
+for (const song of songs) {
+  const item = document.createElement('li');
+  item.textContent = song;
+  list.append(item);
+}
+```
+
+This _render a list from an array_ pattern is the single most reused piece of DOM code on the web - you will write it hundreds of times in your career.
+
+### Changing and Removing Many Elements
+
+`querySelectorAll` returns a list, so a loop applies a change to every match:
+
+```js
+const items = document.querySelectorAll('li');
+for (const item of items) {
+  item.classList.add('song');
+}
+```
+
+Removing is the mirror image of creating - `remove()` detaches an element from the tree, and the page updates:
+
+```js
+const first = document.querySelector('li');
+first.remove();
+```
+
+> **Try it in the editor:** run the loop above against the starter page, then comment out only the `append` line and run again to see the difference in the preview.
+
+## Walking Through the Exercise
+
+The starter page shows one lonely `<li>` under `My Top Songs`, plus an empty `#status` paragraph. Your script must end with three songs visible and a status line like `3 songs in the list`. Plan:
+
+1. **Select first.** Grab `#song-list` and `#status` with `document.querySelector` and store both in `const`s. Log them to the console panel to confirm neither is `null`.
+2. **Render the array.** The starter gives you a `songs` array. Loop over it, and for each song run create - fill - attach: `createElement("li")`, set `textContent`, `append` to the list. The one hardcoded `<li>` in the HTML can stay; you are adding to the list, not replacing it.
+3. **Report the count.** Set `statusLine.textContent` using `songs.length`, not the literal number `3`, so the text survives adding a fourth song.
+4. **Check the preview.** The result must be visible: three list items and the status sentence. If the page looks unchanged, suspect a wrong selector; if the items appear but the status does not, inspect step 3.
+5. **Reflect.** Nothing in the HTML file was edited - every change happened through the object tree at runtime. That live-ness is exactly what "the DOM is the page" means.
+
+Because the script tag is at the end of the body, all of this works without any extra setup - the elements exist before your first line runs. Resist the temptation to build the `<li>` markup as one big HTML string; the exercise is about `createElement`.
+
+## Common Mistakes
+
+### 1. Running the script before the HTML exists
+
+```html
+<!-- Wrong: head scripts run before the body is parsed -->
+<head>
+  <script src="starter.js"></script>
+</head>
+```
+
+```html
+<!-- Right: the script tag sits at the end of body -->
+<body>
+  <main>...</main>
+  <script src="starter.js"></script>
+</body>
+```
+
+### 2. A typo in the selector
+
+```js
+// Wrong: the id is "song-list", this returns null
+const list = document.querySelector('#songlist');
+list.append(item); // TypeError: null is not an object
+```
+
+```js
+// Right: copy the id exactly, # and all
+const list = document.querySelector('#song-list');
+```
+
+### 3. Creating elements but never attaching them
+
+```js
+// Wrong: the element is detached, the page stays empty
+const item = document.createElement('li');
+item.textContent = 'Neon Rain';
+```
+
+```js
+// Right: attach it to a parent that is in the document
+list.append(item);
+```
+
+### 4. Expecting `querySelector` to return everything
+
+```js
+// Wrong: returns only the FIRST matching element
+const items = document.querySelector('.song');
+```
+
+```js
+// Right: querySelectorAll returns all matches
+const items = document.querySelectorAll('.song');
+```
+
+### 5. Including the dot or hash in `classList` and `createElement`
+
+```js
+// Wrong: classList expects the bare class name
+title.classList.add('.highlight');
+```
+
+```js
+// Right: # and . belong to selectors, not here
+title.classList.add('highlight');
+```
+
+### 6. Hardcoding values that should come from the data
+
+```js
+// Wrong: breaks the moment a song is added
+statusLine.textContent = '3 songs in the list';
+```
+
+```js
+// Right: derive the text from the array
+statusLine.textContent = songs.length + ' songs in the list';
+```
+
+### 7. Rebuilding HTML strings in a loop
+
+```js
+// Wrong: re-parses the whole list on every iteration,
+// and injects raw HTML
+list.innerHTML += '<li>' + song + '</li>';
+```
+
+```js
+// Right: build a node once and attach it
+const item = document.createElement('li');
+item.textContent = song;
+list.append(item);
+```
+
+## Summary
+
+- The DOM is the browser's live object tree built from your HTML; changing it changes the page.
+- `document.querySelector` finds the first match for a CSS selector, `querySelectorAll` finds all of them, and `null` means "nothing matched - check your selector".
+- `textContent` changes plain text safely, `classList.add`/`remove`/`toggle` change looks through CSS classes, and `style` sets inline properties.
+- New elements are created with `createElement`, filled with `textContent`, and attached with `append`: create, fill, attach.
+- Attributes sit right on the element, `data-*` attributes are reachable through `dataset`, and `remove()` detaches an element from the tree.
+- The sandboxed preview runs your script because its `<script>` tag is at the end of the body - the tree exists before the code touches it.

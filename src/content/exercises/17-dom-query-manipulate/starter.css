@@ -1,0 +1,23 @@
+/* Lesson 17: querying and manipulating the DOM */
+body {
+  font-family: system-ui, sans-serif;
+  margin: 2rem;
+  color: #1f2933;
+}
+
+h1 {
+  color: #0f766e;
+}
+
+ul {
+  padding-left: 1.2rem;
+}
+
+li {
+  margin: 0.3rem 0;
+}
+
+#status {
+  color: #52606d;
+  font-style: italic;
+}

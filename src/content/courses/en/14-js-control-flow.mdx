@@ -1,0 +1,283 @@
+---
+lessonId: 14-js-control-flow
+order: 14
+module: javascript
+difficulty: beginner
+minutes: 30
+title: 'Conditionals and Loops'
+summary: 'Let programs make decisions with if/else and switch, and repeat work with for and while loops.'
+objectives:
+  - 'Choose between code paths with `if`, `else if` and `else`.'
+  - 'Combine checks with `&&`, `||` and `!`, and compare values with `===`.'
+  - 'Write `for` and `while` loops that repeat work a controlled number of times.'
+  - 'Use `break` and `continue` to leave or skip iterations on purpose.'
+exercise:
+  task: "Write a `classify(n)` function that returns 'fizz' when `n` is divisible by 3, 'buzz' when divisible by 5, 'fizzbuzz' when divisible by both, and the number itself as a string otherwise. Then use a `for` loop to log lines like '3 -> fizz' for every number from 1 to 15 in the console panel."
+  hints:
+    - "The remainder operator `%` answers 'is it divisible': `n % 3 === 0` is true exactly when 3 divides `n`."
+    - "Check the 'both' case first, because a number divisible by 15 is also divisible by 3 and by 5."
+    - "In the loop, build the label with `classify(n)` and log it with `console.log(n + ' -> ' + classify(n))`."
+---
+
+## Overview
+
+Programs would be terribly boring if every run did exactly the same thing. What makes software feel smart is that it _decides_: "if the password matches, log in; otherwise show an error." It also _repeats_: "for each of the 100 items, render a row." This lesson gives you the two control-flow tools behind those behaviors: **conditionals** and **loops**.
+
+Conditionals pick a path; loops repeat one. Together they account for most of the logic in everyday scripts, and they combine beautifully - a loop whose body contains a conditional is the classic shape of data processing.
+
+Everything here runs offline in the built-in editor. As usual, the console panel under the editor is your observation deck: each example prints evidence of which path the program took.
+
+## Making Decisions with `if` and `else`
+
+An `if` statement runs its block only when the condition in parentheses is true. `else` adds a fallback path.
+
+```js
+const temperature = 17;
+
+if (temperature > 20) {
+  console.log('Warm day - shorts are fine');
+} else {
+  console.log('Take a jacket');
+}
+```
+
+Conditions are built from **comparison operators**, each producing a `true` or `false` value:
+
+| Operator    | Meaning                          | Example                 |
+| ----------- | -------------------------------- | ----------------------- |
+| `===`       | strictly equal                   | `5 === 5` is `true`     |
+| `!==`       | strictly not equal               | `"a" !== "b"` is `true` |
+| `>` / `<`   | greater / less                   | `temperature > 20`      |
+| `>=` / `<=` | greater-or-equal / less-or-equal | `age >= 18`             |
+
+Always use `===` rather than `==`: the strict version refuses to guess when comparing different types, so `"5" === 5` is `false` instead of a vague "maybe".
+
+> **Try it in the editor:** change `temperature` to a few values and run each time. Watch in the console panel which of the two messages appears.
+
+## Combining Conditions
+
+Real decisions often depend on several facts at once. Three **logical operators** glue comparisons together:
+
+```js
+const age = 20;
+const hasTicket = true;
+
+if (age >= 18 && hasTicket) {
+  console.log('Enjoy the movie');
+}
+
+if (!hasTicket || age < 18) {
+  console.log('Sorry, no entry');
+}
+```
+
+- `&&` (and) is true only when _both_ sides are true.
+- `||` (or) is true when _at least one_ side is true.
+- `!` (not) flips a boolean.
+
+> **Try it in the editor:** flip `hasTicket` to `false` and re-run. Predict which of the two messages you will see before the console panel answers.
+
+## Branching with `else if` and `switch`
+
+When there are more than two paths, chain `else if` branches. JavaScript walks down the ladder and runs the _first_ condition that matches:
+
+```js
+const score = 78;
+
+if (score >= 90) {
+  console.log('Grade: A');
+} else if (score >= 80) {
+  console.log('Grade: B');
+} else if (score >= 70) {
+  console.log('Grade: C');
+} else {
+  console.log('Keep practicing');
+}
+```
+
+A `switch` is an alternative when one value is compared against a list of exact cases:
+
+```js
+const fruit = 'apple';
+
+switch (fruit) {
+  case 'apple':
+    console.log('Red and crunchy');
+    break;
+  case 'banana':
+    console.log('Yellow and soft');
+    break;
+  default:
+    console.log('Unknown fruit');
+}
+```
+
+| Aspect        | `if / else if`            | `switch`                      |
+| ------------- | ------------------------- | ----------------------------- |
+| Compares      | any condition             | one value against exact cases |
+| Needs `break` | no                        | yes, or cases fall through    |
+| Best for      | ranges like `score >= 90` | fixed menus like `"apple"`    |
+
+> **Try it in the editor:** remove one `break` from the switch and see how the console output changes - this "fall-through" is why `break` matters.
+
+## Repeating Work with Loops
+
+A `for` loop bundles three things in one line: a start, a keep-going condition, and a step.
+
+```js
+for (let i = 1; i <= 3; i += 1) {
+  console.log('Lap ' + i);
+}
+// Lap 1
+// Lap 2
+// Lap 3
+```
+
+A `while` loop keeps running as long as its condition holds, so _you_ are responsible for changing something inside the body:
+
+```js
+let cups = 3;
+while (cups > 0) {
+  console.log('Drinking a cup, ' + cups + ' left');
+  cups -= 1;
+}
+```
+
+And a `for...of` loop walks through the values of a list one by one:
+
+```js
+const snacks = ['apple', 'cookie', 'tea'];
+for (const snack of snacks) {
+  console.log("Today's snack: " + snack);
+}
+```
+
+| Loop                           | Use when                     | Watch out for                      |
+| ------------------------------ | ---------------------------- | ---------------------------------- |
+| `for (let i = 0; ...; i += 1)` | you know how many times      | off-by-one bounds                  |
+| `while (condition)`            | you only know _when to stop_ | forgetting to update the condition |
+| `for (const item of list)`     | walking a list               | you do not get the index           |
+
+Two control words fine-tune loops: `break` exits the loop immediately, and `continue` skips to the next iteration. Both are perfect for quick experiments in the editor's console panel.
+
+> **Try it in the editor:** add `if (i === 2) continue;` inside the laps loop and predict the output before running.
+
+## Walking Through the Exercise
+
+The exercise is the classic **FizzBuzz**: count from 1 to 15, but replace some numbers with words. The plan:
+
+1. **Build `classify(n)` first**, as a pure function that _returns_ a string. Think about the four cases: divisible by 3, by 5, by both, and everything else.
+2. **Order matters.** A number divisible by 15 is also divisible by 3, so test the "both" case before the single-factor cases, or your `fizzbuzz` branch will never run.
+3. **Then loop.** Count `n` from 1 to 15 with a `for` loop, and log one line per number in the shape `3 -> fizz` by combining `n` with `classify(n)`.
+4. **Verify in the console panel.** You should see 15 lines, with `fizz` on multiples of 3, `buzz` on multiples of 5, and `fizzbuzz` exactly once, on 15.
+
+Resist checking divisibility with division (`n / 3`); the remainder operator `%` gives a crisp true/false condition. If your loop prints nothing at all, double-check the middle part of the `for` header - it must be possible for the condition to be false at some point.
+
+## Common Mistakes
+
+### 1. Assigning instead of comparing
+
+```js
+// Wrong: = assigns, the condition is always truthy
+if ((answer = 42)) {
+  console.log('correct');
+}
+```
+
+```js
+// Right: === compares
+if (answer === 42) {
+  console.log('correct');
+}
+```
+
+### 2. Off-by-one loop bounds
+
+```js
+// Wrong: 5 iterations when you wanted 4 (indexes 0..3)
+for (let i = 0; i <= 4; i += 1) {
+  console.log(i);
+}
+```
+
+```js
+// Right: pick the bound that matches the count
+for (let i = 0; i < 4; i += 1) {
+  console.log(i);
+}
+```
+
+### 3. Forgetting `break` in a switch
+
+```js
+// Wrong: execution falls through into the next case
+case "apple":
+  console.log("Red and crunchy");
+case "banana":
+  console.log("Yellow and soft"); // runs too!
+```
+
+```js
+// Right: each case ends with break
+case "apple":
+  console.log("Red and crunchy");
+  break;
+```
+
+### 4. A `while` loop that never ends
+
+```js
+// Wrong: cups never changes, so the condition stays true forever
+let cups = 3;
+while (cups > 0) {
+  console.log('Drinking...');
+}
+```
+
+```js
+// Right: move toward the exit condition
+while (cups > 0) {
+  console.log('Drinking...');
+  cups -= 1;
+}
+```
+
+### 5. Testing the specific case too late
+
+```js
+// Wrong: 15 matches n % 3 === 0 first and never reaches "fizzbuzz"
+if (n % 3 === 0) return 'fizz';
+if (n % 5 === 0) return 'buzz';
+if (n % 15 === 0) return 'fizzbuzz';
+```
+
+```js
+// Right: most specific condition first
+if (n % 15 === 0) return 'fizzbuzz';
+if (n % 3 === 0) return 'fizz';
+if (n % 5 === 0) return 'buzz';
+```
+
+### 6. Using `&&` when you mean `||`
+
+```js
+// Wrong: a day cannot be Saturday AND Sunday at the same time
+if (day === 'Saturday' && day === 'Sunday') {
+  console.log('Weekend!');
+}
+```
+
+```js
+// Right: either one counts, so combine with or
+if (day === 'Saturday' || day === 'Sunday') {
+  console.log('Weekend!');
+}
+```
+
+## Summary
+
+- `if` / `else if` / `else` choose between paths; conditions are boolean expressions built from `===`, `!==`, `<`, `>` and friends.
+- `&&`, `||` and `!` combine simple checks into compound decisions.
+- `else if` ladders suit ranges; `switch` suits comparing one value against exact cases, and each case needs a `break`.
+- `for` loops count, `while` loops wait for a stop condition, `for...of` walks a list; `break` exits early, `continue` skips ahead.
+- The FizzBuzz exercise chains all of these: a loop, a function with carefully ordered branches, and `console.log` lines you can verify in the console panel.
