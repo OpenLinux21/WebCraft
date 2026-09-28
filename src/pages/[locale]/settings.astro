@@ -1,0 +1,190 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { createTranslator } from '@/lib/i18n/core';
+import { APP_LOCALES, type AppLocale } from '@/lib/i18n/types';
+import '@/styles/pages.css';
+
+export function getStaticPaths() {
+  return APP_LOCALES.map((locale) => ({ params: { locale }, props: { locale } }));
+}
+
+interface Props {
+  locale: AppLocale;
+}
+
+const { locale } = Astro.props;
+const t = createTranslator(locale);
+---
+
+<BaseLayout
+  locale={locale}
+  title={t.t('meta.settingsTitle')}
+  description={t.t('meta.settingsDescription')}
+>
+  <h1 class="page-title">{t.t('settings.title')}</h1>
+  <p class="page-subtitle">{t.t('settings.subtitle')}</p>
+
+  <section class="card settings-section" aria-labelledby="settings-general">
+    <h2 id="settings-general">{t.t('settings.sectionGeneral')}</h2>
+
+    <div class="form-row">
+      <label for="setting-theme">{t.t('theme.label')}</label>
+      <md-outlined-select id="setting-theme" data-setting="theme">
+        <md-option value="light">{t.t('theme.light')}</md-option>
+        <md-option value="dark">{t.t('theme.dark')}</md-option>
+        <md-option value="system">{t.t('theme.system')}</md-option>
+      </md-outlined-select>
+    </div>
+
+    <div class="form-row">
+      <label for="setting-language">{t.t('language.label')}</label>
+      <md-outlined-select id="setting-language" data-setting="language" data-locale={locale}>
+        {APP_LOCALES.map((option) => (
+          <md-option value={option} selected={option === locale}>
+            {option === 'en' ? 'English' : '简体中文'}
+          </md-option>
+        ))}
+      </md-outlined-select>
+    </div>
+
+    <div class="form-row">
+      <label for="setting-live-preview">{t.t('workbench.autoRun')}</label>
+      <md-outlined-select id="setting-live-preview" data-setting="live-preview">
+        <md-option value="0">{t.t('workbench.autoRunOff')}</md-option>
+        <md-option value="500">{t.t('workbench.autoRunFast')}</md-option>
+        <md-option value="1000">{t.t('workbench.autoRunNormal')}</md-option>
+        <md-option value="2000">{t.t('workbench.autoRunSlow')}</md-option>
+      </md-outlined-select>
+    </div>
+  </section>
+
+  <section class="card settings-section" aria-labelledby="settings-data">
+    <h2 id="settings-data">{t.t('settings.sectionData')}</h2>
+    <p class="form-hint">{t.t('settings.data.storageNote')}</p>
+    <md-filled-button type="button" data-clear-all class="danger-button">
+      {t.t('settings.data.clearAll')}
+    </md-filled-button>
+  </section>
+
+  <dialog class="confirm-dialog" data-clear-all-dialog>
+    <p>{t.t('settings.data.clearAllConfirm')}</p>
+    <div class="confirm-dialog__actions">
+      <md-text-button type="button" data-dialog-cancel autofocus>
+        {t.t('common.cancel')}
+      </md-text-button>
+      <md-filled-button type="button" data-dialog-confirm class="danger-button">
+        {t.t('common.confirm')}
+      </md-filled-button>
+    </div>
+  </dialog>
+</BaseLayout>
+
+<script>
+  import '@/components/material/register';
+  import type { MdOutlinedSelect } from '@/components/material/register';
+  import type { AppLocale } from '@/lib/i18n/core';
+  import { swapLocaleSegment } from '@/lib/routes';
+  import { setThemeSetting, getThemeSetting } from '@/lib/theme/theme';
+  import { clearAppLocalStorage, getStorage } from '@/lib/storage/storage';
+  import {
+    loadPreviewSettings,
+    savePreviewSettings,
+    type LivePreviewMs,
+  } from '@/lib/storage/settings';
+
+  function initThemeSelect(): void {
+    const select = document.querySelector<MdOutlinedSelect>('[data-setting="theme"]');
+    if (!select) return;
+    select.value = getThemeSetting();
+    select.addEventListener('change', () => {
+      setThemeSetting(select.value as 'light' | 'dark' | 'system');
+    });
+  }
+
+  function initLanguageSelect(): void {
+    const select = document.querySelector<MdOutlinedSelect>('[data-setting="language"]');
+    if (!select) return;
+    const current = (select.dataset.locale ?? 'en') as AppLocale;
+    select.addEventListener('change', () => {
+      const target = select.value as AppLocale;
+      if (target === current) return;
+      window.location.assign(swapLocaleSegment(window.location.pathname, current, target));
+    });
+  }
+
+  function initLivePreviewSelect(): void {
+    const select = document.querySelector<MdOutlinedSelect>('[data-setting="live-preview"]');
+    if (!select) return;
+    select.value = String(loadPreviewSettings().livePreviewMs);
+    select.addEventListener('change', () => {
+      savePreviewSettings({ livePreviewMs: Number(select.value) as LivePreviewMs });
+    });
+  }
+
+  function initClearAll(): void {
+    const button = document.querySelector<HTMLElement>('[data-clear-all]');
+    const dialog = document.querySelector<HTMLDialogElement>('[data-clear-all-dialog]');
+    if (!button || !dialog) return;
+    const cancel = dialog.querySelector<HTMLElement>('[data-dialog-cancel]');
+    const confirm = dialog.querySelector<HTMLElement>('[data-dialog-confirm]');
+    button.addEventListener('click', () => dialog.showModal());
+    cancel?.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    confirm?.addEventListener('click', () => {
+      void (async () => {
+        const storage = await getStorage();
+        await storage.clearAll();
+        clearAppLocalStorage();
+        dialog.close();
+        window.location.reload();
+      })();
+    });
+  }
+
+  initThemeSelect();
+  initLanguageSelect();
+  initLivePreviewSelect();
+  initClearAll();
+</script>
+
+<style>
+  .settings-section {
+    max-width: 40rem;
+    margin-block-end: var(--md-sys-spacing-5);
+  }
+
+  .settings-section h2 {
+    font-size: 1.15rem;
+  }
+
+  .settings-section label {
+    min-width: 8rem;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .danger-button {
+    --md-filled-button-container-color: var(--md-sys-color-error);
+    --md-filled-button-label-text-color: var(--md-sys-color-on-error);
+  }
+
+  .confirm-dialog {
+    border: none;
+    border-radius: var(--md-sys-shape-corner-lg);
+    background-color: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    padding: var(--md-sys-spacing-5);
+    max-width: 26rem;
+  }
+
+  .confirm-dialog::backdrop {
+    background-color: var(--md-sys-color-scrim);
+  }
+
+  .confirm-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--md-sys-spacing-2);
+  }
+</style>

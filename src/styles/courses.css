@@ -202,3 +202,67 @@
 .exercise__solution pre:empty {
   display: none;
 }
+
+/* Lesson status card */
+
+.lesson-status {
+  max-width: 48rem;
+  margin-block-end: var(--md-sys-spacing-5);
+}
+
+.lesson-status__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-sys-spacing-3);
+}
+
+.lesson-status__state {
+  margin: 0;
+  padding: 0.25rem 0.9rem;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-small-size);
+  font-weight: 600;
+}
+
+.lesson-status[data-status='completed'] .lesson-status__state {
+  background-color: var(--md-sys-color-success-container);
+  color: var(--md-sys-color-on-success-container);
+}
+
+.lesson-status[data-status='inProgress'] .lesson-status__state {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.lesson-status__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-sys-spacing-2);
+}
+
+/* Progress badges on the course list */
+
+.course-list__status {
+  display: none;
+  margin-inline-end: var(--md-sys-spacing-3);
+  padding: 0.15rem 0.7rem;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.course-list__status[data-status='inProgress'] {
+  display: inline-block;
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.course-list__status[data-status='completed'] {
+  display: inline-block;
+  background-color: var(--md-sys-color-success-container);
+  color: var(--md-sys-color-on-success-container);
+}

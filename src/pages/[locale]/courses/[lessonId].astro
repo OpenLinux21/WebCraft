@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import ExercisePanel from '@/components/ExercisePanel.astro';
+import LessonStatus from '@/components/LessonStatus.astro';
 import { getExerciseFiles } from '@/lib/courses/exercise-files';
 import { getLessons, lessonIdOf, lessonNeighbours, type LessonEntry } from '@/lib/courses/server';
 import { createTranslator } from '@/lib/i18n/core';
@@ -66,6 +67,8 @@ const from = Astro.url.pathname;
     <h1 class="page-title">{entry.data.title}</h1>
     <p class="page-subtitle">{entry.data.summary}</p>
   </header>
+
+  <LessonStatus locale={locale} lessonId={lessonId} />
 
   <section class="lesson-objectives card" aria-labelledby="objectives-title">
     <h2 id="objectives-title">{t.t('lesson.objectives')}</h2>

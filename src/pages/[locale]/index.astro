@@ -1,8 +1,9 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getLessons, lessonIdOf } from '@/lib/courses/server';
 import { createTranslator } from '@/lib/i18n/core';
 import { APP_LOCALES, type AppLocale } from '@/lib/i18n/types';
-import { coursesPath, playgroundPath, relativeHref } from '@/lib/routes';
+import { coursesPath, lessonPath, playgroundPath, relativeHref } from '@/lib/routes';
 import '@/styles/pages.css';
 
 export function getStaticPaths() {
@@ -16,6 +17,20 @@ interface Props {
 const { locale } = Astro.props;
 const t = createTranslator(locale);
 const from = Astro.url.pathname;
+const lessons = await getLessons(locale);
+
+interface HomeLesson {
+  id: string;
+  title: string;
+  href: string;
+}
+
+const homeLessons: HomeLesson[] = lessons.map((lesson) => ({
+  id: lessonIdOf(lesson),
+  title: lesson.data.title,
+  href: relativeHref(lessonPath(locale, lessonIdOf(lesson)), from),
+}));
+const firstLesson = homeLessons[0];
 ---
 
 <BaseLayout locale={locale} title={t.t('meta.homeTitle')} description={t.t('meta.homeDescription')}>
@@ -51,4 +66,89 @@ const from = Astro.url.pathname;
       </article>
     </div>
   </section>
+
+  {firstLesson && (
+    <section
+      class="progress-card card"
+      aria-labelledby="progress-title"
+      data-progress-card
+      data-locale={locale}
+    >
+      <h2 id="progress-title">{t.t('home.progressTitle')}</h2>
+      <div class="progress-card__bar">
+        <div data-progress-bar style="width: 0%" />
+      </div>
+      <p class="progress-card__meta">
+        <span data-progress-summary>
+          {t.t('home.progressSummary', { done: 0, total: homeLessons.length })}
+        </span>
+        <a data-progress-continue href={firstLesson.href}>
+          {t.t('home.startFirst')}
+        </a>
+      </p>
+      <script type="application/json" data-lessons-payload set:html={JSON.stringify(homeLessons)} />
+    </section>
+  )}
 </BaseLayout>
+
+<script>
+  // Home progress card: reads lesson progress from local storage.
+  import { createTranslator, isAppLocale } from '@/lib/i18n/core';
+  import { createProgressRepo } from '@/lib/storage/repos/progress';
+  import { getStorage } from '@/lib/storage/storage';
+
+  interface HomeLesson {
+    id: string;
+    title: string;
+    href: string;
+  }
+
+  function isHomeLesson(value: unknown): value is HomeLesson {
+    if (typeof value !== 'object' || value === null) return false;
+    const record = value as Record<string, unknown>;
+    return (
+      typeof record['id'] === 'string' &&
+      typeof record['title'] === 'string' &&
+      typeof record['href'] === 'string'
+    );
+  }
+
+  async function initProgressCard(): Promise<void> {
+    const card = document.querySelector<HTMLElement>('[data-progress-card]');
+    if (!card) return;
+    const payload = card.querySelector<HTMLScriptElement>('[data-lessons-payload]');
+    const localeRaw: unknown = card.dataset.locale;
+    if (!payload || !isAppLocale(localeRaw)) return;
+
+    let lessons: HomeLesson[] = [];
+    try {
+      const parsed: unknown = JSON.parse(payload.textContent ?? '[]');
+      if (Array.isArray(parsed)) lessons = parsed.filter(isHomeLesson);
+    } catch {
+      return;
+    }
+    if (lessons.length === 0) return;
+
+    const t = createTranslator(localeRaw);
+    const repo = createProgressRepo(await getStorage());
+    const progressMap = new Map((await repo.list()).map((entry) => [entry.key, entry.value]));
+
+    const done = lessons.filter(
+      (lesson) => progressMap.get(lesson.id)?.status === 'completed',
+    ).length;
+    const bar = card.querySelector<HTMLElement>('[data-progress-bar]');
+    const summary = card.querySelector<HTMLElement>('[data-progress-summary]');
+    const continueLink = card.querySelector<HTMLAnchorElement>('[data-progress-continue]');
+    if (bar) bar.style.width = `${Math.round((done / lessons.length) * 100)}%`;
+    if (summary) summary.textContent = t.t('home.progressSummary', { done, total: lessons.length });
+    if (continueLink) {
+      const next = lessons.find((lesson) => progressMap.get(lesson.id)?.status !== 'completed');
+      if (next) {
+        continueLink.href = next.href;
+        continueLink.textContent = t.t('home.continueLearning', { title: next.title });
+      }
+    }
+  }
+
+  void initProgressCard();
+</script>

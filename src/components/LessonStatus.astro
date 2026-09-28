@@ -1,0 +1,84 @@
+---
+import type { AppLocale } from '@/lib/i18n/core';
+
+interface Props {
+  locale: AppLocale;
+  lessonId: string;
+}
+
+const { locale, lessonId } = Astro.props;
+---
+
+<section
+  class="lesson-status card"
+  data-lesson-status
+  data-lesson-id={lessonId}
+  data-locale={locale}
+>
+  <div class="lesson-status__row">
+    <p class="lesson-status__state" data-status-text hidden></p>
+    <div class="lesson-status__actions">
+      <md-filled-button type="button" data-action="start" hidden></md-filled-button>
+      <md-filled-tonal-button type="button" data-action="complete" hidden></md-filled-tonal-button>
+      <md-text-button type="button" data-action="reset" hidden></md-text-button>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@/components/material/register';
+  import { createTranslator, isAppLocale } from '@/lib/i18n/core';
+  import type { AppLocale, MessageKey } from '@/lib/i18n/core';
+  import type { LessonStatus, ProgressAction } from '@/lib/courses/types';
+  import { createProgressRepo } from '@/lib/storage/repos/progress';
+  import { getStorage } from '@/lib/storage/storage';
+
+  const BUTTON_LABELS: Record<ProgressAction, MessageKey> = {
+    start: 'lesson.markStart',
+    complete: 'lesson.markCompleted',
+    reset: 'lesson.resetProgress',
+  };
+
+  async function initLessonStatus(): Promise<void> {
+    const sections = document.querySelectorAll<HTMLElement>('[data-lesson-status]');
+    if (sections.length === 0) return;
+    const repo = createProgressRepo(await getStorage());
+
+    for (const section of sections) {
+      const lessonId = section.dataset.lessonId ?? '';
+      const localeRaw: unknown = section.dataset.locale;
+      if (!lessonId || !isAppLocale(localeRaw)) continue;
+      const locale: AppLocale = localeRaw;
+      const t = createTranslator(locale);
+
+      const textEl = section.querySelector<HTMLElement>('[data-status-text]');
+      const buttons = new Map<ProgressAction, HTMLButtonElement>();
+      for (const action of ['start', 'complete', 'reset'] as const) {
+        const button = section.querySelector<HTMLButtonElement>(`[data-action="${action}"]`);
+        if (!button) continue;
+        button.textContent = t.t(BUTTON_LABELS[action]);
+        buttons.set(action, button);
+      }
+      if (!textEl || buttons.size === 0) continue;
+
+      const sync = (status: LessonStatus): void => {
+        textEl.textContent = t.t(`courses.status.${status}`);
+        textEl.hidden = false;
+        section.dataset.status = status;
+        buttons.get('start')!.hidden = status !== 'notStarted';
+        buttons.get('complete')!.hidden = status !== 'inProgress';
+        buttons.get('reset')!.hidden = status === 'notStarted';
+      };
+
+      sync((await repo.get(lessonId))?.status ?? 'notStarted');
+
+      for (const [action, button] of buttons) {
+        button.addEventListener('click', () => {
+          void repo.apply(lessonId, action).then((progress) => sync(progress.status));
+        });
+      }
+    }
+  }
+
+  void initLessonStatus();
+</script>

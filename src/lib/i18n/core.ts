@@ -59,6 +59,11 @@ export function resolveLocaleFromBrowser(candidates: readonly string[]): AppLoca
   return DEFAULT_LOCALE;
 }
 
+/** Derives the app locale from a BCP 47 tag such as a document `lang`. */
+export function localeFromLanguageTag(tag: string): AppLocale {
+  return tag.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en';
+}
+
 export function formatNumber(locale: AppLocale, value: number): string {
   return new Intl.NumberFormat(locale).format(value);
 }

@@ -59,6 +59,11 @@ const groups = COURSE_MODULES.map((module) => ({
                   <small>{entry.data.summary}</small>
                 </span>
                 <span class="course-list__meta">
+                  <span
+                    class="course-list__status"
+                    data-lesson-progress-badge
+                    data-lesson-id={lessonIdOf(entry)}
+                  ></span>
                   {t.t(`courses.difficulty.${entry.data.difficulty}`)} ·{' '}
                   {t.t('common.minutesShort', { minutes: entry.data.minutes })}
                 </span>
@@ -70,3 +75,28 @@ const groups = COURSE_MODULES.map((module) => ({
     ) : null,
   )}
 </BaseLayout>
+
+<script>
+  // Fill per-lesson progress badges from local storage.
+  import { createTranslator, localeFromLanguageTag } from '@/lib/i18n/core';
+  import { createProgressRepo } from '@/lib/storage/repos/progress';
+  import { getStorage } from '@/lib/storage/storage';
+
+  async function initProgressBadges(): Promise<void> {
+    const badges = document.querySelectorAll<HTMLElement>('[data-lesson-progress-badge]');
+    if (badges.length === 0) return;
+    const t = createTranslator(localeFromLanguageTag(document.documentElement.lang));
+    const repo = createProgressRepo(await getStorage());
+    const progressMap = new Map((await repo.list()).map((entry) => [entry.key, entry.value]));
+
+    for (const badge of badges) {
+      const lessonId = badge.dataset.lessonId ?? '';
+      const progress = lessonId ? progressMap.get(lessonId) : undefined;
+      if (!progress || progress.status === 'notStarted') continue;
+      badge.dataset.status = progress.status;
+      badge.textContent = t.t(`courses.status.${progress.status}`);
+    }
+  }
+
+  void initProgressBadges();
+</script>
