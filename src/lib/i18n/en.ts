@@ -227,6 +227,7 @@ export const en = {
       'A free sandbox to practice HTML, CSS and JavaScript — with an AI tutor by your side.',
     tasksTitle: 'Challenges',
     newTask: 'Get a new challenge',
+    newBuiltin: 'Add a starter challenge',
     generating: 'Generating…',
     noTasks: 'No challenges yet. Generate one below, or just experiment freely.',
     fromAi: 'AI challenge',
@@ -236,6 +237,17 @@ export const en = {
     taskCompletedLabel: 'Done',
     deleteTaskConfirm: 'Delete this challenge?',
     newTaskFailed: 'Could not generate a challenge: {reason}',
+    builtinTasks: {
+      t1Title: 'Rainbow list',
+      t1Task:
+        'Create an unordered list with at least five items. Use CSS only to give every list item a different text color (for example via :nth-child). No JavaScript needed.',
+      t2Title: 'Click counter',
+      t2Task:
+        'Build a button and a counter. Every click on the button increases the number by one. When the counter reaches 10, log "You made it!" to the console.',
+      t3Title: 'Color flipper',
+      t3Task:
+        'Show a colored box and a button. Each click on the button changes the box background to a random color from an array of at least five colors and displays the color name below the box.',
+    },
   },
   ai: {
     panelTitle: 'AI tutor',

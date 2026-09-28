@@ -94,3 +94,18 @@
 .progress-card__meta a {
   font-weight: 600;
 }
+
+/* Playground two-column layout */
+
+.playground-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--md-sys-spacing-4);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .playground-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

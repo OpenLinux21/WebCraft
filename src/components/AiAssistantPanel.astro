@@ -263,6 +263,17 @@ const settingsHref = '../settings/';
       controller?.abort();
     });
 
+    // The challenges panel asks for a new AI-generated task.
+    window.addEventListener('webcraft:generate-challenge', () => {
+      if (isBusy()) return;
+      const config = currentConfig();
+      if (!config) {
+        showDisabled();
+        return;
+      }
+      void request('challenge', undefined);
+    });
+
     for (const button of root.querySelectorAll<HTMLElement>('[data-mode]')) {
       const mode = button.dataset.mode ?? '';
       if (!MODE_KEYS.includes(mode as Mode)) continue;

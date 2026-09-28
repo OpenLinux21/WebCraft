@@ -223,6 +223,7 @@ export const zhCN: Dictionary = {
     subtitle: '自由练习 HTML、CSS 和 JavaScript 的沙箱——旁边就有一位 AI 助教。',
     tasksTitle: '挑战任务',
     newTask: '生成新挑战',
+    newBuiltin: '添加入门挑战',
     generating: '生成中…',
     noTasks: '还没有挑战任务。可以在下方生成一个，或者先自由探索。',
     fromAi: 'AI 挑战',
@@ -232,6 +233,17 @@ export const zhCN: Dictionary = {
     taskCompletedLabel: '已完成',
     deleteTaskConfirm: '删除这个挑战？',
     newTaskFailed: '无法生成挑战：{reason}',
+    builtinTasks: {
+      t1Title: '彩虹列表',
+      t1Task:
+        '创建一个至少包含五项的无序列表。只使用 CSS 让每个列表项的文字颜色都不同（例如借助 :nth-child）。不需要 JavaScript。',
+      t2Title: '点击计数器',
+      t2Task:
+        '制作一个按钮和一个计数器。每点击一次按钮，数字加一。当计数达到 10 时，用 console.log 输出 "你做到了！"。',
+      t3Title: '颜色切换器',
+      t3Task:
+        '展示一个色块和一个按钮。每次点击按钮，把色块背景切换成颜色数组（至少五个颜色）中的随机一个，并在色块下方显示颜色名称。',
+    },
   },
   ai: {
     panelTitle: 'AI 助教',
