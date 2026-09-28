@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build output & packaged artifacts
+dist/
+release/
+*.zip
+
+# Astro generated types/cache
+.astro/
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Environment variables & secrets
+.env
+.env.*
+*.key
+secrets*.json
+
+# Editor private config & OS junk
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.zcode/
+.DS_Store
+Thumbs.db
+
+# Logs & temp files
+logs/
+*.log
+npm-debug.log*
+tmp/
+.cache/
