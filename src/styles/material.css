@@ -45,3 +45,39 @@ md-outlined-select {
   color: var(--md-sys-color-error);
   font-size: var(--md-sys-typescale-small-size);
 }
+
+/* Backup section */
+
+.backup-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-2);
+  margin-block-end: var(--md-sys-spacing-2);
+  font-size: var(--md-sys-typescale-small-size);
+  cursor: pointer;
+}
+
+.form-warning {
+  color: var(--md-sys-color-warning);
+  font-weight: 600;
+}
+
+.backup-file-input {
+  font-size: var(--md-sys-typescale-small-size);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.backup-file-input::file-selector-button {
+  margin-inline-end: var(--md-sys-spacing-3);
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.backup-file-input::file-selector-button:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+}
