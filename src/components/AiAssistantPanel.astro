@@ -1,0 +1,276 @@
+---
+/**
+ * AI tutor panel: mode buttons (Hint/Explain/Review/Debug/Challenge), free
+ * chat with streaming replies, and lesson/code/console context injection.
+ * Requests go directly from the browser to the user-configured provider.
+ */
+import '@/components/material/register';
+import { createTranslator } from '@/lib/i18n/core';
+import type { AppLocale } from '@/lib/i18n/core';
+import '@/styles/ai.css';
+
+interface Props {
+  locale: AppLocale;
+  /** Registry key of the workbench code (see lib/editor/registry). */
+  contextKey: string;
+  level: 'beginner' | 'intermediate';
+}
+
+const MODES = [
+  { mode: 'hint', key: 'ai.modes.hint' },
+  { mode: 'explain', key: 'ai.modes.explain' },
+  { mode: 'review', key: 'ai.modes.review' },
+  { mode: 'debug', key: 'ai.modes.debug' },
+  { mode: 'challenge', key: 'ai.modes.challenge' },
+] as const;
+
+const { locale, contextKey, level } = Astro.props;
+const t = createTranslator(locale);
+const settingsHref = '../settings/';
+---
+
+<section
+  class="ai-panel card"
+  data-ai-panel
+  data-locale={locale}
+  data-context-key={contextKey}
+  data-level={level}
+>
+  <div class="ai-panel__head">
+    <h2>{t.t('ai.panelTitle')}</h2>
+    <div class="ai-panel__options">
+      <label class="ai-panel__option">
+        <input type="checkbox" data-option="code" checked />
+        {t.t('ai.includeCode')}
+      </label>
+      <label class="ai-panel__option">
+        <input type="checkbox" data-option="console" checked />
+        {t.t('ai.includeConsole')}
+      </label>
+    </div>
+  </div>
+
+  <div class="ai-panel__modes" role="group" aria-label={t.t('ai.panelTitle')}>
+    {MODES.map(({ mode, key }) => (
+      <md-filled-tonal-button type="button" class="ai-panel__mode" data-mode={mode}>
+        {t.t(key)}
+      </md-filled-tonal-button>
+    ))}
+  </div>
+
+  <div class="ai-panel__messages" data-messages aria-live="polite"></div>
+
+  <form class="ai-panel__composer" data-composer>
+    <textarea
+      class="ai-panel__input"
+      data-input
+      rows="2"
+      placeholder={t.t('ai.placeholder')}
+      aria-label={t.t('ai.placeholder')}
+    ></textarea>
+    <div class="ai-panel__composer-actions">
+      <md-outlined-button type="button" data-stop hidden>
+        {t.t('ai.stop')}
+      </md-outlined-button>
+      <md-filled-button type="submit" data-send>
+        {t.t('ai.send')}
+      </md-filled-button>
+    </div>
+  </form>
+
+  <p class="ai-panel__disclaimer">{t.t('ai.disclaimer')}</p>
+
+  <div class="ai-panel__disabled" data-disabled hidden>
+    <p>{t.t('ai.disabled')}</p>
+    <a class="btn btn--outlined" href={settingsHref}>
+      {t.t('ai.goSettings')}
+    </a>
+  </div>
+</section>
+
+<script>
+  import '@/components/material/register';
+  import { createTranslator, isAppLocale, type AppLocale } from '@/lib/i18n/core';
+  import { getSharedFiles } from '@/lib/editor/registry';
+  import { getAIProvider } from '@/lib/ai/provider';
+  import { loadAIConfig } from '@/lib/ai/settings';
+  import { describeFetchError } from '@/lib/ai/errors';
+  import type { ChatMessage } from '@/lib/ai/types';
+  import type { ConsoleLine } from '@/lib/ai/prompt';
+
+  const MODE_KEYS = ['hint', 'explain', 'review', 'debug', 'challenge', 'free'] as const;
+  type Mode = (typeof MODE_KEYS)[number];
+
+  interface LessonContext {
+    title: string;
+    objectives: string[];
+    task: string;
+  }
+
+  function readConsoleLines(): ConsoleLine[] {
+    return [...document.querySelectorAll<HTMLElement>('[data-console-list] li')].map((entry) => ({
+      level: entry.dataset.level ?? 'log',
+      text: entry.textContent ?? '',
+    }));
+  }
+
+  function initAiPanel(): void {
+    const root = document.querySelector<HTMLElement>('[data-ai-panel]');
+    if (!root) return;
+    const localeRaw: unknown = root.dataset.locale;
+    if (!isAppLocale(localeRaw)) return;
+    const locale: AppLocale = localeRaw;
+    const t = createTranslator(locale);
+    const panel: HTMLElement = root;
+    const messages: HTMLElement = root.querySelector<HTMLElement>('[data-messages]') ?? root;
+
+    const contextKey = root.dataset.contextKey ?? 'playground';
+    const level = root.dataset.level === 'intermediate' ? 'intermediate' : 'beginner';
+    const input = root.querySelector<HTMLTextAreaElement>('[data-input]');
+    const sendButton = root.querySelector<HTMLElement>('[data-send]');
+    const stopButton = root.querySelector<HTMLElement>('[data-stop]');
+    const disabledBox = root.querySelector<HTMLElement>('[data-disabled]');
+    const composer = root.querySelector<HTMLFormElement>('[data-composer]');
+    if (!input || !sendButton || !stopButton || !disabledBox || !composer) return;
+
+    const lessonPayload = root.querySelector<HTMLScriptElement>('[data-lesson-payload]');
+    let lesson: LessonContext | undefined;
+    if (lessonPayload) {
+      try {
+        const parsed: unknown = JSON.parse(lessonPayload.textContent ?? 'null');
+        if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          typeof (parsed as Record<string, unknown>)['title'] === 'string'
+        ) {
+          lesson = parsed as LessonContext;
+        }
+      } catch {
+        lesson = undefined;
+      }
+    }
+
+    const history: ChatMessage[] = [];
+    let controller: AbortController | null = null;
+
+    const isBusy = (): boolean => controller !== null;
+
+    const setBusy = (busy: boolean): void => {
+      sendButton.toggleAttribute('inert', busy);
+      stopButton.hidden = !busy;
+    };
+
+    const addBubble = (role: 'user' | 'assistant'): HTMLElement => {
+      const bubble = document.createElement('div');
+      bubble.className = `ai-panel__bubble ai-panel__bubble--${role}`;
+      messages.appendChild(bubble);
+      messages.scrollTop = messages.scrollHeight;
+      return bubble;
+    };
+
+    const showDisabled = (): void => {
+      disabledBox.hidden = false;
+    };
+
+    function currentConfig() {
+      const config = loadAIConfig();
+      return config?.enabled ? config : null;
+    }
+
+    async function request(mode: Mode, question: string | undefined): Promise<void> {
+      const config = currentConfig();
+      if (!config) {
+        showDisabled();
+        return;
+      }
+      if (isBusy()) return;
+
+      const includeCode =
+        panel.querySelector<HTMLInputElement>('[data-option="code"]')?.checked ?? true;
+      const includeConsole =
+        panel.querySelector<HTMLInputElement>('[data-option="console"]')?.checked ?? true;
+
+      const { buildAssistantMessages, parseChallengeReply } = await import('@/lib/ai/prompt');
+      const code = includeCode ? getSharedFiles(contextKey) : undefined;
+      const newMessages = buildAssistantMessages({
+        mode,
+        locale,
+        level,
+        ...(lesson ? { lesson } : {}),
+        ...(code ? { code } : {}),
+        ...(includeConsole ? { consoleLines: readConsoleLines() } : {}),
+        ...(question !== undefined ? { question } : {}),
+      });
+
+      if (question !== undefined) {
+        addBubble('user').textContent = question;
+      }
+
+      const bubble = addBubble('assistant');
+      bubble.textContent = t.t('ai.thinking');
+      setBusy(true);
+      controller = new AbortController();
+
+      const requestMessages: ChatMessage[] = [...history.slice(-12), ...newMessages];
+      let replyText = '';
+      try {
+        const provider = getAIProvider(config.provider);
+        for await (const delta of provider.chat(config, {
+          messages: requestMessages,
+          signal: controller.signal,
+        })) {
+          if (delta.kind === 'done') break;
+          replyText += delta.text;
+          bubble.textContent = replyText;
+          messages.scrollTop = messages.scrollHeight;
+        }
+        history.push(...newMessages, { role: 'assistant', content: replyText });
+        if (mode === 'challenge') {
+          const challenge = parseChallengeReply(replyText);
+          if (challenge) {
+            window.dispatchEvent(new CustomEvent('webcraft:new-task', { detail: challenge }));
+          }
+        }
+      } catch (error: unknown) {
+        if (controller.signal.aborted) {
+          bubble.textContent = replyText !== '' ? replyText : t.t('ai.thinking');
+        } else {
+          const described = describeFetchError(error);
+          bubble.classList.add('ai-panel__bubble--error');
+          bubble.textContent = t.t('ai.requestFailed', { reason: described.message.slice(0, 200) });
+          if (described.hint) {
+            const hint = document.createElement('span');
+            hint.className = 'ai-panel__hint';
+            hint.textContent = described.hint;
+            bubble.appendChild(hint);
+          }
+        }
+      } finally {
+        setBusy(false);
+        controller = null;
+      }
+    }
+
+    composer.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const question = input.value.trim();
+      if (question === '' || isBusy()) return;
+      input.value = '';
+      void request('free', question);
+    });
+
+    stopButton.addEventListener('click', () => {
+      controller?.abort();
+    });
+
+    for (const button of root.querySelectorAll<HTMLElement>('[data-mode]')) {
+      const mode = button.dataset.mode ?? '';
+      if (!MODE_KEYS.includes(mode as Mode)) continue;
+      button.addEventListener('click', () => {
+        void request(mode as Mode, input.value.trim() === '' ? undefined : input.value.trim());
+      });
+    }
+  }
+
+  initAiPanel();
+</script>

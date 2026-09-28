@@ -1,0 +1,302 @@
+---
+/**
+ * Settings section: AI provider configuration (Ollama / OpenAI-compatible).
+ * Values live only in this browser; requests go straight from the browser to
+ * the configured service.
+ */
+import '@/components/material/register';
+import { createTranslator } from '@/lib/i18n/core';
+import type { AppLocale } from '@/lib/i18n/core';
+
+interface Props {
+  locale: AppLocale;
+}
+
+const { locale } = Astro.props;
+const t = createTranslator(locale);
+---
+
+<section
+  class="card settings-section"
+  aria-labelledby="settings-ai"
+  data-ai-settings
+  data-locale={locale}
+>
+  <h2 id="settings-ai">{t.t('settings.sectionAi')}</h2>
+
+  <div class="form-row">
+    <label for="ai-enabled">{t.t('settings.ai.enable')}</label>
+    <md-switch id="ai-enabled" data-ai-field="enabled"></md-switch>
+  </div>
+
+  <div class="form-row">
+    <label for="ai-provider">{t.t('settings.ai.provider')}</label>
+    <md-outlined-select id="ai-provider" data-ai-field="provider">
+      <md-option value="openai-compatible">{t.t('settings.ai.providerOpenAI')}</md-option>
+      <md-option value="ollama">{t.t('settings.ai.providerOllama')}</md-option>
+    </md-outlined-select>
+  </div>
+
+  <div class="form-row">
+    <label for="ai-base-url">{t.t('settings.ai.baseUrl')}</label>
+    <md-filled-text-field
+      id="ai-base-url"
+      data-ai-field="baseUrl"
+      type="url"
+      autocomplete="off"
+      spellcheck="false"
+    ></md-filled-text-field>
+  </div>
+  <p class="form-hint">{t.t('settings.ai.baseUrlHint')}</p>
+
+  <div class="form-row">
+    <label for="ai-model">{t.t('settings.ai.model')}</label>
+    <md-filled-text-field
+      id="ai-model"
+      data-ai-field="model"
+      autocomplete="off"
+      spellcheck="false"
+    ></md-filled-text-field>
+  </div>
+
+  <div class="form-row">
+    <label for="ai-api-key">{t.t('settings.ai.apiKey')}</label>
+    <md-filled-text-field
+      id="ai-api-key"
+      data-ai-field="apiKey"
+      type="password"
+      autocomplete="off"
+      spellcheck="false"
+    ></md-filled-text-field>
+    <md-text-button type="button" data-ai-clear-key>
+      {t.t('settings.ai.clearKey')}
+    </md-text-button>
+  </div>
+  <p class="form-hint">{t.t('settings.ai.apiKeyHint')}</p>
+
+  <div class="form-row">
+    <label for="ai-headers">{t.t('settings.ai.customHeaders')}</label>
+    <md-filled-text-field
+      id="ai-headers"
+      data-ai-field="customHeaders"
+      type="textarea"
+      rows="2"
+      autocomplete="off"
+      spellcheck="false"
+    ></md-filled-text-field>
+  </div>
+  <p class="form-hint" data-ai-headers-hint>
+    {t.t('settings.ai.customHeadersHint')}
+  </p>
+
+  <div class="form-row">
+    <label for="ai-temperature">{t.t('settings.ai.temperature')}</label>
+    <md-filled-text-field
+      id="ai-temperature"
+      data-ai-field="temperature"
+      type="number"
+      min="0"
+      max="2"
+      step="0.1"
+    ></md-filled-text-field>
+    <label for="ai-max-tokens">{t.t('settings.ai.maxTokens')}</label>
+    <md-filled-text-field
+      id="ai-max-tokens"
+      data-ai-field="maxTokens"
+      type="number"
+      min="1"
+      step="1"
+    ></md-filled-text-field>
+  </div>
+
+  <div class="form-row">
+    <md-filled-tonal-button type="button" data-ai-save>
+      {t.t('common.ok')}
+    </md-filled-tonal-button>
+    <md-outlined-button type="button" data-ai-test>
+      {t.t('settings.ai.testConnection')}
+    </md-outlined-button>
+  </div>
+
+  <p class="form-hint">{t.t('settings.ai.privacyNote')}</p>
+  <p class="form-hint">{t.t('settings.ai.corsWarning')}</p>
+</section>
+
+<script>
+  import '@/components/material/register';
+  import type {
+    MdFilledTextField,
+    MdOutlinedSelect,
+    MdSwitch,
+  } from '@/components/material/register';
+  import { createTranslator, isAppLocale } from '@/lib/i18n/core';
+  import { showToast } from '@/lib/ui/toast';
+  import { getAIProvider } from '@/lib/ai/provider';
+  import {
+    DEFAULT_OLLAMA_BASE_URL,
+    DEFAULT_OPENAI_BASE_URL,
+    loadAIConfig,
+    saveAIConfig,
+  } from '@/lib/ai/settings';
+  import { describeFetchError } from '@/lib/ai/errors';
+  import type { AIConfig, AIProviderId } from '@/lib/ai/types';
+
+  const DEFAULT_BASE_URLS: Record<AIProviderId, string> = {
+    'openai-compatible': DEFAULT_OPENAI_BASE_URL,
+    ollama: DEFAULT_OLLAMA_BASE_URL,
+  };
+
+  interface FormValues {
+    enabled: boolean;
+    provider: AIProviderId;
+    baseUrl: string;
+    model: string;
+    apiKey: string;
+    customHeaders: string;
+    temperature: string;
+    maxTokens: string;
+  }
+
+  function readForm(root: HTMLElement): FormValues {
+    const value = (name: string): string => {
+      const field = root.querySelector<MdFilledTextField>(`[data-ai-field="${name}"]`);
+      return field?.value ?? '';
+    };
+    const provider = root.querySelector<MdOutlinedSelect>('[data-ai-field="provider"]')?.value;
+    const enabled = root.querySelector<MdSwitch>('[data-ai-field="enabled"]')?.selected ?? false;
+    return {
+      enabled,
+      provider: provider === 'ollama' ? 'ollama' : 'openai-compatible',
+      baseUrl: value('baseUrl').trim(),
+      model: value('model').trim(),
+      apiKey: value('apiKey'),
+      customHeaders: value('customHeaders').trim(),
+      temperature: value('temperature').trim(),
+      maxTokens: value('maxTokens').trim(),
+    };
+  }
+
+  function writeForm(root: HTMLElement, config: AIConfig | null): void {
+    const setField = (name: string, fieldValue: string): void => {
+      const field = root.querySelector<MdFilledTextField>(`[data-ai-field="${name}"]`);
+      if (field) field.value = fieldValue;
+    };
+    const switchEl = root.querySelector<MdSwitch>('[data-ai-field="enabled"]');
+    if (switchEl) switchEl.selected = config?.enabled ?? false;
+    const select = root.querySelector<MdOutlinedSelect>('[data-ai-field="provider"]');
+    if (select) select.value = config?.provider ?? 'openai-compatible';
+    setField(
+      'baseUrl',
+      config?.baseUrl ?? DEFAULT_BASE_URLS[config?.provider ?? 'openai-compatible'],
+    );
+    setField('model', config?.model ?? '');
+    setField('apiKey', config?.apiKey ?? '');
+    setField(
+      'customHeaders',
+      config && Object.keys(config.customHeaders).length > 0
+        ? JSON.stringify(config.customHeaders, null, 2)
+        : '',
+    );
+    setField('temperature', config ? String(config.temperature) : '0.7');
+    setField(
+      'maxTokens',
+      config?.maxTokens !== null && config?.maxTokens !== undefined ? String(config.maxTokens) : '',
+    );
+  }
+
+  function buildConfig(values: FormValues): AIConfig | null {
+    let customHeaders: Record<string, string> = {};
+    if (values.customHeaders !== '') {
+      try {
+        const parsed: unknown = JSON.parse(values.customHeaders);
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+          throw new Error('not an object');
+        customHeaders = Object.fromEntries(
+          Object.entries(parsed as Record<string, unknown>).filter(
+            (entry): entry is [string, string] => typeof entry[1] === 'string',
+          ),
+        );
+      } catch {
+        return null; // invalid headers JSON
+      }
+    }
+    const temperature = Number(values.temperature);
+    const maxTokens = values.maxTokens === '' ? null : Number(values.maxTokens);
+    return {
+      enabled: values.enabled,
+      provider: values.provider,
+      baseUrl: values.baseUrl,
+      model: values.model,
+      apiKey: values.apiKey,
+      customHeaders,
+      temperature: Number.isFinite(temperature) ? temperature : 0.7,
+      maxTokens:
+        maxTokens !== null && Number.isFinite(maxTokens) && maxTokens > 0 ? maxTokens : null,
+    };
+  }
+
+  function initAiSettings(): void {
+    const root = document.querySelector<HTMLElement>('[data-ai-settings]');
+    if (!root) return;
+    const localeRaw: unknown = root.dataset.locale;
+    if (!isAppLocale(localeRaw)) return;
+    const t = createTranslator(localeRaw);
+
+    writeForm(root, loadAIConfig());
+
+    // Keep the base URL sensible when switching providers.
+    const providerSelect = root.querySelector<MdOutlinedSelect>('[data-ai-field="provider"]');
+    const baseUrlField = root.querySelector<MdFilledTextField>('[data-ai-field="baseUrl"]');
+    providerSelect?.addEventListener('change', () => {
+      const provider = (
+        providerSelect.value === 'ollama' ? 'ollama' : 'openai-compatible'
+      ) as AIProviderId;
+      if (baseUrlField && Object.values(DEFAULT_BASE_URLS).includes(baseUrlField.value.trim())) {
+        baseUrlField.value = DEFAULT_BASE_URLS[provider];
+      }
+    });
+
+    root.querySelector<HTMLElement>('[data-ai-save]')?.addEventListener('click', () => {
+      const config = buildConfig(readForm(root));
+      const headersHint = root.querySelector<HTMLElement>('[data-ai-headers-hint]');
+      if (!config) {
+        headersHint?.classList.add('form-error');
+        return;
+      }
+      headersHint?.classList.remove('form-error');
+      saveAIConfig(config);
+      showToast(t.t('settings.ai.saved'));
+    });
+
+    root.querySelector<HTMLElement>('[data-ai-clear-key]')?.addEventListener('click', () => {
+      const apiKeyField = root.querySelector<MdFilledTextField>('[data-ai-field="apiKey"]');
+      if (apiKeyField) apiKeyField.value = '';
+      const config = buildConfig(readForm(root));
+      if (config) saveAIConfig(config);
+      showToast(t.t('settings.ai.keyCleared'));
+    });
+
+    root.querySelector<HTMLElement>('[data-ai-test]')?.addEventListener('click', () => {
+      const config = buildConfig(readForm(root));
+      if (!config) {
+        showToast(t.t('settings.ai.customHeadersInvalid'));
+        return;
+      }
+      void (async () => {
+        try {
+          const models = await getAIProvider(config.provider).listModels(config);
+          showToast(
+            models.length > 0
+              ? t.t('settings.ai.testOk', { count: models.length })
+              : t.t('settings.ai.testOkNoList'),
+          );
+        } catch (error: unknown) {
+          const described = describeFetchError(error);
+          showToast(t.t('settings.ai.testFailed', { reason: described.message.slice(0, 120) }));
+        }
+      })();
+    });
+  }
+
+  initAiSettings();
+</script>
