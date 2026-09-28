@@ -1,0 +1,274 @@
+---
+lessonId: 10-responsive-design
+order: 10
+module: layout
+difficulty: intermediate
+minutes: 35
+title: 'Responsive Design and Media Queries'
+summary: 'Adapt one page to every screen: media queries, desktop-first overrides, fluid widths between breakpoints, and type that scales with clamp().'
+objectives:
+  - 'Explain why the viewport meta tag and fluid widths come before any media query.'
+  - 'Write `@media` rules with `max-width` and `min-width` conditions.'
+  - 'Adapt a two-column layout into one column at a chosen breakpoint.'
+  - 'Scale typography smoothly with `clamp()` instead of per-breakpoint font sizes.'
+  - 'Hide or restyle content per breakpoint and verify both states by resizing.'
+exercise:
+  task: 'Make a news page responsive. Below a viewport width of 720px, the two-column layout (article plus sidebar) must stack into a single column, the promo box must disappear, and the headline must shrink. Above 720px the layout stays side by side. Use fluid widths so nothing overflows between breakpoints, and verify both states by resizing the preview.'
+  hints:
+    - 'Build the desktop layout first, then add an `@media (max-width: 720px)` block at the end of the stylesheet so its rules override the defaults.'
+    - "Inside the media query, stack the columns by changing the flex container's `flex-direction` to `column` and remove the promo box with `display: none`."
+    - 'Let the headline scale with `font-size: clamp(1.6rem, 5vw, 2.5rem)` so it shrinks smoothly instead of jumping.'
+---
+
+## Overview
+
+Your preview pane is a comfortable width, but your page will actually be read on phones squeezed into train seats, on laptops, and on giant monitors. **Responsive design** is the discipline of writing one page that adapts to all of them - not three separate sites, but one set of HTML and CSS with rules that switch on when the screen changes.
+
+The good news: after Flexbox and Grid you already own most of the toolkit. Fluid widths, `flex-wrap` and `auto-fit` grids handle a surprising amount of adaptation _by themselves_. Media queries are the finishing layer, not the foundation - they only need to fix what fluid layout cannot.
+
+In this lesson you will meet the viewport meta tag, learn the syntax of `@media`, practice the desktop-first override pattern, and meet `clamp()`, the function that makes typography scale continuously. The exercise then asks you to make a news page survive the trip from desktop width to phone width.
+
+## Viewports and Fluid Layout First
+
+The very first piece of responsive CSS is not CSS at all - it is a meta tag in the HTML. Without it, mobile browsers pretend your page is 980px wide and zoom out, producing the tiny-text experience everyone hates:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+```
+
+With the viewport under control, the next habit is **fluid layout**: widths that bend instead of break. Percentages, `max-width`, `fr` units and flex wrapping all do this before any breakpoint is involved.
+
+```css
+.container {
+  max-width: 880px; /* roomy on desktop ... */
+  margin: 0 auto; /* ... centered, fluid below 880px */
+  padding: 0 16px;
+}
+
+img {
+  max-width: 100%; /* never wider than its container */
+  height: auto;
+}
+```
+
+A page built this way already survives a lot of shrinking: the container just gets narrower, images follow their boxes, wrapped flex rows reflow. Only when elements genuinely cannot squeeze further - a two-column pair that has become unreadably narrow - does a breakpoint earn its place.
+
+> **Try it in the editor:** check that the starter page has the viewport meta tag, then drag the preview from wide to narrow _before_ adding any media query. Note the exact width where the layout starts to look wrong - that is where your breakpoint should go.
+
+## Writing Media Queries
+
+A media query wraps CSS rules in a condition: these declarations apply **only** when the condition matches. The two conditions you will use constantly are `max-width` (up to this width) and `min-width` (from this width up):
+
+```css
+/* desktop-first: rules for small screens come last */
+.layout {
+  display: flex;
+  gap: 24px;
+}
+
+.sidebar {
+  flex: 1;
+}
+.article {
+  flex: 2;
+}
+
+@media (max-width: 720px) {
+  .layout {
+    flex-direction: column; /* stack the columns */
+  }
+}
+```
+
+There are two philosophical directions. **Desktop-first** writes the roomy layout as the default and then overrides downward with `max-width` queries. **Mobile-first** starts with the stacked phone layout and adds roominess upward with `min-width` queries. Both are legitimate; what matters is picking one and being consistent, because media queries are not more specific than other selectors - **order decides the winner**, so overrides must come after the rules they override.
+
+```css
+/* mobile-first alternative */
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (min-width: 720px) {
+  .layout {
+    flex-direction: row;
+  }
+}
+```
+
+Media queries can test more than width - `orientation: portrait`, `prefers-reduced-motion`, `hover: none` - and can combine conditions with `and`. For this course, width queries are the workhorse; the others are worth knowing exist.
+
+> **Try it in the editor:** add the stacked-column query above, then drag the preview across the 720px line slowly. The layout should flip exactly once, with no jumps in between.
+
+## Fluid Type with clamp()
+
+Font sizes present a special problem. A fixed `font-size` looks huge on a phone and small on a monitor; resizing it at every breakpoint means writing a media query per heading, forever. `clamp()` scales continuously between a floor and a ceiling:
+
+```css
+h1 {
+  /* minimum 1.6rem, preferred 5% of viewport width, maximum 2.5rem */
+  font-size: clamp(1.6rem, 5vw, 2.5rem);
+}
+```
+
+The function takes three values: a minimum, a _preferred_ value, and a maximum. The preferred value - here `5vw`, five percent of the viewport width - does the scaling, while the outer values clamp it. Between 32px and 50px of viewport width the headline grows smoothly; outside that range it holds steady.
+
+The same trick works for padding and gaps: `padding: clamp(12px, 3vw, 32px)` gives a page breathing room that grows with the screen. Reserve media queries for **layout changes** (stacking, hiding, reflowing) and let `clamp()` absorb the continuous size changes.
+
+| Tool                   | Best for                     | Behavior between breakpoints    |
+| ---------------------- | ---------------------------- | ------------------------------- |
+| Fixed `px` sizes       | Hairlines, icons, borders    | Never changes                   |
+| `rem` units            | Base typography, spacing     | Changes only with user settings |
+| `vw` units             | Raw viewport scaling         | Changes always - can get tiny   |
+| `clamp(min, val, max)` | Headings, hero text, padding | Scales smoothly within bounds   |
+
+> **Try it in the editor:** give the page headline `font-size: clamp(1.6rem, 5vw, 2.5rem)` and drag the preview. Watch the type glide between sizes with no breakpoint in sight, then try `10vw` to see the maximum kick in earlier.
+
+## Adapting and Removing Content per Breakpoint
+
+Responsiveness is not only about sizes - sometimes the right adaptation is _restructuring_. Columns stack, navigations collapse, sidebars move below the article. And sometimes the right answer is _removal_: a promo box, a tagline, a decorative column can simply disappear on small screens via `display: none`.
+
+```css
+/* desktop: promo sits inside the sidebar */
+.promo {
+  background: #fef3c7;
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+@media (max-width: 720px) {
+  .promo {
+    display: none; /* gone on phones, nothing left behind */
+  }
+}
+```
+
+`display: none` is the honest tool here: the element takes no space at all, unlike `visibility: hidden`, which hides the pixels but keeps the layout hole. A useful checklist for each breakpoint:
+
+1. Does any content overflow its box? Fix with fluid widths or stacking.
+2. Is anything too small to tap? Enlarge hit areas on touch screens.
+3. Is anything no longer worth its space? Hide it.
+4. Does the reading order still make sense? Stacked columns read top to bottom, so put the article before the sidebar in the HTML.
+
+> **Try it in the editor:** hide the promo box at 720px, then swap `display: none` for `visibility: hidden` and compare - one leaves a gap, the other does not.
+
+## How the Exercise Works
+
+The exercise is a news page: an article and a sidebar side by side, a promo box in the sidebar, and a headline. The starter stylesheet builds the desktop layout with flex; your job is the responsive layer:
+
+1. **Check the foundation.** The page should already have the viewport meta tag and fluid widths (`max-width`, percentages). If something overflows before you write a single query, fix the fluid layout first.
+2. **Find the natural breakpoint.** Drag the preview narrow and watch the two columns. Around the width where they stop being readable - the starter suggests 720px - is where the media query goes.
+3. **Stack the layout.** Add `@media (max-width: 720px)` at the _end_ of the stylesheet, switch the layout container to `flex-direction: column`, and make sure both columns take full width.
+4. **Remove and shrink.** Hide the promo box with `display: none` inside the same query, and switch the headline to a `clamp()` size so it scales instead of stepping.
+5. **Verify both states.** Drag the preview across the breakpoint in both directions. The layout should flip cleanly at one width, with no overflow anywhere in between.
+
+Resist the temptation to add many breakpoints. Two states - desktop and stacked - are enough for this page, and the fluid layer does the rest. Compare with the solution files once both states look right.
+
+## Common Mistakes
+
+### 1. Missing viewport meta tag
+
+Without the meta tag, mobile browsers render at a fake 980px width and zoom out, so your media queries appear never to fire on real phones.
+
+```html
+<!-- wrong: mobile browsers fake a desktop width -->
+<title>News</title>
+
+<!-- right: the page width follows the device -->
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+```
+
+### 2. Media query placed before the rules it overrides
+
+Media queries are not more specific - later rules of equal specificity win. A query at the top of the file gets silently overridden by the defaults below it.
+
+```css
+/* wrong: the default below wins, nothing stacks */
+@media (max-width: 720px) {
+  .layout {
+    flex-direction: column;
+  }
+}
+.layout {
+  flex-direction: row;
+}
+
+/* right: the override comes last */
+.layout {
+  flex-direction: row;
+}
+@media (max-width: 720px) {
+  .layout {
+    flex-direction: column;
+  }
+}
+```
+
+### 3. Fixing everything with breakpoints
+
+Media queries stacked on fluid layout fail loudly when fluid layout is missing. If content overflows _between_ breakpoints, the widths are fixed and need to bend.
+
+```css
+/* wrong: jumps, and overflows in between */
+.article {
+  width: 640px;
+}
+
+/* right: fluid between breakpoints */
+.article {
+  width: 100%;
+  max-width: 640px;
+}
+```
+
+### 4. Using visibility: hidden instead of display: none
+
+`visibility: hidden` hides the pixels but keeps the reserved space - the "removed" promo box leaves a hole in the sidebar.
+
+```css
+/* wrong: the box is gone but its space remains */
+.promo {
+  visibility: hidden;
+}
+
+/* right: the box is gone, space included */
+.promo {
+  display: none;
+}
+```
+
+### 5. Typography in pure vw units
+
+Viewport units scale without limits: on a phone `5vw` becomes unreadably small, on a monitor absurdly large. Always wrap them in `clamp()`.
+
+```css
+/* wrong: tiny on phones, giant on monitors */
+h1 {
+  font-size: 5vw;
+}
+
+/* right: scales within bounds */
+h1 {
+  font-size: clamp(1.6rem, 5vw, 2.5rem);
+}
+```
+
+### 6. Testing only the exact breakpoint width
+
+Checking 719px and 721px is not enough - most life happens _between_ breakpoints. Drag continuously through the whole range and watch for overflow.
+
+```css
+/* a good sanity check during development */
+* {
+  outline: 1px solid rgb(239 68 68 / 0.3);
+} /* remove before shipping */
+```
+
+## Summary
+
+- The viewport meta tag comes first; fluid widths (`max-width`, percentages, `fr`, wrapping) do most of the adapting before any query.
+- `@media (max-width: 720px)` applies rules up to a width; `min-width` builds mobile-first upward - pick one direction and stay consistent.
+- Media queries are order-sensitive, not specificity-boosted: overrides belong at the end of the stylesheet.
+- `clamp(min, preferred, max)` scales type and spacing continuously, reserving queries for structural changes.
+- Per breakpoint, restructure (stack columns) or remove (`display: none`) content, then verify by dragging through the whole range.

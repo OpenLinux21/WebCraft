@@ -1,0 +1,52 @@
+/* Lesson 8 starter: flexbox layout - all layout rules are missing */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+main {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.navbar {
+  /* TODO 1: turn the navbar into a flex row, vertically centered */
+  padding: 12px 20px;
+  background: #1e293b;
+}
+
+.logo {
+  color: #fff;
+  font-weight: 700;
+}
+
+.nav-links {
+  /* TODO 2: make the links a flex row with a 20px gap,
+     and push the whole group to the right edge of the navbar */
+}
+
+.nav-links a {
+  color: #c7d2fe;
+  text-decoration: none;
+}
+
+.cards {
+  /* TODO 3: make this a flex row with a 16px gap */
+  margin-top: 8px;
+}
+
+.card {
+  /* TODO 4: let each card grow equally, never narrower than 180px */
+  padding: 16px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.08);
+}
+
+/* TODO 5: allow the card row to wrap when the preview gets narrow */

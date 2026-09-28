@@ -1,0 +1,315 @@
+---
+lessonId: 11-css-transitions-animations
+order: 11
+module: layout
+difficulty: intermediate
+minutes: 30
+title: '过渡与动画'
+summary: '用过渡平滑状态切换，用关键帧让效果自动运行，同时弄清哪些属性做动画不会卡顿。'
+objectives:
+  - '用 `transition` 和缓动函数让 hover、focus 的状态变化动起来。'
+  - '读写 `transition` 简写：属性、时长、缓动、延迟。'
+  - '用 `@keyframes` 和 `animation` 简写创建自动运行的动效。'
+  - '优先使用 `transform` 与 `opacity`，让动画保持流畅。'
+  - '通过 `prefers-reduced-motion` 尊重关闭动效的用户。'
+exercise:
+  task: '让一个操作页面活起来。给主按钮加 0.2 秒的过渡：hover 时背景色变化并上移 2 像素——指针移开时两个变化都要平滑还原。再为主按钮旁的通知圆点写一个 `@keyframes` 脉冲动画：放大的同时淡出，每 1.5 秒循环一次、永不停歇。最后在预览里验证两个效果。'
+  hints:
+    - '把 `transition` 写在按钮的正常状态上，而不是写在 `:hover` 规则里，这样两个方向的变化都会带动画。'
+    - '在 `@keyframes pulse` 里用 `transform: scale()` 和 `opacity` 描述 0% 到 50% 再到 100% 的各个阶段。'
+    - '用简写 `animation: pulse 1.5s ease-in-out infinite;` 把动画挂到圆点上。'
+---
+
+## 概述
+
+界面要想"活"，就得在状态*之间*移动，而不是瞬移。一个用 0.2 秒慢慢变深的按钮读起来是"可以按"；一个滑入的菜单让人觉得它和打开它的东西连在一起。CSS 给了你两件工具，它们解决的问题并不相同。
+
+**过渡**是被动的：它为*两个状态之间的变化*做动画——只要属性发生变化（通常因为 `:hover`、`:focus` 或类名切换），浏览器就会从旧值插值到新值。**动画**是主动的：`@keyframes` 脚本描述一串状态序列，元素自己照着演，还可以无限循环。
+
+两件工具共享一条决定品质的规则：有些属性做动画又便宜又流畅（`transform`、`opacity`），有些属性则逼着浏览器每一帧都重新计算布局（`width`、`top`、`margin`）。你要学会分辨。打开编辑器，边读边反复悬停、移开。
+
+## 过渡：给状态变化做动画
+
+过渡声明在元素的**静止状态**上，而不是变化后的状态上。它列出哪个属性要做动画、这趟旅程要多久：
+
+```css
+.button {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.button:hover {
+  background: #4338ca;
+}
+```
+
+就这一行，悬停时颜色用 0.2 秒淡入——同样重要的是，指针移开时它也用同样的方式*淡出*。如果把过渡声明写进 `:hover` 里，移开时就会瞬间弹回，因为"离开"的那个状态没有自己的过渡。
+
+要同时动画多个属性，可以把它们列在一起，也可以用关键字 `all`：
+
+```css
+.button {
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.button:hover {
+  background: #4338ca;
+  transform: translateY(-2px); /* 一点点上浮 */
+}
+```
+
+完整简写有四个槽位：`transition: 属性 时长 缓动函数 延迟`。时长是唯一必填项——缺省的缓动函数是 `ease`。
+
+| 槽位     | 含义           | 示例          |
+| -------- | -------------- | ------------- |
+| 属性     | 动画谁         | `background`  |
+| 时长     | 一次变化花多久 | `0.2s`        |
+| 缓动函数 | 旅程的节奏     | `ease-in-out` |
+| 延迟     | 开始前等多久   | `0.1s`        |
+
+> **在编辑器中试一试：** 粘贴按钮代码，悬停它；再把 transition 挪进 `:hover` 规则，观察移开时的瞬间弹回。挪回去——对称的淡出就回来了。
+
+## 缓动函数与节奏
+
+缓动函数描述数值*如何*行进：匀速、中间快两头慢，还是结尾减速。真实物体不做匀速运动，这就是 `linear` 看起来总有点机械的原因——它属于循环和颜色轮播，不属于入场出场。
+
+```css
+.card {
+  transition: transform 0.25s ease-out;
+}
+.card:hover {
+  transform: translateY(-4px);
+}
+
+.dropdown {
+  transition: opacity 0.15s ease-in;
+}
+```
+
+内置曲线覆盖了绝大多数场景：`ease`（默认值，起止都柔和）、`ease-in`（起步慢、到得急——适合退场）、`ease-out`（起步快、缓缓落定——适合入场）、`ease-in-out`（两头都顺）、`linear`。需要更特别的感觉时，`cubic-bezier(x1, y1, x2, y2)` 可以画出自定义曲线；著名的"弹簧"回弹就是把某个 y 值取到 1 以上。
+
+时长要短。界面过渡生活在 150-300ms 区间：长到能被感知为运动，短到不至于挟持用户。接近一整秒的时长只留给页面级的大场面。
+
+> **在编辑器中试一试：** 给一个按钮 `transition: transform 0.25s linear`，另一个 `0.25s ease-out`，都让它们 hover 上浮，比较手感。再试试 `cubic-bezier(0.34, 1.56, 0.64, 1)` 的弹簧回弹。
+
+## 关键帧：自己会跑的动画
+
+过渡需要触发，关键帧动画则自己开跑。你在命名的 `@keyframes` 规则里描述序列——百分比标记从起点（0%）到终点（100%）的各个阶段——再用 `animation` 属性挂上去：
+
+```css
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+```
+
+`animation` 简写塞下了很多东西：`名称 时长 缓动函数 延迟 循环次数 方向`。`infinite` 表示永远循环；写数字则限制播放次数。`alternate` 让每个来回方向反转，做往复效果很方便。上面的例子在 100% 处回到起始状态，所以循环是无缝的——如果关键帧的终点和起点不一致，每次循环都会肉眼可见地跳一下。
+
+与过渡不同，动画在元素出现时就开始，与悬停焦点无关。加载转圈、通知脉冲、骨架屏、抢眼球的强调高亮——这些"不需要用户输入也该发生"的事情，都归它管。
+
+| 对比点   | 过渡                   | 动画                   |
+| -------- | ---------------------- | ---------------------- |
+| 触发方式 | 状态变化               | 应用即运行，或类名切换 |
+| 阶段数量 | 两个（起点与终点）     | 多个，用百分比标记     |
+| 能否循环 | 不能                   | 能（`infinite`）       |
+| 典型用途 | hover、focus、显示隐藏 | 转圈、脉冲、揭示动效   |
+
+> **在编辑器中试一试：** 粘贴圆点代码看它脉冲，然后把 `infinite` 改成 `3` 再加上 `alternate`。注意循环停下来、方向反转。
+
+## 动画该动哪些属性
+
+在浏览器眼里，属性并非生而平等。每一帧浏览器都要重绘页面；动画化参与**布局**的属性，会逼它每一帧都重新计算所有元素的位置——代价高昂，也是复杂页面上动画卡顿的根源。
+
+```css
+/* 昂贵：每一帧都在重排整个页面 */
+.panel {
+  transition:
+    width 0.3s,
+    top 0.3s,
+    margin 0.3s;
+}
+
+/* 便宜：走合成器，布局纹丝不动 */
+.panel {
+  transition:
+    transform 0.3s,
+    opacity 0.3s;
+}
+```
+
+`transform` 和 `opacity` 是黄金搭档，因为浏览器可以在合成线程上处理它们，完全不碰布局。你用 `translateY` 做的上浮模式，即便放在长列表里也依然流畅。当设计似乎要求动画化 `width` 或 `top` 时，几乎总能找到 `transform` 的等价物（`scaleX`、`translate`）；隐藏元素也可以用 `opacity` 淡出、再用 `visibility` 管点击穿透。
+
+还有一记专业细节：有些用户因为运动让他们眩晕，会在系统层面关掉动画。用一条媒体查询尊重这个设置：
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+```
+
+> **在编辑器中试一试：** 让一个盒子在一段文字旁边动画化 `width`，看文字每一帧都被重排。换成 `transform: scaleX()`，邻居们纹丝不动。
+
+## 练习思路
+
+练习页面有一个主按钮和一个通知圆点，启动样式表把它们都做成了静态样式。两个效果，完全按本课的做法来：
+
+1. **按钮过渡。** 在按钮的正常规则里加 `transition: background 0.2s ease, transform 0.2s ease`——两个属性都写，颜色淡入和上浮才会一起动画。然后在 `:hover` 里扩展 `background` 加 `transform: translateY(-2px)`。悬停再移开：两个方向都必须平滑。
+2. **圆点脉冲。** 定义 `@keyframes pulse` 的三个阶段（正常、放大变淡、回到正常），再用 `animation: pulse 1.5s ease-in-out infinite` 挂上去。关键帧要结束在开始的地方，循环才看不出来。
+
+收工前有两个检查点：上浮必须在指针移开时平滑还原（证明过渡写在静止状态上）；脉冲在循环之间不能跳变（证明 0% 和 100% 阶段一致）。如果圆点在脉冲但页面整体发抖，你可能动画了布局属性——换回只用 `transform`。两个效果都顺手之后，再去对比参考答案。
+
+## 常见错误
+
+### 1. 把过渡声明写进 hover 状态
+
+过渡描述的是*去往*悬停状态的旅程。只声明在那里，回程就会瞬间弹回。
+
+```css
+/* 错误：移开悬停瞬间弹回 */
+.button:hover {
+  background: #4338ca;
+  transition: background 0.2s;
+}
+
+/* 正确：两个方向都有动画 */
+.button {
+  transition: background 0.2s ease;
+}
+.button:hover {
+  background: #4338ca;
+}
+```
+
+### 2. 用 all 过渡所有属性
+
+`transition: all 0.3s` 会把你没打算动的属性也动画化——布局位移、配色切换——日后排查"谁在乱动"也更加困难。
+
+```css
+/* 错误：什么都在晃 */
+.card {
+  transition: all 0.3s;
+}
+
+/* 正确：只动你要的 */
+.card {
+  transition:
+    transform 0.3s,
+    opacity 0.3s;
+}
+```
+
+### 3. 动画化布局属性
+
+`width`、`height`、`top`、`margin` 每一帧都重排页面。`transform` 的等价物走廉价的合成路径，视觉效果一样。
+
+```css
+/* 错误：真实页面上卡顿 */
+.tooltip {
+  transition:
+    top 0.2s,
+    left 0.2s;
+}
+
+/* 正确：流畅，布局不动 */
+.tooltip {
+  transition: transform 0.2s;
+}
+```
+
+### 4. 忘写时长
+
+没有时长的过渡历时零秒——看起来和你要避免的瞬间切换一模一样，这条规则仿佛"毫无作用"。
+
+```css
+/* 错误：瞬间完成，没有动画 */
+.button {
+  transition: background;
+}
+
+/* 正确：看得见的 0.2 秒旅程 */
+.button {
+  transition: background 0.2s ease;
+}
+```
+
+### 5. 关键帧没有回到起点
+
+起点和终点不一致的无限动画，每次循环边界都会"闪现"。两端一致，循环才无缝。
+
+```css
+/* 错误：每 1.5 秒跳一次 */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.35);
+  }
+}
+
+/* 正确：循环自己闭合 */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+```
+
+### 6. 无视 prefers-reduced-motion
+
+在系统里关闭动效的用户，仍然会收到你写的每一个动画。一条小小的媒体查询就能放他们一马。
+
+```css
+/* 错误：不管用户设置，动效照跑 */
+.dot {
+  animation: pulse 1.5s infinite;
+}
+
+/* 正确：尊重用户的选择 */
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}
+```
+
+## 小结
+
+- 过渡为两个状态*之间*的变化做动画；声明在静止状态上，两个方向才会都动。
+- 简写是 `transition: 属性 时长 缓动函数 延迟`；界面时长控制在 150-300ms 左右。
+- `@keyframes` 描述自动运行的多阶段序列，用 `animation: 名称 时长 缓动 循环` 挂载。
+- `transform` 和 `opacity` 做动画不碰布局——先于 `width`、`top`、`margin` 使用。
+- 无限循环必须首尾一致，并且永远给 `prefers-reduced-motion` 留一条退路。

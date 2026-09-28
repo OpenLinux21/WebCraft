@@ -1,0 +1,234 @@
+---
+lessonId: 12-js-syntax-basics
+order: 12
+module: javascript
+difficulty: beginner
+minutes: 30
+title: 'JavaScript 入门：变量、类型与运算'
+summary: '写下第一行 JavaScript：用 console 输出、用变量存值、分辨基本类型，并用运算符组合它们。'
+objectives:
+  - '用 console.log 打印值，并能在 Console 面板里读它们。'
+  - '用 const 和 let 声明变量，知道各自该在什么时候用。'
+  - '区分五种基本类型：string、number、boolean、undefined 和 null。'
+  - '使用算术、比较和逻辑运算符，坚持使用严格相等。'
+  - '用 Number() 和 String() 在字符串与数字之间转换。'
+exercise:
+  task: "打开浏览器 Console 面板，完成一份小小的个人档案报告。先用 const 建一个名为 name 的字符串（写你或任何名字），再用 let 建一个名为 year 的出生年份数字。用当前年份 2026 减去出生年份算出近似年龄，并用 typeof 打印每个值的类型。然后用模板字符串输出一句类似 'Ada is about 36 years old.' 的完整句子。最后把字符串 '5' 和数字 2 相加，打印这个意外结果，再用 Number() 把字符串转换后重新相加并打印修正后的和。"
+  hints:
+    - '模板字符串用反引号，并用 ${name} 插值——检查你敲的是反引号而不是引号。'
+    - "'5' + 2 是 '52'，因为 + 遇到字符串就变成拼接。typeof 能告诉你拿到的到底是什么。"
+    - "Number('5') 把字符串变成数字；之后 5 + 2 是 7，typeof 7 是 'number'。"
+---
+
+## 概述
+
+欢迎来到课程的 JavaScript 部分。HTML 描述页面*是什么*，CSS 描述它*长什么样*——JavaScript 是第三层：_行为_。它是一门完整编程语言，运行在每一个浏览器里。从这一课开始，编辑器下方的 **Console** 面板会成为你最好的朋友：你写下的每个 `console.log()` 都会出现在编辑器正下方。
+
+本课还不会去碰页面本身，这是刻意的。程序在能移动物体之前，得先学会*记住*值并*计算*出新值。你会认识两种声明变量的方式、JavaScript 赖以构建的几个基本类型，以及组合它们的运算符。这些概念写下来显得很小，但它们是之后一切内容——函数、循环、数组、DOM——的词汇表。
+
+从第一分钟起就要养成一个习惯：**认真读报错**。打错变量名时，JavaScript 不会默默猜测——它会停下来，在控制台写一条红色消息。那条消息不是批评，而是你能得到的最快的文档。
+
+## 第一个程序：console.log
+
+本页编辑器会在预览里运行你的 JavaScript，下方的 **Console** 面板显示程序打印的一切。`console.log()` 是一个函数，它打印你交给它的任何值：
+
+```js
+console.log('Hello, WebCraft!');
+console.log(42);
+console.log(true);
+```
+
+三次调用，控制台出现三行。注意标点：圆括号里是*参数*——你交给函数的值——分号结束一条语句。分号在现代 JavaScript 中严格说是可选的，但一致地写分号能消除一整类令人困惑的 bug，所以本课程处处使用它们。
+
+`console.log` 一次可以打印多个值，用逗号隔开，非常适合并排比较：
+
+```js
+console.log('age:', 36);
+// Console: age: 36
+```
+
+> **试一试：** 在 JS 标签页输入 `console.log("Hi, I am learning JavaScript");` 然后按运行。消息会出现在 Console 面板。如果没有出现，检查面板里的红色错误行——通常是少了引号或括号。
+
+后面的课程还会遇到 `console.warn()` 和 `console.error()`；它们打印方式相同，但带黄色和红色样式，平台的控制台面板也正是这样标记它们的。
+
+## 变量：const 与 let
+
+*变量*是存放值的命名盒子。创建变量要用**声明**，JavaScript 提供两个关键字，二选一就是在表达意图：
+
+```js
+const appName = 'WebCraft'; // 不能重新赋值
+let score = 0; // 可以重新赋值
+
+score = 10;
+console.log(appName, score);
+```
+
+`const`（_constant_，常量）把名字和值**永远**绑定——重新赋值会抛出错误。`let` 允许重新赋值。现代风格规则简单而严格：**默认用 `const`**，只有当你有具体理由去重新赋值时（比如一个要递增的计数器）才换成 `let`。
+
+```js
+const birthYear = 1990; // 永远不会变
+let age = 2026 - birthYear; // 随年份变化
+age = age + 1; // 没问题：用的是 let
+```
+
+破坏规则会怎样？试一下：
+
+```js
+const pi = 3.14;
+pi = 42; // TypeError: Assignment to constant variable.
+```
+
+控制台显示红色的 `TypeError`。程序并没有"坏掉"——是 JavaScript 拒绝了会破坏你意图的操作。这是语言在保护程序的语义。
+
+变量名区分大小写，采用**驼峰命名**（`userAge`，而不是 `user_age` 或 `UserAge`）。名字应当说明值*是什么*：`score` 好过 `s`，`birthYear` 好过 `x`。未来的你读到的是名字，不是意图。
+
+## 基本类型
+
+JavaScript 中每个值都有*类型*。你会天天打交道的五种基本类型是：
+
+| 类型        | 含义                 | 示例                                   |
+| ----------- | -------------------- | -------------------------------------- |
+| `string`    | 引号中的文本         | `"Ada"`、`'hello'`、`` `hi ${name}` `` |
+| `number`    | 整数和小数，同一类型 | `42`、`3.14`、`-7`                     |
+| `boolean`   | 逻辑值               | `true`、`false`                        |
+| `undefined` | 声明了但没赋值       | `let x;` → `x` 是 `undefined`          |
+| `null`      | 故意的"没有值"       | `const connection = null;`             |
+
+随时可以用 `typeof` 运算符询问一个值的类型：
+
+```js
+console.log(typeof 'Ada'); // "string"
+console.log(typeof 42); // "number"
+console.log(typeof true); // "boolean"
+console.log(typeof undefined); // "undefined"
+console.log(typeof null); // "object" —— 一个著名的历史 bug
+```
+
+是的，最后一行是真实行为：`typeof null` 返回 `"object"`，从 1995 年至今如此。这个 bug 永远修不了，因为太多代码依赖它。现在你知道了——这个小怪癖也提醒我们：类型在 JavaScript 里是工具，不是信仰。
+
+两个值得尽早知道的细节：
+
+- 字符串可以用单引号、双引号或反引号——但开头结尾必须用*同一种*。
+- `undefined` 意为"从未赋值"；`null` 意为"故意留空"。两者之后会在各种 API 里遇到；现在先知道它们都存在，且 `typeof` 不太分得清。
+
+## 运算符：用值做计算
+
+运算符把值组合成新的值。算术运算符和学校数学教的一样，外加 `%`（取余）：
+
+```js
+console.log(7 + 3); // 10
+console.log(7 - 3); // 4
+console.log(7 * 3); // 21
+console.log(7 / 3); // 2.3333333333333335
+console.log(7 % 3); // 1  <- 7 除以 3 的余数
+```
+
+比较运算符产生布尔值——程序做一切决策的原材料：
+
+```js
+console.log(3 > 2); // true
+console.log(3 <= 2); // false
+console.log('a' === 'a'); // true
+console.log(5 === '5'); // false！
+```
+
+最后一行最关键。JavaScript 有两种相等：`==`（宽松）在比较前*转换*类型，`===`（严格）不转换。用 `==` 时，数字 `5` 和字符串 `"5"` 相等；用 `===` 时不等，因为类型不同。宽松相等制造无穷的细微 bug，所以本课程乃至大多数专业代码库的规则是绝对的：**永远使用 `===` 和 `!==`**。
+
+逻辑运算符组合布尔值：`&&`（与）只在两侧都为真时为真，`||`（或）至少一侧为真即为真，`!`（非）翻转布尔值：
+
+```js
+const isLoggedIn = true;
+const hasPermission = false;
+console.log(isLoggedIn && hasPermission); // false
+console.log(isLoggedIn || hasPermission); // true
+console.log(!isLoggedIn); // false
+```
+
+> **试一试：** 打印 `10 % 3`、`10 === "10"` 和 `true && false`。按运行*之前*先预测每个结果，再用控制台核对。你的预测和现实之间的差距，恰恰是学习发生的地方。
+
+## 加号身兼两职
+
+有一个运算符值得单开一节，因为它会骗到你。`+` 对数字做加法，但只要有一侧是字符串，它就*拼接*——把文本粘起来：
+
+```js
+console.log('5' + 2); // "52"  <- 字符串！
+console.log(5 + 2); // 7
+console.log('5' + '2'); // "52"
+```
+
+规则是：`+` 的*任意*一侧是字符串，另一侧也会被转成字符串。这是 JavaScript 早期最经典的意外。解药是显式转换：
+
+```js
+const input = '5'; // 假装它来自表单输入
+const value = Number(input); // 字符串 -> 数字
+console.log(value + 2); // 7
+
+const score = 42;
+const message = String(score); // 数字 -> 字符串
+console.log(typeof message); // "string"
+```
+
+`Number("hello")` 返回 `NaN`——"不是数字"（not a number）——JavaScript 表示转换失败的说法。`NaN` 的类型是 `"number"`（又一个经典怪癖），它会污染一切与之相关的计算，所以要尽早检查可疑的转换。
+
+## 模板字符串：正确地拼字符串
+
+用 `+` 拼接字符串能用，但很快就会变得难看：
+
+```js
+const name = 'Ada';
+const age = 36;
+console.log(name + ' is about ' + age + ' years old.'); // 能用，但吵闹
+```
+
+**模板字符串**使用反引号和 `${...}` 占位符，是现代的文本组装方式：
+
+```js
+console.log(`${name} is about ${age} years old.`);
+// "Ada is about 36 years old."
+```
+
+占位符里可以放任何表达式：`` `${age + 1}` `` 会先计算再打印。反引号还允许直接写多行字符串，不需要 `\n`。从本课起，凡是混合文本和值的字符串都用模板字符串。
+
+## 走向练习
+
+练习要求你在控制台里完成一份小小的"个人档案报告"。工作的形状是：
+
+1. 声明 `name`（字符串，不会变 → `const`）和 `year`（出生年份数字 → `const`，出生年不会变）。
+2. 把年龄算进一个新变量——一个算术表达式。
+3. 打印每个值*和它的 `typeof`*，亲眼看到类型。
+4. 用模板字符串组织句子，不要用 `+`。
+5. 复现 `"5" + 2` 的意外，打印它，再用 `Number()` 修正并打印修正后的和。
+
+这里还没有碰 DOM——那是后面几课的事。你在训练的是一切编程的内心循环：**声明、计算、打印、核对**。
+
+## 常见错误
+
+- **用 `=` 做比较。** `=` 是赋值；`===` 才是比较。`if (x = 5)` 会把 `x` 设成 5 而不是判断它。编辑器不一定每次都提醒你。
+
+  ```js
+  // 错误：赋值
+  let score = 0;
+  console.log((score = 10)); // 10，score 变成了 10
+  // 正确：比较
+  console.log(score === 10); // true
+  ```
+
+- **字符串里混用引号。** `"It's fine"` 会坏掉，因为字符串在第二个 `"` 处就结束了。用反引号或交替引号：`'It\'s fine'` 或 `` `It's fine` ``。
+
+- **变量名打错字。** `userName` 和 `username` 是两个变量。JavaScript 不猜；你会得到 `ReferenceError: username is not defined`。读错误里的名字，改拼写。
+
+- **忘了 `typeof null` 是 `"object"`。** 不要只用 `typeof` 判断 `null`；直接比较：`value === null`。
+
+- **表单输入没转换就做加法。** 表单的值永远是字符串。先 `Number()` 再计算——否则 `"5" + 2` 得到 `"52"`。
+
+- **给 `const` 重新赋值。** 看到源 `TypeError: Assignment to constant variable` 时，要么重新赋值是 bug——要么这个变量当初就该用 `let` 声明。
+
+## 小结
+
+- `console.log()` 把值打印到 Console 面板——它是本课程剩余部分的反馈回路。
+- 默认用 `const` 声明；只对真正会变的值用 `let`。
+- 五种基本类型是 `string`、`number`、`boolean`、`undefined` 和 `null`；用 `typeof` 随时询问。
+- 比较永远用 `===` / `!==`；记住 `+` 遇到字符串就变拼接。
+- 用 `Number()` 和 `String()` 显式转换，用模板字符串 `` `${name}` `` 组合文本。
+
+下一课：函数——教 JavaScript 学会新动词。

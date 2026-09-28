@@ -1,0 +1,330 @@
+---
+lessonId: 08-css-flexbox
+order: 8
+module: layout
+difficulty: beginner
+minutes: 35
+title: 'Flexbox Layout'
+summary: 'Turn any container into a flex row or column, distribute and align its items, and build navbar and card layouts that wrap responsively.'
+objectives:
+  - 'Create a flex container with `display: flex` and reason about its main and cross axes.'
+  - 'Distribute items along the main axis with `justify-content` and space them with `gap`.'
+  - 'Align items on the cross axis with `align-items` and switch direction with `flex-direction`.'
+  - 'Control how items grow and shrink using the `flex` shorthand and `min-width`.'
+  - 'Build a navbar and a wrapping card row that need no media queries.'
+exercise:
+  task: 'Lay out a music-app page with Flexbox. Make the nav bar a flex row with the logo pushed to the left and the link list pushed to the right, and give the links a comfortable gap. Turn the three feature cards into an equal-width row with a 16px gap. Finally, let the card row wrap onto new lines when the preview is narrow, keeping each card at least 180px wide.'
+  hints:
+    - 'Flexbox always works in pairs: declare `display: flex` on the container (the nav and the card row), then control how its children behave.'
+    - '`justify-content` distributes items along the main axis and `gap` spaces them; `margin-left: auto` on one item pushes everything after it to the far end.'
+    - 'Give each card `flex: 1` plus `min-width: 180px`, and add `flex-wrap: wrap` to the row so cards grow equally but drop to a new line when they get too narrow.'
+---
+
+## Overview
+
+Normal flow gives you either full-width blocks or inline text - and almost nothing in between. The moment a design wants a logo on the left with links on the right, three cards of equal height, or a sidebar next to an article, you need a **layout system**. Flexbox is the first one you should reach for: a one-dimensional layout where a container distributes its children along a single axis, and you control the distribution with a handful of properties.
+
+Flexbox has a reputation for a confusing vocabulary, but it rests on one idea. A flex container has a **main axis** - the direction its children are laid out in - and a **cross axis** running perpendicular to it. `justify-content` positions things _along_ the main axis, `align-items` positions things _across_ it. Once those two sentences click, the rest is vocabulary practice.
+
+In this lesson you will build the two layouts that appear in nearly every website: a navigation bar and a card row. Keep the built-in editor open, change one property at a time, and watch the preview - Flexbox rewards experimenting far more than memorizing.
+
+## The Flex Container and Its Axes
+
+Flexbox always starts on a **container**. Declare `display: flex` and its direct children instantly become **flex items** laid out in a row. The children's own `display` values are mostly ignored: a `span` and a `div` become equal citizens that can shrink, grow and align like any other item.
+
+```html
+<nav class="menu">
+  <a href="#">Home</a>
+  <a href="#">Library</a>
+  <a href="#">Playlists</a>
+</nav>
+```
+
+```css
+.menu {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #1e293b;
+}
+
+.menu a {
+  color: #c7d2fe;
+  text-decoration: none;
+}
+```
+
+The `gap` property adds space _between_ flex items without touching margins - one rule instead of a pile of `margin-right` hacks that always leaves a stray space after the last item.
+
+**Direction** decides which way the main axis runs. The default `row` lays items left to right; `column` stacks them vertically, and then the axes swap roles: `justify-content` now positions things vertically. There is also `row-reverse` and `column-reverse` when the visual order should flip.
+
+| Property          | Controls                         | Common values                                       |
+| ----------------- | -------------------------------- | --------------------------------------------------- |
+| `flex-direction`  | Where the main axis points       | `row`, `column`, `row-reverse`, `column-reverse`    |
+| `justify-content` | Distribution along the main axis | `flex-start`, `center`, `space-between`, `flex-end` |
+| `align-items`     | Alignment across the cross axis  | `stretch`, `center`, `flex-start`, `flex-end`       |
+| `gap`             | Minimum space between items      | any length, e.g. `12px` or `1rem`                   |
+
+> **Try it in the editor:** paste the nav above and add `justify-content: center`, then `space-between`, then switch to `flex-direction: column`. Watch which axis each change acts on.
+
+## Distributing Along the Main Axis
+
+`justify-content` answers: "there is leftover space in my row - who gets it?" This is the property behind centered heroes, spread-out footers and right-aligned button groups.
+
+```css
+.toolbar {
+  display: flex;
+  justify-content: space-between; /* first item left, last item right */
+  align-items: center;
+  padding: 10px 16px;
+  background: #f1f5f9;
+}
+```
+
+The values form a spectrum: `flex-start` packs everything at the start and dumps all leftover space at the end; `center` splits the leftover space in half; `space-between` gives it all to the gaps between items; `space-around` and `space-evenly` spread it around each item with slightly different half-gaps.
+
+`align-items` works the same way on the cross axis, and its default `stretch` is why flex items in a row quietly grow to equal height. A row of three cards with different amounts of text still lines up perfectly - no equal-height JavaScript, no fixed pixel heights. One subtlety: to center something both ways, `justify-content` centers along the row while `align-items` centers along the column - mixing them up is the most common Flexbox typo.
+
+> **Try it in the editor:** build the toolbar, then give one button a taller padding. Watch how the other items stay centered against it thanks to `align-items: center`.
+
+## Growing, Shrinking and Wrapping
+
+By default flex items refuse to shrink below their content size and never grow beyond it. The `flex` shorthand changes that. Its three ingredients are `flex-grow` (how much leftover space to absorb), `flex-shrink` (how much to give up when space is tight) and `flex-basis` (the starting size before growing or shrinking).
+
+```css
+.cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap; /* allow items to drop onto a new line */
+}
+
+.card {
+  flex: 1; /* grow: take an equal share of the free space */
+  min-width: 180px; /* but never narrower than this */
+  padding: 16px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.08);
+}
+```
+
+`flex: 1` is shorthand for `flex: 1 1 0` - grow and shrink freely from a zero starting point, which is why three cards with `flex: 1` come out exactly equal regardless of their content. Compare that with `flex: 2` on one card: it absorbs twice as much of the leftover space, a simple way to make a main pane twice the width of a sidebar.
+
+The real magic is the **wrap trick** above. With `flex-wrap: wrap` and a `min-width` on each item, the container fits as many cards per line as it can, and pushes the rest onto a new line - a responsive card grid with zero media queries. Try narrowing the preview: cards shrink to 180px, then one hops down.
+
+> **Try it in the editor:** paste the card row, then drag the preview narrower. Find the exact width where the third card drops, then raise `min-width` to 240px and watch it drop earlier.
+
+## The Classic Navbar: Logo Left, Links Right
+
+Almost every navigation bar is the same puzzle: one item at the start of the row, the rest at the end. Flexbox offers two idiomatic solutions. The blunt one is `justify-content: space-between` on a nav with exactly two children - logo and link list. The flexible one is the **auto-margin trick**: in a flex container, `margin-left: auto` on an item absorbs all the free space to its left, shoving it and everything after it to the far end.
+
+```html
+<nav class="navbar">
+  <span class="logo">WaveDeck</span>
+  <div class="nav-links">
+    <a href="#">Search</a>
+    <a href="#">Library</a>
+    <a href="#">Account</a>
+  </div>
+</nav>
+```
+
+```css
+.navbar {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  background: #1e293b;
+}
+
+.logo {
+  color: #fff;
+  font-weight: 700;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+  margin-left: auto; /* absorb all free space, pushing this group right */
+}
+
+.nav-links a {
+  color: #c7d2fe;
+  text-decoration: none;
+}
+```
+
+The auto-margin trick scales better because it does not care how many children the nav has: add a profile avatar before the links and it will flow naturally inside the right-hand group. Note that `.nav-links` is itself a flex container - nesting flex layouts is completely normal, each container managing only its own children.
+
+> **Try it in the editor:** rebuild the navbar, then add a fourth link and see the group stay right-aligned. Replace `margin-left: auto` with `justify-content: space-between` on the navbar and compare the two approaches.
+
+## Fine-Tuning Single Items
+
+The container-level properties position _every_ item at once. Sometimes one item needs to break ranks, and Flexbox keeps two child-side properties ready for exactly that.
+
+`align-self` overrides `align-items` for a single item, using the same values. In a toolbar stretched to equal height, one odd "New" pill can opt out and center itself - without touching its siblings:
+
+```css
+.toolbar {
+  display: flex;
+  align-items: stretch; /* the default for every item */
+}
+
+.toolbar .tag {
+  align-self: center; /* only this one opts out */
+}
+```
+
+`order` rearranges items visually without touching the HTML. Every item defaults to `order: 0`, and items with equal orders keep their source order, so a single `order: -1` pulls one item to the front of the row:
+
+```css
+.menu .active {
+  order: -1;
+} /* jump to the front of the nav */
+.menu .logo {
+  order: -2;
+} /* even further forward */
+```
+
+A word of caution: `order` changes only what users _see_. Screen readers and keyboard users still follow the HTML order, so a link that jumps to the front visually but sits last in the markup produces a confusing tab sequence. Reach for `order` for small visual tweaks; when the sequence itself is wrong, fix the HTML instead.
+
+With this, the child-side toolkit is complete: size with `flex`, align with `align-self`, sequence with `order`. The container sets the defaults for every item; an item asks for an exception when it needs one.
+
+> **Try it in the editor:** in the navbar, give the logo `order: 1` and the link group `order: -1` and watch them swap places. Then add `align-self: flex-end` to one link and see it ignore the row's `align-items`.
+
+## How the Exercise Works
+
+The exercise is a music-app page with a nav and three feature cards, and the starter stylesheet ships without any layout rules - only colors and spacing. Your job is to add the Flexbox layer, one container at a time:
+
+1. **Navbar.** Declare `display: flex` on the nav so the logo and the link list share a row, then push the link group right with the auto-margin trick (or `space-between` if the nav has exactly two children). Give the inner link list its own `display: flex` plus a `gap` so the links stop touching.
+2. **Card row.** Declare `display: flex` on the row container and a `gap` of 16px, then give each card `flex: 1` so they share the width equally.
+3. **Wrapping.** Add `flex-wrap: wrap` to the row and `min-width: 180px` to each card. Resize the preview to verify cards drop onto a second line instead of squashing.
+
+Preview after every step. If two cards refuse to be equal, check that `flex: 1` is on the _items_ and `display: flex` is on their _parent_ - mixing up that pair is the number one Flexbox bug. The solution files are there to compare when you finish, not to peek at first.
+
+## Common Mistakes
+
+### 1. Putting display: flex on the items instead of the container
+
+Flex properties describe how a container lays out its children. Applying `display: flex` to each card makes each card a container for its own text - the row itself stays a plain block.
+
+```css
+/* wrong: each card becomes a container, the row does nothing */
+.card {
+  display: flex;
+}
+
+/* right: the row is the container */
+.cards {
+  display: flex;
+  gap: 16px;
+}
+```
+
+### 2. Mixing up the two alignment axes
+
+`justify-content` works along the main axis and `align-items` across it. Swapping them makes a "centered" box sit off-center in exactly one direction.
+
+```css
+/* wrong: centers vertically, not horizontally (in a row) */
+.box {
+  display: flex;
+  align-items: center;
+}
+
+/* right: centers along both axes */
+.box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+```
+
+### 3. Faking gaps with margins
+
+A `margin-right` on every item leaves an extra space after the last one. `gap` applies only _between_ items.
+
+```css
+/* wrong: stray space after the last link */
+.menu a {
+  margin-right: 16px;
+}
+
+/* right: clean spacing between items only */
+.menu {
+  display: flex;
+  gap: 16px;
+}
+```
+
+### 4. Forgetting flex-wrap
+
+Without `flex-wrap: wrap`, items never drop to a new line - they either shrink or overflow the container, no matter what `min-width` says.
+
+```css
+/* wrong: cards squash instead of wrapping */
+.cards {
+  display: flex;
+  gap: 16px;
+}
+.card {
+  flex: 1;
+  min-width: 180px;
+}
+
+/* right: cards wrap when they hit min-width */
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.card {
+  flex: 1;
+  min-width: 180px;
+}
+```
+
+### 5. Expecting align-items to center one axis inside a column
+
+In a `column` container the axes swap: `justify-content` moves items vertically and `align-items` horizontally. Code copied from a row layout suddenly behaves sideways.
+
+```css
+/* wrong in a column: centers items horizontally, not vertically */
+.stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* right: justify-content now controls the vertical axis */
+.stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+```
+
+### 6. Fighting content size instead of using flex-basis
+
+Cards with long text come out unequal even with `flex: 1` if the basis is left at `auto` - grow distributes only _leftover_ space. Force a fair start with `flex-basis: 0`, which is exactly what `flex: 1` means.
+
+```css
+/* wrong: basis auto keeps content sizes unequal */
+.card {
+  flex-grow: 1;
+}
+
+/* right: zero basis, equal shares */
+.card {
+  flex: 1 1 0;
+}
+```
+
+## Summary
+
+- `display: flex` turns a container into a flex box; its children become flex items along a main axis with a perpendicular cross axis.
+- `justify-content` distributes along the main axis, `align-items` aligns across it, and `gap` spaces items without margin hacks.
+- `flex-direction: column` swaps the axes; every distribution property follows the axis, not the screen.
+- `flex: 1` grows items equally from a zero basis; `min-width` plus `flex-wrap: wrap` builds responsive rows with no media queries.
+- The auto-margin trick (`margin-left: auto`) pushes a group to the far end of a navbar.

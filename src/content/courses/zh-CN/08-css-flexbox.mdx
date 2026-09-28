@@ -1,0 +1,330 @@
+---
+lessonId: 08-css-flexbox
+order: 8
+module: layout
+difficulty: beginner
+minutes: 35
+title: 'Flexbox 弹性布局'
+summary: '把任意容器变成横向或纵向的弹性容器，分配与对齐它的子项，并做出无需媒体查询、能自动换行的导航栏与卡片布局。'
+objectives:
+  - '用 `display: flex` 创建弹性容器，并理清主轴与交叉轴。'
+  - '用 `justify-content` 沿主轴分配子项，用 `gap` 设置间距。'
+  - '用 `align-items` 沿交叉轴对齐，用 `flex-direction` 切换方向。'
+  - '用 `flex` 简写与 `min-width` 控制子项如何伸展与收缩。'
+  - '搭建导航栏和能自动换行、无需媒体查询的卡片行。'
+exercise:
+  task: '用 Flexbox 排版一个音乐应用页面。让导航栏变成一行：logo 推到最左、链接列表推到最右，并给链接之间留出舒适的间距。把三张功能卡片排成一列等宽的行，间距 16px。最后让卡片行在预览变窄时换到新的一行，且每张卡片不窄于 180px。'
+  hints:
+    - 'Flexbox 总是成对出现：先在容器（导航栏和卡片行）上声明 `display: flex`，再控制子项的行为。'
+    - '`justify-content` 沿主轴分配子项，`gap` 负责间距；给某个子项加 `margin-left: auto`，它及之后的元素都会被推到末端。'
+    - '给每张卡片 `flex: 1` 加上 `min-width: 180px`，并给行容器加 `flex-wrap: wrap`，卡片就能等分宽度、太窄时自动换行。'
+---
+
+## 概述
+
+普通流只给你两种选择：占满整行的块级元素，或者像文本一样排列的行内元素——中间地带几乎是空白。可设计稿偏偏总想要"左边 logo、右边链接""三张等高卡片""侧栏挨着文章"。这时你需要一个**布局系统**，而 Flexbox 应该是你的第一反应：它是一维布局，容器沿单条轴线分配子项，你只需用少数几个属性控制"怎么分"。
+
+Flexbox 的术语常常吓退初学者，但它的核心只有一个想法。弹性容器有一条**主轴**——子项排列的方向，还有一条与它垂直的**交叉轴**。`justify-content` 负责*沿主轴*摆位置，`align-items` 负责*沿交叉轴*对齐。这两句话说通之后，剩下的都只是词汇练习。
+
+本节课你会搭建几乎所有网站都有的两种布局：导航栏和卡片行。请保持编辑器打开，每次只改一个属性，盯着预览看变化——Flexbox 这门手艺，动手试远胜死记硬背。
+
+## 弹性容器与它的两条轴
+
+Flexbox 永远从**容器**开始。声明 `display: flex`，它的直接子元素立刻变成**弹性子项**，排成一行。子元素原本的 `display` 值大多被忽略：`span` 和 `div` 变成地位平等的子项，同样可以伸展、收缩、对齐。
+
+```html
+<nav class="menu">
+  <a href="#">首页</a>
+  <a href="#">曲库</a>
+  <a href="#">歌单</a>
+</nav>
+```
+
+```css
+.menu {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #1e293b;
+}
+
+.menu a {
+  color: #c7d2fe;
+  text-decoration: none;
+}
+```
+
+`gap` 属性在弹性子项*之间*加空隙，完全不用碰 margin——一条规则搞定，不像 `margin-right` 那样总在最后一个元素后面留下多余空隙。
+
+**方向**决定主轴指向哪里。默认的 `row` 从左到右排列子项；`column` 纵向堆叠，此时两条轴的角色互换：`justify-content` 改为控制纵向。另有 `row-reverse` 和 `column-reverse`，用于视觉顺序需要反转的场合。
+
+| 属性              | 控制什么           | 常用取值                                            |
+| ----------------- | ------------------ | --------------------------------------------------- |
+| `flex-direction`  | 主轴指向           | `row`、`column`、`row-reverse`、`column-reverse`    |
+| `justify-content` | 沿主轴的分配方式   | `flex-start`、`center`、`space-between`、`flex-end` |
+| `align-items`     | 沿交叉轴的对齐方式 | `stretch`、`center`、`flex-start`、`flex-end`       |
+| `gap`             | 子项之间的最小间距 | 任意长度，如 `12px` 或 `1rem`                       |
+
+> **在编辑器中试一试：** 粘贴上面的导航栏，依次加上 `justify-content: center`、`space-between`，再切换成 `flex-direction: column`。观察每次改动作用在哪条轴上。
+
+## 沿主轴分配空间
+
+`justify-content` 回答的问题是："这一行还有富余空间——给谁？"居中的 Hero 区、摊开的页脚、右对齐的按钮组，背后都是它。
+
+```css
+.toolbar {
+  display: flex;
+  justify-content: space-between; /* 首项靠左，末项靠右 */
+  align-items: center;
+  padding: 10px 16px;
+  background: #f1f5f9;
+}
+```
+
+各个取值构成一个光谱：`flex-start` 把所有子项挤到起点，富余空间全部堆在末尾；`center` 把富余空间对半分；`space-between` 全部喂给子项之间的空隙；`space-around` 和 `space-evenly` 把空间摊到每个子项周围，只是半份空隙的算法略有差别。
+
+`align-items` 在交叉轴上做同样的事，它的默认值 `stretch` 正是一行里的弹性子项悄悄长成等高的原因：三张文字长短不一的卡片依然严丝合缝——不需要等高的 JavaScript，也不需要写死的像素高度。一个容易踩的细节：要让元素两向居中，`justify-content` 沿行居中、`align-items` 沿列居中，两者搞混是 Flexbox 最常见的笔误。
+
+> **在编辑器中试一试：** 搭好工具栏，再给其中一个按钮加大 padding。有 `align-items: center` 坐镇，其余子项依然相对它居中。
+
+## 伸展、收缩与换行
+
+默认情况下，弹性子项不会收缩到内容尺寸以下，也不会主动变大。`flex` 简写改变了这一切，它包含三个成分：`flex-grow`（分到多少富余空间）、`flex-shrink`（空间不足时让出多少）和 `flex-basis`（伸缩前的起始尺寸）。
+
+```css
+.cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap; /* 允许子项落到新的一行 */
+}
+
+.card {
+  flex: 1; /* 伸展：平分剩余空间 */
+  min-width: 180px; /* 但绝不窄于这个值 */
+  padding: 16px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.08);
+}
+```
+
+`flex: 1` 是 `flex: 1 1 0` 的简写——从零起点自由伸缩，所以三张 `flex: 1` 的卡片不论内容多少都严格等宽。对比给某张卡片 `flex: 2`：它能分到两倍的富余空间，这是"主栏是侧栏两倍宽"的简单写法。
+
+真正神奇的是上面的**换行技巧**。有了 `flex-wrap: wrap` 和子项的 `min-width`，容器会尽可能多地往一行里塞卡片，塞不下的推到新的一行——不写一条媒体查询就得到响应式卡片网格。把预览拖窄试试：卡片缩到 180px 后，就有一张跳到下一行。
+
+> **在编辑器中试一试：** 粘贴卡片行，把预览拖窄，找出第三张卡片掉下去的临界宽度。再把 `min-width` 提到 240px，看它更早掉下去。
+
+## 经典导航栏：logo 在左，链接在右
+
+几乎所有导航栏都是同一道谜题：一个元素在行首，其余的在行尾。Flexbox 有两种惯用解法。简单直接的是 `justify-content: space-between`——当导航栏恰好只有两个子元素（logo 和链接列表）时很好用。更灵活的是**自动外边距技巧**：在弹性容器里，某个子项的 `margin-left: auto` 会吸走它左侧的全部富余空间，把它和它后面的所有兄弟一起推向末端。
+
+```html
+<nav class="navbar">
+  <span class="logo">WaveDeck</span>
+  <div class="nav-links">
+    <a href="#">搜索</a>
+    <a href="#">曲库</a>
+    <a href="#">账户</a>
+  </div>
+</nav>
+```
+
+```css
+.navbar {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  background: #1e293b;
+}
+
+.logo {
+  color: #fff;
+  font-weight: 700;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+  margin-left: auto; /* 吸走全部富余空间，把这一组推向右侧 */
+}
+
+.nav-links a {
+  color: #c7d2fe;
+  text-decoration: none;
+}
+```
+
+自动外边距技巧扩展性更好，因为它不关心导航栏有几个子元素：在链接前再加一个头像，它会自然地并入右侧那一组。注意 `.nav-links` 自己也是弹性容器——嵌套弹性布局完全正常，每个容器只管理自己的直接子项。
+
+> **在编辑器中试一试：** 搭好导航栏，再加第四个链接，看右侧一组依然贴右。把 `margin-left: auto` 换成导航栏上的 `justify-content: space-between`，比较两种做法。
+
+## 单个子项的微调
+
+容器级的属性一次摆好*所有*子项，但有时个别子项需要"脱离队伍"。Flexbox 为此准备了两个写在子项身上的属性。
+
+`align-self` 用同样的取值覆盖单个子项的 `align-items`。在一排被拉伸到等高的工具栏按钮里，某个特殊的"新品"小标签可以单独选择居中——完全不影响兄弟元素：
+
+```css
+.toolbar {
+  display: flex;
+  align-items: stretch; /* 所有子项的默认值 */
+}
+
+.toolbar .tag {
+  align-self: center; /* 只有它自己例外 */
+}
+```
+
+`order` 可以在不改动 HTML 的前提下改变视觉顺序。所有子项默认 `order: 0`，order 相同的子项保持源代码顺序，所以给某个子项设 `order: -1` 就能把它拉到行首：
+
+```css
+.menu .active {
+  order: -1;
+} /* 跳到导航栏最前面 */
+.menu .logo {
+  order: -2;
+} /* 还要更靠前 */
+```
+
+提醒一句：`order` 改变的只是用户*看到*的顺序。屏幕阅读器和键盘用户仍然遵循 HTML 顺序——视觉上跳到行首的链接在标记里却排在最后，Tab 顺序会变得混乱。`order` 适合小的视觉微调；如果顺序本身错了，应该去改 HTML。
+
+到此，子项侧的工具箱就集齐了：尺寸交给 `flex`，对齐交给 `align-self`，顺序交给 `order`。容器为所有子项定好默认值，子项在需要时申请例外。
+
+> **在编辑器中试一试：** 在导航栏里给 logo 设 `order: 1`、给链接组设 `order: -1`，看它们交换位置。再给某个链接加 `align-self: flex-end`，看它无视整行的 `align-items`。
+
+## 练习思路
+
+练习是一个音乐应用页面，包含导航栏和三张功能卡片，启动样式表里只有颜色和间距、没有任何布局规则。你的任务是补上 Flexbox 这一层，一次处理一个容器：
+
+1. **导航栏。** 在 nav 上声明 `display: flex`，让 logo 和链接列表同处一行，然后用自动外边距技巧把链接组推向右侧（如果 nav 恰好只有两个子元素，用 `space-between` 也行）。再给内层链接列表单独 `display: flex` 加 `gap`，让链接不再挤在一起。
+2. **卡片行。** 在行容器上声明 `display: flex` 和 16px 的 `gap`，再给每张卡片 `flex: 1`，让它们平分宽度。
+3. **换行。** 给行容器加 `flex-wrap: wrap`，给每张卡片加 `min-width: 180px`。拖动预览宽度，确认卡片是掉到第二行而不是被压扁。
+
+每做完一步就预览一次。如果两张卡片死活不相等，检查 `flex: 1` 是否写在*子项*上、`display: flex` 是否写在它们的*父容器*上——搞混这一对是 Flexbox 头号 bug。完成后可以打开参考答案对比，先别急着偷看。
+
+## 常见错误
+
+### 1. 把 display: flex 写在子项上而不是容器上
+
+Flex 属性描述的是容器如何摆放子项。给每张卡片都写 `display: flex`，只会让每张卡片变成自己文字的容器——卡片行本身仍是普通块级盒子。
+
+```css
+/* 错误：每张卡片成了容器，行本身什么也没做 */
+.card {
+  display: flex;
+}
+
+/* 正确：行才是容器 */
+.cards {
+  display: flex;
+  gap: 16px;
+}
+```
+
+### 2. 混淆两条对齐轴
+
+`justify-content` 沿主轴工作，`align-items` 沿交叉轴工作。两者写反，"居中"的盒子会恰好在某一个方向上偏掉。
+
+```css
+/* 错误：在 row 方向上只垂直居中，没水平居中 */
+.box {
+  display: flex;
+  align-items: center;
+}
+
+/* 正确：两条轴都居中 */
+.box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+```
+
+### 3. 用 margin 冒充 gap
+
+给每个子项加 `margin-right`，最后一个元素后面会多出一段空隙。`gap` 只作用于子项*之间*。
+
+```css
+/* 错误：最后一个链接后面多了空隙 */
+.menu a {
+  margin-right: 16px;
+}
+
+/* 正确：只在子项之间留白 */
+.menu {
+  display: flex;
+  gap: 16px;
+}
+```
+
+### 4. 忘记 flex-wrap
+
+没有 `flex-wrap: wrap`，子项永远不会掉到新的一行——它们只会被压扁或溢出容器，`min-width` 写了也白写。
+
+```css
+/* 错误：卡片被压扁而不是换行 */
+.cards {
+  display: flex;
+  gap: 16px;
+}
+.card {
+  flex: 1;
+  min-width: 180px;
+}
+
+/* 正确：卡片碰到 min-width 就换行 */
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.card {
+  flex: 1;
+  min-width: 180px;
+}
+```
+
+### 5. 在 column 容器里照抄 row 的居中代码
+
+在 `column` 容器里两条轴互换：`justify-content` 管纵向，`align-items` 管横向。从横向布局抄来的代码突然开始"横着来"。
+
+```css
+/* 错误（column 中）：只水平居中，没有垂直居中 */
+.stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* 正确：justify-content 此时控制的是纵向 */
+.stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+```
+
+### 6. 与内容尺寸较劲，而不是用 flex-basis
+
+内容较长的卡片即便写了 `flex: 1` 也不等宽，原因是 basis 停在 `auto`——grow 只分配*富余*空间。用 `flex-basis: 0` 强制公平起点，这正是 `flex: 1` 的含义。
+
+```css
+/* 错误：basis 为 auto，内容尺寸造成不均 */
+.card {
+  flex-grow: 1;
+}
+
+/* 正确：零起点，均等分配 */
+.card {
+  flex: 1 1 0;
+}
+```
+
+## 小结
+
+- `display: flex` 把容器变成弹性盒；子项沿主轴排列，交叉轴与之垂直。
+- `justify-content` 沿主轴分配，`align-items` 沿交叉轴对齐，`gap` 负责间距、无需 margin hack。
+- `flex-direction: column` 会交换两条轴；所有分配属性都跟随轴而不是屏幕方向。
+- `flex: 1` 让子项从零起点等分空间；`min-width` 加 `flex-wrap: wrap` 无需媒体查询即可做出响应式行布局。
+- 自动外边距技巧（`margin-left: auto`）能把一组内容推到导航栏的末端。

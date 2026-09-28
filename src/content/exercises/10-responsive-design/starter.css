@@ -1,0 +1,65 @@
+/* Lesson 10 starter: responsive design - desktop layout is done,
+   the responsive layer is missing */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.site-header {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px 8px;
+}
+
+.tagline {
+  color: #64748b;
+  margin: 0;
+}
+
+/* desktop layout: article twice as wide as the sidebar */
+.layout {
+  display: flex;
+  gap: 24px;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 8px 16px 32px;
+}
+
+.article {
+  flex: 2;
+}
+.article h2 {
+  margin-top: 0;
+}
+
+.sidebar {
+  flex: 1;
+}
+
+.sidebar ul {
+  padding-left: 18px;
+  color: #334155;
+}
+
+.promo {
+  background: #fef3c7;
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+/* TODO 1: below a viewport width of 720px, stack the two columns
+   (the media query must come after the rules it overrides) */
+
+/* TODO 2: inside the same query, hide the promo box completely */
+
+/* TODO 3: make the h1 scale smoothly instead of stepping:
+   between 1.6rem and 2.5rem, preferring 5% of the viewport width */
+.site-header h1 {
+  font-size: 2.5rem;
+  margin: 0 0 4px;
+}

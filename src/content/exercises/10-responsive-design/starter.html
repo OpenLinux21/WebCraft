@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lesson 10: Responsive Design</title>
+    <link rel="stylesheet" href="starter.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>The Daily Byte</h1>
+      <p class="tagline">Short stories about code</p>
+    </header>
+
+    <!-- TODO: below 720px this pair must stack into one column -->
+    <div class="layout">
+      <article class="article">
+        <h2>Browsers learn new tricks</h2>
+        <p>Every year the platform grows: new CSS features land, old workarounds retire.</p>
+        <p>
+          This article is the main reading column. It should stay comfortable to read at every
+          width.
+        </p>
+      </article>
+
+      <aside class="sidebar">
+        <h2>Latest</h2>
+        <ul>
+          <li>Grid ships everywhere</li>
+          <li>Flexbox turns 15</li>
+          <li>Clamp is all you need</li>
+        </ul>
+        <!-- TODO: this promo box must disappear below 720px -->
+        <div class="promo">
+          <strong>Subscribe!</strong>
+          <p>One email a week, no spam.</p>
+        </div>
+      </aside>
+    </div>
+  </body>
+</html>

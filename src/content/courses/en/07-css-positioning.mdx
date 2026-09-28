@@ -1,0 +1,339 @@
+---
+lessonId: 07-css-positioning
+order: 7
+module: css
+difficulty: beginner
+minutes: 35
+title: 'Positioning, Stacking Contexts and Overflow'
+summary: 'Move elements out of the normal flow with relative, absolute, fixed and sticky positioning, control overlap order with z-index, and handle overflow.'
+objectives:
+  - 'Describe normal flow and name the five values of the `position` property.'
+  - 'Anchor a badge to a parent by combining `position: relative` with `position: absolute`.'
+  - 'Keep a header visible while scrolling with `position: sticky` and pin UI to the viewport with `position: fixed`.'
+  - 'Predict which element wins an overlap using stacking contexts and `z-index`.'
+  - 'Choose the right `overflow` value to scroll, clip or hide content that does not fit.'
+exercise:
+  task: "Polish a profile card page: make the page header stick to the top while you scroll, pin the notification badge to the top-right corner of the avatar by combining a positioned parent with an absolutely positioned child, and fix the 'Back to top' button to the bottom-right corner of the viewport. Finally, give the tips box a fixed height and a scrollbar with `overflow` so its long text no longer stretches the card."
+  hints:
+    - "An absolutely positioned element is placed relative to its nearest positioned ancestor, so first give the avatar's wrapper a `position` of its own."
+    - '`position: sticky` only sticks when you also set a `top` offset, while `position: fixed` always measures from the viewport itself.'
+    - "Place the badge with `top` and `right` offsets (small negative values let it sit on the avatar's edge) and raise its `z-index` if it hides behind the card."
+---
+
+## Overview
+
+Everything you have built so far lives in **normal flow**: block elements stack top to bottom, inline elements flow left to right like words in a sentence, and nothing overlaps. That model is perfect for documents, but real interfaces constantly break out of it. A notification badge sits _on top of_ an avatar. A header stays _pinned_ while the page scrolls underneath. A chat button floats in the corner of the screen no matter how far you scroll.
+
+The `position` property is CSS's lever for leaving normal flow, and it comes with a supporting cast: the `top`/`right`/`bottom`/`left` offsets that say _where_ to move, `z-index` that says _who wins_ when elements overlap, and `overflow` that says _what to do_ with content that no longer fits its box.
+
+In this lesson you will work in the built-in editor: paste each snippet into the stylesheet, watch the preview update, and deliberately break things to see what changes. At the end you will assemble a profile card page that uses all four positioning tricks at once.
+
+## Normal Flow and the Five Position Values
+
+Before moving things, it helps to know what you are moving _away from_. In normal flow, each block box takes the full width available and the next block starts below it. The `position` property has five values, and they differ in one key question: **positioned relative to what?**
+
+| Value      | Leaves normal flow? | Positioned relative to         | Typical use                      |
+| ---------- | ------------------- | ------------------------------ | -------------------------------- |
+| `static`   | No (the default)    | Nothing - offsets are ignored  | Everyday content                 |
+| `relative` | No                  | Its own normal-flow position   | Nudging, anchoring children      |
+| `absolute` | Yes                 | Nearest _positioned_ ancestor  | Badges, labels, dropdown panels  |
+| `fixed`    | Yes                 | The viewport                   | Floating buttons, cookie banners |
+| `sticky`   | No, until it sticks | The nearest scrolling ancestor | Sticky headers, table headers    |
+
+Two consequences are worth memorizing. First, offsets like `top` do nothing on a `static` element - they only apply once the element is positioned. Second, `absolute` and `fixed` remove the element from flow, so neighbors close the gap it left behind, exactly as if it were not there.
+
+```html
+<div class="flow-demo">
+  <p>First</p>
+  <p class="nudged">Second</p>
+  <p>Third</p>
+</div>
+```
+
+```css
+.flow-demo p {
+  padding: 10px;
+  background: #e0e7ff;
+}
+.nudged {
+  position: relative;
+  top: 12px;
+  left: 24px;
+}
+```
+
+Notice that the third paragraph does not move up to fill the gap: `relative` shifts the _painting_ of the box but not its place in the layout. That is what makes it safe for small visual nudges.
+
+> **Try it in the editor:** paste both snippets into the built-in editor and watch the second paragraph slide down and right. Then change `relative` to `static` and confirm the offsets stop doing anything.
+
+## Relative and Absolute: The Anchor Pattern
+
+The single most useful positioning pattern is a **two-step dance**: give a parent `position: relative` so it becomes the anchor, then give a child `position: absolute` so it is placed against that anchor. This is how every "3" badge lands on an avatar and how dropdown menus find their trigger.
+
+```html
+<div class="avatar-wrap">
+  <div class="avatar">ZK</div>
+  <span class="badge">3</span>
+</div>
+```
+
+```css
+.avatar-wrap {
+  position: relative; /* step 1: the anchor */
+  width: 96px;
+}
+
+.avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.badge {
+  position: absolute; /* step 2: placed against .avatar-wrap */
+  top: -8px;
+  right: -12px;
+  background: #ef4444;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+```
+
+The offsets are measured from the anchor's edges: `top: -8px` lifts the badge 8 pixels _above_ the wrapper's top edge, and `right: -12px` pushes it 12 pixels past the right edge. Negative values are not a hack here - they are how elements sit _on_ an edge rather than inside it.
+
+The step people skip is step 1. An absolutely positioned element with **no positioned ancestor** falls back to the page itself and ends up wherever the scroll happens to be. Whenever your badge lands in a bizarre place, ask: _what is this positioned against?_
+
+> **Try it in the editor:** add the snippets above, then comment out the `position: relative` line on the wrapper and watch the badge escape to the page. Put it back and it snaps home.
+
+## Fixed and Sticky: Pinning to the Viewport
+
+`fixed` and `sticky` both create UI that stays visible, but they answer different questions. `fixed` asks "where is the viewport?" - the element is glued to the screen and ignores scrolling completely. `sticky` asks "has my scroll threshold been crossed?" - the element scrolls normally _until_ it reaches the offset you set, then it behaves like fixed.
+
+```css
+.site-header {
+  position: sticky;
+  top: 0; /* stick once the header touches the top of the viewport */
+  background: #1e293b;
+  color: white;
+  padding: 14px 20px;
+  z-index: 10;
+}
+
+.chat-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: #6366f1;
+  color: white;
+}
+```
+
+A `sticky` element never leaves normal flow, so it keeps reserving its space - no layout jump when it sticks. It does need two things to work: a `top` (or `bottom`) offset, and a scrolling area tall enough to actually scroll past it. `fixed` elements, by contrast, are removed from flow entirely, so nothing else rearranges around them.
+
+Use `sticky` for things that belong to the document: headers, table headings, "save" bars. Use `fixed` for things that float above the document: chat widgets, back-to-top buttons, full-screen overlays.
+
+> **Try it in the editor:** make the preview tall enough to scroll, add the header style to the top of the page, and scroll. Then change `sticky` to `fixed` and watch the header stay put even as content slides beneath it.
+
+### Stacking Contexts and z-index
+
+When positioned elements overlap, the browser stacks them using two rules. By default, later elements in the HTML paint on top of earlier ones, and positioned elements paint above non-positioned ones. `z-index` lets you take manual control: higher values win, but **only on positioned elements** (or children of flex and grid containers).
+
+```css
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgb(15 23 42 / 0.5);
+  z-index: 10;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  background: #0f172a;
+  color: white;
+  padding: 12px 16px;
+  z-index: 20; /* above the backdrop's entire context */
+}
+```
+
+There is one subtlety: any element that creates a **stacking context** (a positioned element with a `z-index`, plus a few properties like `transform` and `opacity` below 1) becomes an atomic unit. Its children compete _inside_ that unit and can never slip between it and the outside world. A child with `z-index: 9999` inside a context with `z-index: 1` still loses to an outside element with `z-index: 2`. The practical rule: keep `z-index` values small and local, and never escalate to `9999` wars.
+
+> **Try it in the editor:** overlap two absolutely positioned boxes, give the first `z-index: 1` and the second `z-index: 2`, then swap the values to see the winner change.
+
+## Overflow: Scroll, Clip or Hide
+
+Positioning answers _where_ a box goes; `overflow` answers what happens when the box's **content is bigger than the box**. This happens constantly once you set fixed heights or narrow columns.
+
+| Value     | Behavior with oversized content                |
+| --------- | ---------------------------------------------- |
+| `visible` | Content spills out of the box (the default)    |
+| `hidden`  | Content is clipped and cannot be reached       |
+| `scroll`  | Scrollbars always appear, even when not needed |
+| `auto`    | Scrollbars appear only when actually needed    |
+
+```css
+.tips {
+  height: 120px;
+  overflow: auto; /* scrollbars only if the text is longer than 120px */
+  padding: 12px 16px;
+  background: #eef2ff;
+  border-radius: 8px;
+}
+```
+
+`overflow` also affects layout in a sneaky way: setting any value other than `visible` makes the element a containing block for absolutely positioned descendants and stops margins from collapsing through it. And you can control each axis separately with `overflow-x` and `overflow-y` - the classic fix for a wide table is `overflow-x: auto` on its wrapper, which gives a horizontal scrollbar on small screens instead of breaking the page.
+
+> **Try it in the editor:** put a long paragraph inside a 120px-tall box and try all four values. With `hidden`, notice the text is simply gone - there is no way for a user to reach it.
+
+## How the Exercise Works
+
+The exercise is a profile card page with four rough edges, and each one maps to one concept from this lesson. You are not asked to design anything - only to place what already exists.
+
+Work through the TODO comments in the starter stylesheet in order, previewing after each change:
+
+1. **Sticky header.** The page header should stay visible while you scroll. Give it `position: sticky` plus a `top` value. If it never sticks, check that the page actually scrolls.
+2. **Anchored badge.** The badge needs two edits, in this order: make the avatar's wrapper the _anchor_ with `position: relative`, then make the badge itself `position: absolute` and steer it with `top` and `right`. Small negative values are expected here.
+3. **Fixed button.** The back-to-top button should hover over the page's bottom-right corner regardless of scroll - that is a viewport question, not a document question.
+4. **Scrollable tips box.** The long text currently stretches the card. Cap the box with a `height` and choose the `overflow` value that shows a scrollbar only when needed.
+
+A good debugging habit while you work: when an absolutely positioned element lands somewhere strange, add a bright temporary `background` color to its wrapper. That shows you instantly which element the browser is using as the anchor. The solution files are available once you finish - compare yours line by line rather than copying.
+
+## Common Mistakes
+
+### 1. Absolute positioning without an anchor
+
+The child gets `position: absolute` but the parent stays `static`, so the element is placed against the page and drifts when you scroll.
+
+```css
+/* wrong: no positioned ancestor */
+.parent {
+  width: 200px;
+}
+.child {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+/* right: parent is the anchor */
+.parent {
+  position: relative;
+  width: 200px;
+}
+.child {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+```
+
+### 2. Expecting z-index to work on static elements
+
+`z-index` is silently ignored on non-positioned, non-flex, non-grid elements. The fix is to give the element a position first.
+
+```css
+/* wrong: nothing happens */
+.callout {
+  z-index: 100;
+}
+
+/* right: now the value is honored */
+.callout {
+  position: relative;
+  z-index: 100;
+}
+```
+
+### 3. Sticky without a top offset
+
+`position: sticky` with no `top` (or `bottom`) value has no threshold to stick at, so the header simply scrolls away like a normal element.
+
+```css
+/* wrong: scrolls away */
+.site-header {
+  position: sticky;
+}
+
+/* right: sticks at the viewport's top edge */
+.site-header {
+  position: sticky;
+  top: 0;
+}
+```
+
+### 4. Choosing fixed when you mean sticky
+
+A `fixed` header is glued to the viewport _always_; a `sticky` header scrolls with the page until its threshold. If your header should start in the document and stay later, `fixed` will strand it in the wrong place.
+
+```css
+/* wrong: header floats mid-page before any scrolling */
+.site-header {
+  position: fixed;
+  top: 0;
+}
+
+/* right: header starts in flow, sticks on scroll */
+.site-header {
+  position: sticky;
+  top: 0;
+}
+```
+
+### 5. Overflow hidden that eats content
+
+`overflow: hidden` silently discards whatever does not fit. If users need the content, they need a scrollbar, not a smaller box.
+
+```css
+/* wrong: the rest of the article is unreachable */
+.article {
+  height: 150px;
+  overflow: hidden;
+}
+
+/* right: reachable via scrollbar, only when needed */
+.article {
+  height: 150px;
+  overflow: auto;
+}
+```
+
+### 6. Offsets on a static element
+
+`top` and `left` do nothing until the element is positioned. This looks like a bug but is the defined behavior for `static`.
+
+```css
+/* wrong: the offsets are ignored */
+.box {
+  top: 20px;
+  left: 20px;
+}
+
+/* right: relative enables the offsets */
+.box {
+  position: relative;
+  top: 20px;
+  left: 20px;
+}
+```
+
+## Summary
+
+- Normal flow is the default layout; the five `position` values are `static`, `relative`, `absolute`, `fixed` and `sticky`, and they answer "positioned relative to what?"
+- The anchor pattern is `relative` parent plus `absolute` child; offsets measure from the nearest positioned ancestor.
+- `sticky` needs a `top` offset and keeps its place in flow; `fixed` glues to the viewport and leaves flow.
+- Overlaps are won by positioned elements, then by higher `z-index` - but stacking contexts trap their children.
+- `overflow: auto` is the workhorse for scrollable regions; `hidden` clips unreachable content; `visible` is the default spill.

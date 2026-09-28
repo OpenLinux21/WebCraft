@@ -1,0 +1,313 @@
+---
+lessonId: 09-css-grid
+order: 9
+module: layout
+difficulty: intermediate
+minutes: 40
+title: 'CSS Grid Layout'
+summary: 'Define rows and columns with grid tracks and the fr unit, span items across the grid, and build responsive galleries with auto-fit and minmax.'
+objectives:
+  - 'Create a grid with `display: grid` and shape it with `grid-template-columns`, `grid-template-rows` and `gap`.'
+  - 'Divide space proportionally using the `fr` unit and the `repeat()` notation.'
+  - 'Span items across tracks with `grid-column` and `grid-row` line numbers.'
+  - 'Build self-reflowing galleries with `repeat(auto-fit, minmax())` and no media queries.'
+  - 'Decide when Grid (two dimensions) beats Flexbox (one dimension).'
+exercise:
+  task: 'Rebuild a photo gallery as a CSS Grid. Define a three-column grid with a 16px gap, stretch the intro tile across all three columns, and let the featured photo span two columns. Finally, swap the track definition to `repeat(auto-fit, minmax(160px, 1fr))` so the gallery reflows on narrow screens without a single media query.'
+  hints:
+    - 'Grid starts on the container: `display: grid` plus `grid-template-columns` defines the column tracks that children drop into.'
+    - 'Span children from the child side: `grid-column: 1 / -1` covers a full row, `grid-column: span 2` covers two tracks.'
+    - '`repeat(auto-fit, minmax(160px, 1fr))` fits in as many columns as are at least 160px wide and stretches them evenly - resize the preview to watch it reflow.'
+---
+
+## Overview
+
+Flexbox arranges children along one line; the moment a design needs rows _and_ columns at the same time - a dashboard, a photo gallery, a magazine front page - you start nesting flex containers inside flex containers, and it gets fragile fast. CSS Grid was built for exactly this: a **two-dimensional** layout system where you describe the grid once, and children snap into the cells.
+
+The mental model shifts in one important way. With Flexbox you style the children and let the container sort it out. With Grid you first **draw the skeleton** on the container - these are my columns, these are my rows - and then place children into that skeleton, either automatically or by naming the exact tracks they should span.
+
+In this lesson you will go from a plain list of photo tiles to a gallery that reflows itself as the preview narrows, using one line of CSS. Everything runs offline in the built-in editor, and the colored boxes stand in for photos.
+
+## Your First Grid: Tracks, fr Units and Gaps
+
+A grid is defined on the container. `display: grid` turns it on, `grid-template-columns` declares the column **tracks**, and children flow into the cells row by row, in source order.
+
+```css
+.gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* three equal columns */
+  gap: 16px; /* both row and column gap */
+}
+```
+
+The `fr` unit is the star here. It means "a share of the free space", so `1fr 1fr 1fr` splits the row into three equal shares - the grid answer to `flex: 1`. Shares can be weighted: `2fr 1fr` gives a main pane twice the width of a sidebar. Mixing units works too, and `repeat()` compresses the repetition:
+
+```css
+.page {
+  display: grid;
+  grid-template-columns: 240px 1fr; /* fixed sidebar, fluid content */
+  grid-template-rows: auto 1fr auto; /* header, flexible body, footer */
+  gap: 16px;
+  min-height: 100vh;
+}
+
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* same as 1fr 1fr 1fr */
+  gap: 12px;
+}
+```
+
+Note what `gap` does in a grid: it sets both the row gap and the column gap. You can tune each independently with `row-gap` and `column-gap`. Unlike the old float-and-margin era, no negative margin tricks are needed anywhere.
+
+> **Try it in the editor:** build the three-column gallery and put six tiles inside it. Change `1fr 1fr 1fr` to `2fr 1fr 1fr` and watch the first column grow, then try `repeat(3, 1fr)` to confirm it is the same thing.
+
+## Placing and Spanning Items
+
+By default children fill the grid automatically, one cell each, in source order. You can override that from the child side using **grid line numbers**. Lines, not cells: a grid with three columns has four vertical lines, numbered 1 to 4 (or -1 counting backward from the end).
+
+```css
+.featured {
+  grid-column: 1 / 3; /* start at line 1, end at line 3 = two tracks wide */
+}
+
+.intro {
+  grid-column: 1 / -1; /* line 1 to the last line = full row */
+}
+```
+
+The `span` keyword lets you say "this many tracks" without caring where the item starts, which keeps working when you later change the number of columns:
+
+```css
+.featured {
+  grid-column: span 2; /* cover two column tracks */
+  grid-row: span 1;
+}
+```
+
+This child-side placement is what makes grid headlines possible: one photo that stretches across the whole top row, a feature tile that takes half the width, and the small tiles flowing around them automatically. Items you do not explicitly place still use the auto-placement algorithm, filling the remaining cells in order - so the "holes" a big item leaves behind are backfilled by later children.
+
+> **Try it in the editor:** add the two classes above to tiles in your gallery. Then move the `featured` tile later in the HTML and watch the small tiles backfill the gap it leaves.
+
+## Row Tracks and Alignment Inside Cells
+
+Columns get all the attention, but rows follow the same rules. `grid-template-rows` declares row tracks explicitly, and that is how the classic page frame is built: a header row that hugs its content, a body row that absorbs the leftovers, a footer that hugs again:
+
+```css
+.page {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto; /* hug, absorb, hug */
+  min-height: 100vh;
+}
+```
+
+Three children are enough to fill this frame:
+
+```html
+<div class="page">
+  <header>Site header</header>
+  <main>Everything in the middle</main>
+  <footer>Site footer</footer>
+</div>
+```
+
+Rows you never declared are **implicit**: the grid creates them automatically when items run past the explicit tracks, and `grid-auto-rows` sizes all of them at once. That matters for galleries, where you never know in advance how many rows the photos will need:
+
+```css
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-auto-rows: 120px; /* every implicit row lands at 120px */
+}
+```
+
+Rather than a fixed height, `minmax()` works for rows exactly as it did for columns: `grid-auto-rows: minmax(120px, auto)` keeps every row at least 120px but lets tall content push it further. Fixed pixel rows and photos of unknown height do not mix well - the auto floor is usually the safer default.
+
+Watch how the two dimensions interact: `auto` rows respond to their content, while `1fr` rows share what is left over - the same mental model as columns, rotated ninety degrees.
+
+Inside their cells, grid items align with the vocabulary you learned in Flexbox - doubled. `align-items` works along the block (row) axis, `justify-items` along the inline (column) axis, and `place-items` sets both in one declaration. This is also the shortest reliable way to center anything in CSS:
+
+```css
+.tile {
+  display: grid; /* each tile is its own little grid */
+  place-items: center; /* the label sits dead-center */
+}
+```
+
+The same one-liner centers a hero's contents, an icon inside a square button, or a spinner inside a card - anywhere the goal is "put this in the middle of that box". For single items, the escapes are `align-self` and `justify-self`, mirroring Flexbox's `align-self`. Between container-level `place-items` and item-level `*-self`, alignment in Grid needs no margins, no line-height tricks and no absolute positioning.
+
+> **Try it in the editor:** add `grid-auto-rows: 120px` to your gallery and watch tall and short tiles settle into uniform rows. Then use the centered tile above on one card and compare it with a neighbor that fakes centering with `padding`.
+
+## Responsive Grids: auto-fit and minmax
+
+Here is the payoff of the whole lesson. Instead of hard-coding three columns, you describe the _smallest_ column you are willing to accept, and the browser computes how many fit:
+
+```css
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+```
+
+Read it inside out: each track is at least `160px` wide and at most an equal share (`1fr`) of the container. `auto-fit` asks the browser to squeeze in as many such tracks as possible. Narrow the preview and the column count drops from five to three to one - with **no media query and no breakpoint bookkeeping**. Wide screen, six columns; phone, one.
+
+`auto-fit` and its sibling `auto-fill` differ only when there are fewer items than columns: `auto-fill` keeps the empty tracks reserved, while `auto-fit` collapses them and stretches the existing items to fill the row. For galleries, `auto-fit` is almost always what you want.
+
+> **Try it in the editor:** replace your fixed three columns with the `auto-fit` line, then drag the preview from wide to narrow. Count the columns at each stage - you just deleted a future media query.
+
+## Grid or Flexbox? Choosing the Right Tool
+
+Grid and Flexbox overlap on purpose, and most real pages use both. The dependable rule of thumb is about **dimensions**:
+
+| Question                                              | Reach for |
+| ----------------------------------------------------- | --------- |
+| One line of items: nav links, button groups, toolbars | Flexbox   |
+| Content-driven flow where items push each other       | Flexbox   |
+| Two-dimensional skeleton: rows and columns together   | Grid      |
+| Items must line up across both rows and columns       | Grid      |
+| Big page frame: header, sidebar, content, footer      | Grid      |
+
+Two more contrasts help in practice. First, Grid's `gap` and `fr` units make _aligned_ layouts trivial - things line up because the tracks are shared, not because contents happen to be the same size. Second, Flexbox distributes _content_ (items size themselves, then share the leftovers), while Grid distributes _space_ (tracks are defined first, items fill them). When you catch yourself nesting flex inside flex inside flex to fake columns, that is the signal to switch to Grid.
+
+```css
+/* a typical page uses both: grid for the frame, flex inside cells */
+.page {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+}
+
+.page nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+```
+
+> **Try it in the editor:** rebuild the page frame above, then add a flex link list in the sidebar. Notice how the grid owns the big lines while flex handles the small ones.
+
+## How the Exercise Works
+
+The exercise is a photo gallery of colored tiles, shipped without any grid. You will layer the concepts in the same order as this lesson:
+
+1. **Draw the skeleton.** Give the gallery `display: grid`, three columns via `grid-template-columns: repeat(3, 1fr)`, and a 16px gap. Preview: the tiles should already sit in three neat columns.
+2. **Span the intro.** The intro tile should stretch across the entire top row. That is a child-side rule: `grid-column: 1 / -1` (or `span 3` while there are three columns).
+3. **Span the featured photo.** It should cover two columns. `grid-column: span 2` keeps working even if you later change the column count.
+4. **Make it self-reflowing.** Replace the fixed tracks with `repeat(auto-fit, minmax(160px, 1fr))`. Drag the preview narrow and confirm the gallery reflows with no media query in sight.
+
+If a span does not seem to work, check where you wrote it: spans belong on the _child_, while tracks and gaps belong on the _container_. And if the gallery has a mysterious horizontal scrollbar, a tile is wider than its track - `min-width: 0` or `minmax(160px, 1fr)` usually explains it. Compare with the solution files only after your version reflows correctly.
+
+## Common Mistakes
+
+### 1. Writing grid properties on the children
+
+Tracks, gaps and `display: grid` live on the container. Children only carry placement rules such as `grid-column`.
+
+```css
+/* wrong: the tile cannot define the grid it lives in */
+.tile {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* right: the gallery owns the tracks */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+```
+
+### 2. Confusing grid lines with track numbers
+
+`grid-column: 1 / 3` ends at _line_ 3, which covers two tracks - not three. Counting lines instead of tracks trips everyone at least once.
+
+```css
+/* wrong: intended three columns, got two */
+.wide {
+  grid-column: 1 / 3;
+}
+
+/* right: three tracks wide in a three-column grid */
+.wide {
+  grid-column: 1 / -1;
+}
+```
+
+### 3. Trying to center with fr units
+
+`1fr` distributes width, it does not center anything. Centering content inside a track is a job for flex inside the cell.
+
+```css
+/* wrong: the tile's text stays left-aligned anyway */
+.gallery {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* right: grid for placement, flex for inner centering */
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+### 4. Using a fixed height on every tile
+
+Photos of different sizes break alignment when each row is forced to a pixel height. Let the row track take the tallest item, or set a uniform `aspect-ratio`.
+
+```css
+/* wrong: tall photos overflow their fixed cells */
+.tile {
+  height: 100px;
+}
+
+/* right: consistent shape without clipping */
+.tile {
+  aspect-ratio: 4 / 3;
+}
+```
+
+### 5. Forgetting minmax's lower bound is a hard floor
+
+`minmax(160px, 1fr)` means tracks never go below 160px. On a 300px-wide phone screen the gallery overflows instead of shrinking - the fix is a smaller minimum, not a media query.
+
+```css
+/* wrong: overflows narrow screens */
+.gallery {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+/* right: tracks can shrink on small screens */
+.gallery {
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+}
+```
+
+### 6. Reaching for Grid when one axis would do
+
+A single row of buttons does not need a two-dimensional skeleton. Grid is not "the better Flexbox" - it is the two-dimensional one.
+
+```css
+/* overkill: a grid for one line of buttons */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+}
+
+/* simpler: one dimension, one dimension tool */
+.actions {
+  display: flex;
+  gap: 12px;
+}
+```
+
+## Summary
+
+- `display: grid` plus `grid-template-columns` and `grid-template-rows` draws the skeleton; children snap into cells in source order.
+- The `fr` unit splits free space into shares, and `repeat()` compresses repeated track definitions.
+- Children place themselves with `grid-column` and `grid-row`; `1 / -1` spans a full row and `span 2` covers two tracks regardless of position.
+- `repeat(auto-fit, minmax(160px, 1fr))` builds galleries that reflow with zero media queries.
+- Grid is for two-dimensional skeletons, Flexbox for one-dimensional flows - real pages use both.

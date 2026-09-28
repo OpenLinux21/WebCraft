@@ -1,0 +1,62 @@
+/* Lesson 9 solution: CSS grid */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* 1: three equal columns plus a 16px gap ...
+   4: ... swapped for self-reflowing tracks, still no media query */
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  background: #64748b;
+}
+
+.tile:nth-child(3n) {
+  background: #0ea5e9;
+}
+.tile:nth-child(3n + 1) {
+  background: #6366f1;
+}
+
+/* 2: full row, whatever the column count is */
+.intro {
+  grid-column: 1 / -1;
+  padding: 16px;
+  background: #1e293b;
+}
+
+.intro p {
+  font-weight: 400;
+  font-size: 15px;
+  margin: 0;
+}
+.intro h2 {
+  margin: 0 0 8px;
+}
+
+/* 3: two tracks wide, wherever it lands */
+.featured {
+  grid-column: span 2;
+  min-height: 200px;
+  background: #f59e0b;
+}

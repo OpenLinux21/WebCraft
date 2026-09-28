@@ -1,0 +1,315 @@
+---
+lessonId: 11-css-transitions-animations
+order: 11
+module: layout
+difficulty: intermediate
+minutes: 30
+title: 'Transitions and Animations'
+summary: 'Smooth state changes with transitions and self-running effects with keyframes, while learning which properties animate without jank.'
+objectives:
+  - 'Animate hover and focus state changes with `transition` and its timing functions.'
+  - 'Read and write the `transition` shorthand: property, duration, easing, delay.'
+  - 'Create self-running effects with `@keyframes` and the `animation` shorthand.'
+  - 'Prefer `transform` and `opacity` for animations that stay smooth.'
+  - 'Respect users who opt out of motion with `prefers-reduced-motion`.'
+exercise:
+  task: 'Bring an actions page to life. Give the primary button a 0.2 second transition so that on hover its background color changes and it lifts up by two pixels - and both changes reverse smoothly when the pointer leaves. Then create a `@keyframes` pulse animation for the notification dot that scales it up while fading it out, repeating every 1.5 seconds forever. Verify both effects in the preview.'
+  hints:
+    - "Put `transition` on the button's normal state, not inside the `:hover` rule, so the change animates in both directions."
+    - 'Define the animation stages inside `@keyframes pulse` using `transform: scale()` and `opacity` from 0% through 50% to 100%.'
+    - 'Attach the animation to the dot with the shorthand `animation: pulse 1.5s ease-in-out infinite;`.'
+---
+
+## Overview
+
+Interfaces feel alive when they _move between_ states instead of teleporting. A button that darkens over a fifth of a second reads as "pressable"; a menu that slides in feels connected to the thing that opened it. CSS gives you two tools for this, and they solve different problems.
+
+**Transitions** are reactive: they animate the _change between two states_ - the browser interpolates from the old value to the new one whenever a property changes, usually because of `:hover`, `:focus` or a class swap. **Animations** are self-running: a `@keyframes` script describes a sequence of states, and the element performs it on its own, on a loop if you like.
+
+Both tools share one rule that matters for quality: some properties animate cheaply and smoothly (`transform`, `opacity`) while others force the browser to recompute layout on every frame (`width`, `top`, `margin`). You will learn to see the difference. Open the built-in editor, and keep hovering and un-hovering as you read.
+
+## Transitions: Animating State Changes
+
+A transition is declared on the element's **resting state**, not on the changed state. It lists which property should animate and how long the trip takes:
+
+```css
+.button {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.button:hover {
+  background: #4338ca;
+}
+```
+
+With that single line, hovering fades the color in over 0.2s - and, just as important, moving the pointer away fades it back _out_ the same way. Declare the transition inside `:hover` instead and you get an abrupt snap-out, because the leaving state has no transition of its own.
+
+To animate several properties, list them, or use the keyword `all`:
+
+```css
+.button {
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.button:hover {
+  background: #4338ca;
+  transform: translateY(-2px); /* a subtle lift */
+}
+```
+
+The full shorthand has four slots: `transition: property duration timing-function delay`. Duration is the only required one - a missing timing function defaults to `ease`.
+
+| Slot            | Meaning                   | Example       |
+| --------------- | ------------------------- | ------------- |
+| property        | What to animate           | `background`  |
+| duration        | How long one change takes | `0.2s`        |
+| timing function | The pace of the trip      | `ease-in-out` |
+| delay           | Wait before starting      | `0.1s`        |
+
+> **Try it in the editor:** paste the button, hover it, then move the transition into the `:hover` rule and watch the snap-out appear. Move it back - the symmetric fade returns.
+
+## Timing Functions and Easing
+
+The timing function describes _how_ a value travels: linearly, or faster in the middle, or decelerating at the end. Real objects do not move at constant speed, which is why `linear` almost always looks mechanical - it belongs to loops and color cycling, not to entrances.
+
+```css
+.card {
+  transition: transform 0.25s ease-out;
+}
+.card:hover {
+  transform: translateY(-4px);
+}
+
+.dropdown {
+  transition: opacity 0.15s ease-in;
+}
+```
+
+The built-in curves cover most needs: `ease` (the default, gentle start and end), `ease-in` (starts slow, arrives fast - good for exits), `ease-out` (starts fast, settles gently - good for entrances), `ease-in-out` (smooth both ends), and `linear`. When you need something specific, `cubic-bezier(x1, y1, x2, y2)` draws a custom curve; the popular "spring" overshoot comes from a y value above 1.
+
+Keep durations short. Interface transitions live in the 150-300ms range: long enough to be perceived as motion, short enough not to hold the user hostage. Anything approaching a full second should be reserved for large, dramatic surfaces like page-level reveals.
+
+> **Try it in the editor:** give one button `transition: transform 0.25s linear` and another `0.25s ease-out`, lift both on hover, and compare the feel. Then try `cubic-bezier(0.34, 1.56, 0.64, 1)` for a springy overshoot.
+
+## Keyframes: Animations That Run Themselves
+
+Transitions need a trigger; keyframe animations just run. You describe the sequence in a named `@keyframes` rule - percentages mark stages from start (0%) to end (100%) - and attach it with the `animation` property:
+
+```css
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+```
+
+The `animation` shorthand packs a lot in: `name duration timing-function delay iteration-count direction`. `infinite` loops forever; a number limits the plays. `alternate` reverses direction on every other cycle, which is convenient for to-and-fro effects. The example above loops back to its starting state at 100%, so the repeat is seamless - a keyframe set whose end differs from its start will visibly jump on every loop.
+
+Unlike transitions, animations start when the element appears and run regardless of hover or focus. They are the right tool for loading spinners, pulsing notifications, skeleton screens and attention-seeking highlights - things that should happen _without_ user input.
+
+| Part        | Transition              | Animation                 |
+| ----------- | ----------------------- | ------------------------- |
+| Trigger     | A state change          | Applied, or a class swap  |
+| Stages      | Two (from and to)       | Many, via percentages     |
+| Looping     | No                      | Yes (`infinite`)          |
+| Typical use | Hover, focus, show/hide | Spinners, pulses, reveals |
+
+> **Try it in the editor:** paste the dot, watch it pulse, then change `infinite` to `3` and add `alternate`. Notice the loop stop and the direction reverse.
+
+## Animating the Right Properties
+
+Not all properties are equal in the browser's eyes. Each frame, the browser repaints the page; animating properties that participate in **layout** forces it to recalculate positions for every element on every frame - expensive, and the cause of stuttery animation on busy pages.
+
+```css
+/* expensive: every frame reflows the whole page */
+.panel {
+  transition:
+    width 0.3s,
+    top 0.3s,
+    margin 0.3s;
+}
+
+/* cheap: composited, layout untouched */
+.panel {
+  transition:
+    transform 0.3s,
+    opacity 0.3s;
+}
+```
+
+`transform` and `opacity` are the golden pair because the browser can handle them on the compositor thread without touching layout. The move-and-lift patterns you built with `translateY` scale beautifully even in long lists. When a design seems to demand animating `width` or `top`, there is almost always a `transform` equivalent (`scaleX`, `translate`) - and a hidden element can fade with `opacity` while `visibility` handles click-through.
+
+One more professional touch: some users turn off animation at the OS level because motion makes them dizzy. Honor that setting with a media query:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+```
+
+> **Try it in the editor:** animate `width` on a box that sits inside a column of text and watch the text reflow every frame. Swap it for `transform: scaleX()` and see the neighbors stay perfectly still.
+
+## How the Exercise Works
+
+The exercise page has a primary button and a notification dot, and the starter stylesheet styles both statically. Two effects, built exactly as in this lesson:
+
+1. **Button transition.** Add `transition: background 0.2s ease, transform 0.2s ease` to the button's normal rule - both properties, so the color fade and the lift animate together. Then extend `:hover` with `background` plus `transform: translateY(-2px)`. Hover on and off: both directions must be smooth.
+2. **Dot pulse.** Define `@keyframes pulse` with the three stages (normal, scaled-and-faded, normal again), then attach it with `animation: pulse 1.5s ease-in-out infinite`. End the keyframes where they started so the loop is invisible.
+
+Two checkpoints before you call it done: the lift must reverse smoothly when the pointer leaves (that proves the transition lives on the resting state), and the pulse must not jump between loops (that proves the 0% and 100% stages match). If the dot pulses but the page also feels twitchy, you may have animated layout properties - switch to `transform` only. Compare with the solution files when both effects feel right.
+
+## Common Mistakes
+
+### 1. Declaring the transition inside the hover state
+
+The transition belongs to the journey _to_ the hovered state. Declaring it only there means the return trip snaps instantly.
+
+```css
+/* wrong: un-hovering snaps back */
+.button:hover {
+  background: #4338ca;
+  transition: background 0.2s;
+}
+
+/* right: both directions animate */
+.button {
+  transition: background 0.2s ease;
+}
+.button:hover {
+  background: #4338ca;
+}
+```
+
+### 2. Transitioning every property with all
+
+`transition: all 0.3s` animates properties you never intended - layout shifts, color scheme switches - and makes debugging mysterious movement harder.
+
+```css
+/* wrong: everything wobbles */
+.card {
+  transition: all 0.3s;
+}
+
+/* right: exactly what you asked for */
+.card {
+  transition:
+    transform 0.3s,
+    opacity 0.3s;
+}
+```
+
+### 3. Animating layout properties
+
+`width`, `height`, `top` and `margin` reflow the page on every frame. The `transform` equivalents do the same visual job on the cheap compositor path.
+
+```css
+/* wrong: janky on real pages */
+.tooltip {
+  transition:
+    top 0.2s,
+    left 0.2s;
+}
+
+/* right: smooth, layout untouched */
+.tooltip {
+  transition: transform 0.2s;
+}
+```
+
+### 4. Forgetting the duration
+
+A transition with no duration lasts zero seconds - it looks exactly like the abrupt change you were trying to avoid, and the rule appears to "do nothing".
+
+```css
+/* wrong: instant, no animation */
+.button {
+  transition: background;
+}
+
+/* right: a visible 0.2 second trip */
+.button {
+  transition: background 0.2s ease;
+}
+```
+
+### 5. Keyframes that do not end where they started
+
+An infinite animation whose 100% stage differs from its 0% stage teleports back at every loop boundary. Matching endpoints make loops seamless.
+
+```css
+/* wrong: visible jump every 1.5s */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.35);
+  }
+}
+
+/* right: the loop closes on itself */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+```
+
+### 6. Ignoring prefers-reduced-motion
+
+Users who disable motion in their OS settings still get every animation you wrote. A small media query opts them out.
+
+```css
+/* wrong: motion runs regardless of user settings */
+.dot {
+  animation: pulse 1.5s infinite;
+}
+
+/* right: honor the user's choice */
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}
+```
+
+## Summary
+
+- Transitions animate the change _between_ two states; declare them on the resting state so both directions animate.
+- The shorthand is `transition: property duration timing-function delay`; keep interface durations around 150-300ms.
+- `@keyframes` describes multi-stage sequences that run themselves, attached via `animation: name duration timing iteration`.
+- `transform` and `opacity` animate without layout work - reach for them before `width`, `top` or `margin`.
+- Loops must end where they began, and `prefers-reduced-motion` should always get an escape hatch.

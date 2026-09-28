@@ -1,0 +1,63 @@
+/* Lesson 8 solution: flexbox layout */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+main {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* 1: navbar is a flex row, children vertically centered */
+.navbar {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  background: #1e293b;
+}
+
+.logo {
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 2: links are their own flex row; auto margin pushes the group right */
+.nav-links {
+  display: flex;
+  gap: 20px;
+  margin-left: auto;
+}
+
+.nav-links a {
+  color: #c7d2fe;
+  text-decoration: none;
+}
+
+/* 3: equal-width row with a 16px gap */
+.cards {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+/* 4: equal growth with a floor, so cards share width fairly */
+.card {
+  flex: 1;
+  min-width: 180px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.08);
+}
+
+/* 5: cards drop onto a new line instead of squashing */
+.cards {
+  flex-wrap: wrap;
+}

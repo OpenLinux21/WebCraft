@@ -1,0 +1,63 @@
+/* Lesson 9 starter: CSS grid - the gallery has no layout yet */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+main {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* TODO 1: turn main into a grid with three equal columns and a 16px gap */
+main {
+  /* display: ... */
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  background: #64748b;
+}
+
+.tile:nth-child(3n) {
+  background: #0ea5e9;
+}
+.tile:nth-child(3n + 1) {
+  background: #6366f1;
+}
+
+.intro {
+  /* TODO 2: span all three columns */
+  padding: 16px;
+  background: #1e293b;
+}
+
+.intro p {
+  font-weight: 400;
+  font-size: 15px;
+  margin: 0;
+}
+.intro h2 {
+  margin: 0 0 8px;
+}
+
+.featured {
+  /* TODO 3: span two columns */
+  min-height: 200px;
+  background: #f59e0b;
+}
+
+/* TODO 4: swap the fixed tracks for
+   repeat(auto-fit, minmax(160px, 1fr)) and resize the preview */

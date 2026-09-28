@@ -1,0 +1,313 @@
+---
+lessonId: 09-css-grid
+order: 9
+module: layout
+difficulty: intermediate
+minutes: 40
+title: 'Grid 网格布局'
+summary: '用网格轨道和 fr 单位定义行与列，让子项跨越网格，并用 auto-fit 与 minmax 做出无需媒体查询的响应式画廊。'
+objectives:
+  - '用 `display: grid` 创建网格，并用 `grid-template-columns`、`grid-template-rows` 和 `gap` 塑造它。'
+  - '用 `fr` 单位和 `repeat()` 记法按比例划分空间。'
+  - '用 `grid-column` 与 `grid-row` 的网格线编号让子项跨轨道。'
+  - '用 `repeat(auto-fit, minmax())` 构建自动重排、零媒体查询的画廊。'
+  - '判断什么时候该用二维的 Grid、什么时候该用一维的 Flexbox。'
+exercise:
+  task: '把一个照片画廊改造成 CSS Grid。定义一个三列网格、间距 16px，让介绍贴片横跨全部三列，让精选照片跨两列。最后把轨道定义换成 `repeat(auto-fit, minmax(160px, 1fr))`，让画廊在窄屏上自动重排，一条媒体查询都不用写。'
+  hints:
+    - 'Grid 从容器开始：`display: grid` 加上 `grid-template-columns` 定义出列轨道，子项自动落进格子里。'
+    - '跨越要在子项一侧设置：`grid-column: 1 / -1` 占满一整行，`grid-column: span 2` 跨两条轨道。'
+    - '`repeat(auto-fit, minmax(160px, 1fr))` 会塞进尽可能多的、不窄于 160px 的列并均分宽度——拖动预览就能看到重排。'
+---
+
+## 概述
+
+Flexbox 沿一条线排列子项；可一旦设计需要行*和*列同时成立——仪表盘、照片墙、杂志首页——你就开始把弹性容器一层层嵌进弹性容器，越写越脆。CSS Grid 正是为这种场景而生：它是一个**二维**布局系统，你把网格描述一次，子项自动落进格子里。
+
+思维模型有一个重要转变。用 Flexbox 时你修饰子项、让容器自己想办法；用 Grid 时你要先在容器上**画好骨架**——这些是我的列、那些是我的行——然后往骨架里放子项，要么自动落位，要么明确指定它们横跨哪些轨道。
+
+本节课你会从一个普普通通的贴片列表出发，最终做出一条预览变窄就自动重排的画廊，而 CSS 只有一行。所有内容都在编辑器里离线运行，彩色方块就代表照片。
+
+## 第一个网格：轨道、fr 单位与间距
+
+网格定义在容器上。`display: grid` 打开开关，`grid-template-columns` 声明列**轨道**，子项按源码顺序逐行落进格子。
+
+```css
+.gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* 三个等宽列 */
+  gap: 16px; /* 同时是行间距和列间距 */
+}
+```
+
+`fr` 单位是这里的主角。它的意思是"一份剩余空间"，`1fr 1fr 1fr` 把一行等分成三份——相当于 Grid 版的 `flex: 1`。份额可以加权：`2fr 1fr` 让主栏是侧栏的两倍宽。不同单位也能混用，而 `repeat()` 负责压缩重复：
+
+```css
+.page {
+  display: grid;
+  grid-template-columns: 240px 1fr; /* 固定侧栏，流式内容 */
+  grid-template-rows: auto 1fr auto; /* 页头、弹性主体、页脚 */
+  gap: 16px;
+  min-height: 100vh;
+}
+
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 等价于 1fr 1fr 1fr */
+  gap: 12px;
+}
+```
+
+注意 `gap` 在网格里同时设置行间距与列间距，想分别微调可以用 `row-gap` 和 `column-gap`。与当年浮动加 margin 的时代不同，如今任何地方都不再需要负 margin 那些歪招。
+
+> **在编辑器中试一试：** 搭出三列画廊并放六个贴片。把 `1fr 1fr 1fr` 改成 `2fr 1fr 1fr` 看第一列变宽，再用 `repeat(3, 1fr)` 验证它们等价。
+
+## 放置与跨越子项
+
+默认情况下子项按源码顺序自动填充，每个占一格。你可以从子项一侧用**网格线编号**覆盖它。注意是线不是格：三列的网格有四条竖线，编号 1 到 4（从末尾倒数则是 -1）。
+
+```css
+.featured {
+  grid-column: 1 / 3; /* 从 1 号线到 3 号线 = 跨两条轨道 */
+}
+
+.intro {
+  grid-column: 1 / -1; /* 从 1 号线到最后一条线 = 占满一行 */
+}
+```
+
+`span` 关键字让你直接说"跨几条轨道"而无需关心起点在哪，这样以后改变列数它依然成立：
+
+```css
+.featured {
+  grid-column: span 2; /* 覆盖两条列轨道 */
+  grid-row: span 1;
+}
+```
+
+有了子项一侧的放置能力，"头条式"布局才成为可能：一张照片横跨整个顶行，一块精选贴片占半行宽，小贴片自动流进剩余的格子。没有显式放置的子项仍走自动放置算法，按顺序填满剩下的格子——大块贴片留下的"空洞"会被后面的子项回填。
+
+> **在编辑器中试一试：** 给画廊里的贴片加上上面两个类。然后把 `featured` 挪到 HTML 靠后的位置，看小贴片如何回填它留下的空缺。
+
+## 行轨道与单元格内的对齐
+
+大家的眼光总在列上，但行遵循完全相同的规则。`grid-template-rows` 显式声明行轨道，经典的页面骨架就是这样搭出来的：页头行紧贴内容，正文行吃掉剩余空间，页脚行再次紧贴内容：
+
+```css
+.page {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto; /* 紧贴、吸收、紧贴 */
+  min-height: 100vh;
+}
+```
+
+三个子元素就够填满这个骨架：
+
+```html
+<div class="page">
+  <header>站点页头</header>
+  <main>中间的所有内容</main>
+  <footer>站点页脚</footer>
+</div>
+```
+
+没有显式声明的行叫**隐式行**：当子项超出已声明的轨道时，网格会自动创建它们，而 `grid-auto-rows` 一次性设定这些行的尺寸。对图库来说这一点尤其重要——你永远无法提前知道这些照片需要多少行：
+
+```css
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-auto-rows: 120px; /* 每条隐式行都是 120px 高 */
+}
+```
+
+比起写死的高度，`minmax()` 对行同样有效，就像它对列那样：`grid-auto-rows: minmax(120px, auto)` 让每行至少 120px，内容更高时再被撑开。像素定高和尺寸未知的图片合不来，"auto 下限"通常是更稳妥的默认值。
+
+再看看两个维度如何互动：`auto` 行随内容伸缩，`1fr` 行平分剩余空间——和列完全相同的心智模型，只是旋转了九十度。
+
+在单元格内部，网格子项的对齐词汇和 Flexbox 里学过的一样，只是*翻了一倍*：`align-items` 沿块级（行）轴工作，`justify-items` 沿行内（列）轴工作，`place-items` 一条声明同时设定两者。这也是 CSS 里最短、最可靠的居中写法：
+
+```css
+.tile {
+  display: grid; /* 每张贴片自身也是小网格 */
+  place-items: center; /* 文字落在贴片正中央 */
+}
+```
+
+同一句话可以居中 Hero 区的内容、方形按钮里的图标、卡片里的加载指示器——凡是"把这个放进那个盒子的正中间"的需求都适用。单个子项的例外则是 `align-self` 和 `justify-self`，正好对应 Flexbox 的 `align-self`。有了容器级的 `place-items` 和子项级的 `*-self`，网格里的对齐不再需要 margin、行高把戏或绝对定位。
+
+> **在编辑器中试一试：** 给图库加上 `grid-auto-rows: 120px`，看高低不一的贴片落进整齐的行。再把上面居中的贴片用到某张卡片上，和靠 `padding` 硬凑居中的邻居对比一下。
+
+## 响应式网格：auto-fit 与 minmax
+
+这是全课最划算的一招。不用硬编码三列，你只需声明能接受的*最小*列宽，浏览器自己算能塞几列：
+
+```css
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+```
+
+由内向外读：每条轨道最窄 `160px`、最宽是容器的均分（`1fr`）。`auto-fit` 让浏览器塞进尽可能多的这种轨道。把预览拖窄，列数从五到三再到一——**没有媒体查询，没有断点账本**。宽屏六列，手机一列。
+
+`auto-fit` 和它的兄弟 `auto-fill` 只在子项数量少于列数时有区别：`auto-fill` 会保留空轨道的占位，`auto-fit` 则折叠空轨道、把现有子项拉伸铺满整行。做画廊时，`auto-fit` 几乎总是你想要的那个。
+
+> **在编辑器中试一试：** 把固定三列换成 `auto-fit` 那一行，把预览从宽拖到窄，数一数每一阶段的列数——你刚刚删掉了未来的一条媒体查询。
+
+## Grid 还是 Flexbox？选对工具
+
+Grid 和 Flexbox 的能力是有意重叠的，真实页面两者都用。可靠的判断标准是**维度**：
+
+| 问题                               | 选谁    |
+| ---------------------------------- | ------- |
+| 一行子项：导航链接、按钮组、工具栏 | Flexbox |
+| 内容驱动的流动布局，子项相互推挤   | Flexbox |
+| 二维骨架：行与列同时成立           | Grid    |
+| 子项要同时沿行和列对齐             | Grid    |
+| 页面大框架：页头、侧栏、内容、页脚 | Grid    |
+
+还有两个对比对实战很有帮助。第一，Grid 的 `gap` 和 `fr` 单位让*对齐*轻而易举——元素对得整齐是因为共享轨道，不是因为内容碰巧一样大。第二，Flexbox 分配的是*内容*（子项先决定自己的大小，再瓜分剩余空间），Grid 分配的是*空间*（先定义轨道，子项再填进去）。当你发现自己在"flex 套 flex 再套 flex"来硬凑列布局，那就是切换到 Grid 的信号。
+
+```css
+/* 典型页面两者并用：grid 搭框架，flex 管格子内部 */
+.page {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+}
+
+.page nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+```
+
+> **在编辑器中试一试：** 搭出上面的页面框架，再在侧栏里放一个 flex 链接列表。体会一下：网格管大线条，flex 管小细节。
+
+## 练习思路
+
+练习是一个由彩色贴片组成的照片画廊，初始没有任何网格。你会按本课的顺序逐层叠加概念：
+
+1. **画出骨架。** 给画廊 `display: grid`、用 `grid-template-columns: repeat(3, 1fr)` 开三列、加 16px 间距。预览：贴片应该已经整齐地排成三列。
+2. **跨越介绍贴片。** 它要横跨整个顶行。规则写在子项一侧：`grid-column: 1 / -1`（当前三列的话写 `span 3` 也行）。
+3. **跨越精选照片。** 它要占两列。`grid-column: span 2` 即使以后改列数也照样成立。
+4. **让它自动重排。** 把固定轨道换成 `repeat(auto-fit, minmax(160px, 1fr))`。拖窄预览，确认画廊重排时全程没出现媒体查询。
+
+如果跨越没生效，检查规则写在了谁身上：`span` 属于*子项*，轨道和间距属于*容器*。如果画廊莫名出现横向滚动条，说明某个贴片比轨道还宽——通常是 `min-width: 0` 或 `minmax(160px, 1fr)` 能解释的问题。等你的版本能正确重排之后，再去对比参考答案。
+
+## 常见错误
+
+### 1. 把 grid 属性写在子项上
+
+轨道、间距和 `display: grid` 都属于容器。子项身上只放 `grid-column` 这类放置规则。
+
+```css
+/* 错误：贴片定义不了它所在的那张网格 */
+.tile {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* 正确：画廊拥有轨道 */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+```
+
+### 2. 把网格线当成轨道数
+
+`grid-column: 1 / 3` 结束于*3 号线*，实际覆盖两条轨道——不是三条。把线数当轨道数，人人都至少踩一次。
+
+```css
+/* 错误：想跨三列，结果只跨了两列 */
+.wide {
+  grid-column: 1 / 3;
+}
+
+/* 正确：三列网格里占满一行 */
+.wide {
+  grid-column: 1 / -1;
+}
+```
+
+### 3. 指望 fr 单位负责居中
+
+`1fr` 分配的是宽度，与居中无关。让轨道里的内容居中是格子里那层 flex 的活。
+
+```css
+/* 错误：贴片里的文字照样左对齐 */
+.gallery {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* 正确：grid 管摆放，flex 管内部居中 */
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+### 4. 给每张贴片写死高度
+
+照片大小不一，强制每行固定像素高度必然破坏对齐。让行轨道自动容纳最高的那张，或者统一 `aspect-ratio`。
+
+```css
+/* 错误：高照片溢出固定高度的格子 */
+.tile {
+  height: 100px;
+}
+
+/* 正确：形状统一又不裁剪 */
+.tile {
+  aspect-ratio: 4 / 3;
+}
+```
+
+### 5. 忘了 minmax 的下限是硬地板
+
+`minmax(160px, 1fr)` 意味着轨道绝不窄于 160px。在 300px 宽的手机屏上，画廊会溢出而不是收缩——解决办法是更小的最小值，而不是媒体查询。
+
+```css
+/* 错误：在窄屏上溢出 */
+.gallery {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+/* 正确：小屏幕上轨道可以收缩 */
+.gallery {
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+}
+```
+
+### 6. 一条轴能干的事却动用了 Grid
+
+单行按钮组不需要二维骨架。Grid 不是"更好的 Flexbox"，它是"二维的那一个"。
+
+```css
+/* 杀鸡用牛刀：一行按钮用了网格 */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+}
+
+/* 更简单：一维的事用一维工具 */
+.actions {
+  display: flex;
+  gap: 12px;
+}
+```
+
+## 小结
+
+- `display: grid` 配合 `grid-template-columns` 和 `grid-template-rows` 画出骨架；子项按源码顺序落进格子。
+- `fr` 单位把剩余空间分成份额，`repeat()` 压缩重复的轨道定义。
+- 子项用 `grid-column` 和 `grid-row` 自行放置；`1 / -1` 占满一行，`span 2` 跨两条轨道且与起点无关。
+- `repeat(auto-fit, minmax(160px, 1fr))` 做出零媒体查询、自动重排的画廊。
+- Grid 管二维骨架，Flexbox 管一维流动——真实页面两者并用。

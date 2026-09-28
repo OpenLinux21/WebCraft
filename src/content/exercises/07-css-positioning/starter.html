@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Lesson 7: Positioning, Stacking and Overflow</title>
+    <link rel="stylesheet" href="starter.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <h1>My Profile</h1>
+    </header>
+
+    <main class="card">
+      <div class="avatar-wrap">
+        <div class="avatar">ZK</div>
+        <!-- TODO: pin this badge to the avatar's top-right corner -->
+        <span class="badge">3</span>
+      </div>
+      <h2>Zoe Kim</h2>
+      <p>Frontend learner. Coffee powered.</p>
+
+      <!-- TODO: cap this box's height so its long text scrolls -->
+      <div class="tips">
+        <p>Tip 1: absolute positioning needs a positioned ancestor.</p>
+        <p>Tip 2: sticky needs a top offset before it sticks.</p>
+        <p>Tip 3: fixed measures from the viewport, not the page.</p>
+        <p>Tip 4: z-index only applies to positioned elements.</p>
+        <p>Tip 5: overflow auto shows a scrollbar only when needed.</p>
+      </div>
+
+      <div class="filler">
+        <p>Scroll down: the header above should stay visible at the top.</p>
+        <p>The button in the corner should hover over the page the whole time.</p>
+        <p>Extra text here gives the page enough height to scroll.</p>
+        <p>Keep scrolling and compare header versus button behaviour.</p>
+      </div>
+    </main>
+
+    <!-- TODO: keep this button fixed to the viewport's bottom-right corner -->
+    <button class="back-top" type="button">Back to top</button>
+  </body>
+</html>

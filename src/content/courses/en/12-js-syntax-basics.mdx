@@ -1,0 +1,234 @@
+---
+lessonId: 12-js-syntax-basics
+order: 12
+module: javascript
+difficulty: beginner
+minutes: 30
+title: 'JavaScript Basics: Variables, Types and Operators'
+summary: 'Write your first JavaScript: log to the console, store values in variables, tell the primitive types apart and combine them with operators.'
+objectives:
+  - 'Print values with console.log and read them in the console panel.'
+  - 'Declare variables with const and let, and know when each is the right choice.'
+  - 'Distinguish the primitive types: string, number, boolean, undefined and null.'
+  - 'Use arithmetic, comparison and logical operators, including strict equality.'
+  - 'Convert between strings and numbers with Number() and String().'
+exercise:
+  task: "Open the browser console panel and complete a small profile report. Create a const called name with your (or any) name as a string, and a let called year with a birth year as a number. Compute the approximate age from the current year (2026) minus the birth year and log the type of each value with typeof. Then log one sentence using template literals that reads like: 'Ada is about 36 years old.' Finally add the string '5' and the number 2 with +, log the surprising result, and fix it by converting the string with Number() before logging the corrected sum."
+  hints:
+    - 'Template literals use backticks and interpolate values with ${name} — check that you typed backticks, not quotes.'
+    - "'5' + 2 is '52' because + with a string means concatenation. typeof tells you what you actually have."
+    - "Number('5') turns the string into a number; then 5 + 2 is 7, and typeof 7 is 'number'."
+---
+
+## Overview
+
+Welcome to the JavaScript part of the course. HTML described _what_ a page is, CSS described _how it looks_ — JavaScript is the third layer: _behavior_. It is a full programming language that runs inside every browser, and starting with this lesson the editor's **Console** panel becomes your best friend: every `console.log()` you write shows up right under the editor.
+
+In this lesson you will not yet touch the page itself. That is deliberate. Before a program can move things around, it must be able to _remember_ values and _compute_ new ones. You will meet the two ways to declare a variable, the handful of primitive types JavaScript is built on, and the operators that combine them. These ideas look tiny written down, but they are the vocabulary of everything that follows — functions, loops, arrays and the DOM all speak it.
+
+One habit to build from minute one: **read your errors**. When you mistype a variable name, JavaScript does not silently guess — it stops and writes a red message in the console. That message is not a scolding; it is the fastest documentation you will ever get.
+
+## Your first program: console.log
+
+The editor on this page runs your JavaScript in the preview, and the **Console** panel below it shows everything the program prints. `console.log()` is a function that prints any value you give it:
+
+```js
+console.log('Hello, WebCraft!');
+console.log(42);
+console.log(true);
+```
+
+Three calls, three lines in the console. Note the punctuation: the parentheses hold the _argument_ — the value you hand to the function — and the semicolon ends the statement. Semicolons are technically optional in modern JavaScript, but writing them consistently removes a whole class of confusing bugs, so this course uses them everywhere.
+
+`console.log` can print several values at once, separated by commas, which is perfect for comparing things side by side:
+
+```js
+console.log('age:', 36);
+// Console: age: 36
+```
+
+> **Try it:** type `console.log("Hi, I am learning JavaScript");` in the JS tab and press Run. The message appears in the Console panel. If it does not, check the panel for a red error line — usually a missing quote or parenthesis.
+
+You will also meet `console.warn()` and `console.error()` in later lessons; they print the same way but with yellow and red styling, which is exactly how the platform's console panel marks them.
+
+## Variables: const and let
+
+A _variable_ is a named box for a value. You create one with a **declaration**, and JavaScript offers two keywords, and the choice between them is a statement of intent:
+
+```js
+const appName = 'WebCraft'; // cannot be reassigned
+let score = 0; // can be reassigned
+
+score = 10;
+console.log(appName, score);
+```
+
+`const` (short for _constant_) binds the name to the value **forever** — reassigning it throws an error. `let` allows reassignment. The modern style rule is simple and strict: **use `const` by default**, and switch to `let` only when you have a concrete reason to reassign, like a counter that increments.
+
+```js
+const birthYear = 1990; // will never change
+let age = 2026 - birthYear; // could change as years pass
+age = age + 1; // fine: declared with let
+```
+
+What happens if you break the rule? Try it:
+
+```js
+const pi = 3.14;
+pi = 42; // TypeError: Assignment to constant variable.
+```
+
+The console shows a red `TypeError`. Nothing is "broken" — JavaScript refused an operation that would corrupt your intentions. This is the language protecting your program's meaning.
+
+Names are case-sensitive and written in **camelCase** (`userAge`, not `user_age` or `UserAge`). A name should say what the value _is_: `score` beats `s`, `birthYear` beats `x`. Future-you reads names, not intentions.
+
+## The primitive types
+
+Every value in JavaScript has a _type_. The primitive types you will use constantly are five:
+
+| Type        | Meaning                                  | Examples                               |
+| ----------- | ---------------------------------------- | -------------------------------------- |
+| `string`    | Text in quotes                           | `"Ada"`, `'hello'`, `` `hi ${name}` `` |
+| `number`    | Integers and decimals, one type for both | `42`, `3.14`, `-7`                     |
+| `boolean`   | Logical value                            | `true`, `false`                        |
+| `undefined` | Declared but not given a value           | `let x;` → `x` is `undefined`          |
+| `null`      | Deliberately "no value"                  | `const connection = null;`             |
+
+You can always ask a value what it is with the `typeof` operator:
+
+```js
+console.log(typeof 'Ada'); // "string"
+console.log(typeof 42); // "number"
+console.log(typeof true); // "boolean"
+console.log(typeof undefined); // "undefined"
+console.log(typeof null); // "object" — a famous historical bug
+```
+
+Yes, that last line is real: `typeof null` returns `"object"` and has since 1995. The bug can never be fixed because too much code depends on it. Now you know — and the quirk makes a great reminder that types in JavaScript are a tool, not a religion.
+
+Two details worth caring about early:
+
+- Strings can use single quotes, double quotes or backticks — but must open and close with the _same_ one.
+- `undefined` means "never given a value"; `null` means "intentionally empty". The difference matters in APIs you will meet later; for now, know both exist and `typeof` tells them apart poorly.
+
+## Operators: computing with values
+
+Operators combine values into new values. The arithmetic ones behave as school math taught you, with `%` (remainder) as a bonus:
+
+```js
+console.log(7 + 3); // 10
+console.log(7 - 3); // 4
+console.log(7 * 3); // 21
+console.log(7 / 3); // 2.3333333333333335
+console.log(7 % 3); // 1  <- remainder of 7 / 3
+```
+
+Comparison operators produce booleans — the raw material of every decision a program makes:
+
+```js
+console.log(3 > 2); // true
+console.log(3 <= 2); // false
+console.log('a' === 'a'); // true
+console.log(5 === '5'); // false!
+```
+
+That last line is the important one. JavaScript has two equalities: `==` (loose) _converts_ types before comparing, and `===` (strict) does not. With `==`, the number `5` and the string `"5"` are equal; with `===` they are not, because their types differ. Loose equality causes endless subtle bugs, so the rule is absolute in this course and in most professional codebases: **always use `===` and `!==`**.
+
+Logical operators combine booleans: `&&` (and) is true only if both sides are true, `||` (or) if at least one is, and `!` (not) flips a boolean:
+
+```js
+const isLoggedIn = true;
+const hasPermission = false;
+console.log(isLoggedIn && hasPermission); // false
+console.log(isLoggedIn || hasPermission); // true
+console.log(!isLoggedIn); // false
+```
+
+> **Try it:** log `10 % 3`, `10 === "10"` and `true && false`. Predict each result _before_ pressing Run, then check the console. The gap between your prediction and reality is exactly where learning happens.
+
+## The plus sign has two jobs
+
+One operator deserves its own section because it will trick you. `+` adds numbers, but between a string and anything else it _concatenates_ — glues text together:
+
+```js
+console.log('5' + 2); // "52"  <- string!
+console.log(5 + 2); // 7
+console.log('5' + '2'); // "52"
+```
+
+The rule: if _either_ side of `+` is a string, the other side is converted to a string too. This is the single most common surprise in early JavaScript. The cure is explicit conversion:
+
+```js
+const input = '5'; // imagine this came from a form field
+const value = Number(input); // convert string -> number
+console.log(value + 2); // 7
+
+const score = 42;
+const message = String(score); // convert number -> string
+console.log(typeof message); // "string"
+```
+
+`Number("hello")` returns `NaN` — "not a number" — JavaScript's way of saying the conversion failed. `NaN` is of type `"number"` (another classic), and it poisons every calculation it touches, so check suspicious conversions early.
+
+## Template literals: building strings properly
+
+Concatenating strings with `+` works but gets ugly fast:
+
+```js
+const name = 'Ada';
+const age = 36;
+console.log(name + ' is about ' + age + ' years old.'); // works, but noisy
+```
+
+**Template literals** use backticks and `${...}` placeholders, and they are the modern way to compose text:
+
+```js
+console.log(`${name} is about ${age} years old.`);
+// "Ada is about 36 years old."
+```
+
+The placeholder can hold any expression: `` `${age + 1}` `` computes before printing. Backticks also allow multi-line strings without `\n` gymnastics. From this lesson on, use template literals for any string that mixes text and values.
+
+## Walking toward the exercise
+
+The exercise asks you to build a tiny "profile report" in the console. The shape of the work:
+
+1. Declare `name` (a string, will not change → `const`) and `year` (a birth year number → `const`, since a birth year never changes).
+2. Compute the age into a new variable — one arithmetic expression.
+3. Log each value _and its `typeof`_ so you can see the types with your own eyes.
+4. Compose the sentence with a template literal, not `+`.
+5. Reproduce the `"5" + 2` surprise, log it, then fix it with `Number()` and log the corrected sum.
+
+Nothing here touches the DOM yet — that is the next lessons' business. What you are training is the inner loop of all programming: **declare, compute, print, check**.
+
+## Common Mistakes
+
+- **Using `=` to compare.** `=` assigns; `===` compares. `if (x = 5)` sets `x` to 5 instead of testing it. The editor will not always warn you.
+
+  ```js
+  // wrong: assigns
+  let score = 0;
+  console.log((score = 10)); // 10, and score is now 10
+  // right: compares
+  console.log(score === 10); // true
+  ```
+
+- **Mixing quotes inside strings.** `"It's fine"` breaks because the string closes at the second `"`. Use backticks or alternate quotes: `'It\'s fine'` or `` `It's fine` ``.
+
+- **Typos in variable names.** `userName` and `username` are different variables. JavaScript does not guess; you get `ReferenceError: username is not defined`. Read the name in the error and fix the spelling.
+
+- **Forgetting `typeof null` is `"object"`.** Do not use `typeof` alone to detect `null`; compare directly: `value === null`.
+
+- **Adding a number to form input without converting.** Form values are always strings. `Number()` first, then compute — otherwise `"5" + 2` gives `"52"`.
+
+- **Reassigning a `const`.** If you see `TypeError: Assignment to constant variable`, either the reassignment is a bug — or the variable should have been declared with `let`.
+
+## Summary
+
+- `console.log()` prints values to the Console panel — your feedback loop for the rest of the course.
+- Declare with `const` by default; use `let` only for values that genuinely change.
+- The primitive types are `string`, `number`, `boolean`, `undefined` and `null`; ask any value with `typeof`.
+- Always compare with `===` / `!==`; remember `+` concatenates when a string is involved.
+- Convert explicitly with `Number()` and `String()`, and compose text with template literals: `` `${name}` ``.
+
+Next lesson: functions — teaching JavaScript new verbs.

@@ -1,0 +1,339 @@
+---
+lessonId: 07-css-positioning
+order: 7
+module: css
+difficulty: beginner
+minutes: 35
+title: '定位、层叠上下文与溢出'
+summary: '用相对、绝对、固定与粘性定位把元素带离普通流，用 z-index 控制重叠次序，并妥善处理放不下的溢出内容。'
+objectives:
+  - '说清普通流是什么，并说出 position 属性的五个取值。'
+  - '组合使用 `position: relative` 与 `position: absolute`，把徽标锚定到父元素上。'
+  - '用 `position: sticky` 让页头在滚动时保持可见，用 `position: fixed` 把界面钉在视口上。'
+  - '借助层叠上下文与 `z-index` 判断重叠时谁在上面。'
+  - '为放不下的内容选择合适的 `overflow` 取值：滚动、裁剪或隐藏。'
+exercise:
+  task: '完善一张个人卡片页面：让页头在滚动时吸附在顶部；先给头像的包裹层设置定位，再用绝对定位把通知徽标钉在头像右上角；把返回顶部按钮固定在视口右下角；最后给提示框设置固定高度，并用 `overflow` 让长文本出现滚动条，不再撑开卡片。'
+  hints:
+    - '绝对定位的元素相对最近的已定位祖先摆放，所以先给头像的包裹层设置一个属于自己的 `position`。'
+    - '`position: sticky` 只有在同时设置 `top` 偏移时才会吸附，而 `position: fixed` 始终以视口为参照。'
+    - '用 `top` 与 `right` 偏移安放徽标（稍小的负值能让它压在头像边缘），如果徽标被卡片挡住就提高它的 `z-index`。'
+---
+
+## 概述
+
+到目前为止，你写的页面都活在**普通流**里：块级元素自上而下堆叠，行内元素像句子里的单词一样从左向右排列，谁也不挡谁。这套模型非常适合文档，但真实的界面总是在打破它：通知徽标要**叠在**头像上面，页头要在页面滚动时**钉住**不动，聊天按钮要悬浮在屏幕角落，无论你滚到哪里。
+
+`position` 属性就是 CSS 用来脱离普通流的杠杆，它还带着一整套配套工具：`top`、`right`、`bottom`、`left` 偏移负责回答"移到哪里"，`z-index` 负责回答"重叠时谁赢"，`overflow` 负责回答"内容装不下怎么办"。
+
+本节课请全程在编辑器里操作：把每个示例粘进样式表，观察预览的变化，并刻意"弄坏"它，看看会发生什么。最后，你会把四种定位技巧汇总到一张个人卡片页面上。
+
+## 普通流与 position 的五个取值
+
+在移动元素之前，先要知道自己移动的是**什么**。在普通流里，每个块级盒子占满可用宽度，下一个块级盒子紧随其下。`position` 有五个取值，它们的区别归结为同一个关键问题：**相对于谁来定位？**
+
+| 取值       | 是否脱离普通流 | 相对于谁定位         | 典型用途               |
+| ---------- | -------------- | -------------------- | ---------------------- |
+| `static`   | 否（默认值）   | 无，偏移量会被忽略   | 日常内容               |
+| `relative` | 否             | 自身在普通流中的位置 | 微调位置、充当定位锚点 |
+| `absolute` | 是             | 最近的**已定位**祖先 | 徽标、标签、下拉面板   |
+| `fixed`    | 是             | 视口                 | 悬浮按钮、Cookie 横幅  |
+| `sticky`   | 吸附前不脱离   | 最近的滚动祖先       | 吸顶页头、表头         |
+
+有两个结论值得背下来。第一，`top` 之类的偏移对 `static` 元素毫无作用——只有元素被"定位"之后偏移才生效。第二，`absolute` 和 `fixed` 会让元素脱离普通流，相邻元素会立刻补上它留下的空位，就像它根本不存在一样。
+
+```html
+<div class="flow-demo">
+  <p>第一段</p>
+  <p class="nudged">第二段</p>
+  <p>第三段</p>
+</div>
+```
+
+```css
+.flow-demo p {
+  padding: 10px;
+  background: #e0e7ff;
+}
+.nudged {
+  position: relative;
+  top: 12px;
+  left: 24px;
+}
+```
+
+注意第三段并不会上移去填补空隙：`relative` 只挪动盒子的**绘制位置**，不改变它在布局中的占位。这正是它适合做小幅视觉微调的原因。
+
+> **在编辑器中试一试：** 把两段代码粘进编辑器，看第二段向右下滑动。再把 `relative` 改成 `static`，确认偏移量彻底失效。
+
+## 相对定位与绝对定位：锚点模式
+
+最有用的定位模式是一支**两步舞**：给父元素 `position: relative`，让它成为锚点；再给子元素 `position: absolute`，让它围绕锚点摆放。所有"3"字徽标能贴在头像上、下拉菜单能找到自己的触发按钮，靠的都是这一招。
+
+```html
+<div class="avatar-wrap">
+  <div class="avatar">ZK</div>
+  <span class="badge">3</span>
+</div>
+```
+
+```css
+.avatar-wrap {
+  position: relative; /* 第一步：锚点 */
+  width: 96px;
+}
+
+.avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.badge {
+  position: absolute; /* 第二步：相对 .avatar-wrap 定位 */
+  top: -8px;
+  right: -12px;
+  background: #ef4444;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+```
+
+偏移量从锚点的边缘开始度量：`top: -8px` 把徽标抬到包裹层顶边**上方** 8 像素，`right: -12px` 把它推到右边**外侧** 12 像素。在这里负值不是什么 hack——元素要"压在"边缘上而不是"装进"盒子里，就得靠它。
+
+人们最容易漏掉的是第一步。如果一个绝对定位的元素**没有已定位的祖先**，它会退而相对整个页面定位，落到随滚动而变的奇怪位置。每当徽标跑到莫名其妙的地方，先问一句：_它现在是相对谁定位的？_
+
+> **在编辑器中试一试：** 添加上面的代码，然后注释掉包裹层上的 `position: relative`，看徽标"逃"到页面某处。恢复之后它立刻回到原位。
+
+## 固定定位与粘性定位：钉在视口上
+
+`fixed` 和 `sticky` 都能让界面保持可见，但它们回答的问题不同。`fixed` 问的是"视口在哪里？"——元素被粘在屏幕上，完全无视滚动。`sticky` 问的是"滚动阈值越过了吗？"——元素先随页面正常滚动，**直到**碰到你设置的偏移位置，才表现得像 fixed 一样。
+
+```css
+.site-header {
+  position: sticky;
+  top: 0; /* 页头一碰到视口顶部就吸附 */
+  background: #1e293b;
+  color: white;
+  padding: 14px 20px;
+  z-index: 10;
+}
+
+.chat-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: #6366f1;
+  color: white;
+}
+```
+
+`sticky` 元素从不脱离普通流，所以会一直保留自己的空间——吸附时不会引起布局跳动。它生效需要两个条件：一个 `top`（或 `bottom`）偏移，以及一个足够高、真的能滚动的区域。相比之下，`fixed` 元素完全脱离文档流，周围的内容不会为它重新排布。
+
+属于文档本身的 UI 用 `sticky`：页头、表头、"保存"工具条。悬浮在文档之上的 UI 用 `fixed`：聊天挂件、返回顶部按钮、全屏遮罩。
+
+> **在编辑器中试一试：** 让预览高到可以滚动，把页头样式加到页面顶部，然后滚动页面。再把 `sticky` 改成 `fixed`，观察内容从页头底下滑过时它依然纹丝不动。
+
+### 层叠上下文与 z-index
+
+当定位元素相互重叠时，浏览器按两条规则叠放它们。默认情况下，HTML 中靠后的元素画在靠前的元素之上，定位元素画在非定位元素之上。`z-index` 让你手动接管：数值大的赢——但**只对定位元素**（以及 flex、grid 容器的子项）有效。
+
+```css
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgb(15 23 42 / 0.5);
+  z-index: 10;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  background: #0f172a;
+  color: white;
+  padding: 12px 16px;
+  z-index: 20; /* 压在整个遮罩层之上 */
+}
+```
+
+这里有个微妙之处：任何**创建层叠上下文**的元素（设置了 `z-index` 的定位元素，以及 `transform`、小于 1 的 `opacity` 等若干属性的元素）都会成为一个原子单位。它的子元素只能在这个单位**内部**比拼，永远无法插进它与外部世界之间。一个 `z-index: 9999` 的子元素，若身处 `z-index: 1` 的上下文里，照样输给外部 `z-index: 2` 的元素。实用准则是：`z-index` 的数值要小、要局部化，永远不要陷入 `9999` 军备竞赛。
+
+> **在编辑器中试一试：** 让两个绝对定位的盒子重叠，给第一个 `z-index: 1`、第二个 `z-index: 2`，然后交换两个值，看赢家如何易主。
+
+## 溢出：滚动、裁剪还是隐藏
+
+定位回答盒子**去哪儿**，`overflow` 回答盒子的**内容比盒子还大**时怎么办。一旦你设置了固定高度或很窄的列，这种情况几乎天天发生。
+
+| 取值      | 内容过大时的行为               |
+| --------- | ------------------------------ |
+| `visible` | 内容溢出盒子之外（默认值）     |
+| `hidden`  | 内容被裁剪，且无法再看到       |
+| `scroll`  | 永远显示滚动条，哪怕根本不需要 |
+| `auto`    | 只在真正需要时才出现滚动条     |
+
+```css
+.tips {
+  height: 120px;
+  overflow: auto; /* 文字超过 120px 时才出现滚动条 */
+  padding: 12px 16px;
+  background: #eef2ff;
+  border-radius: 8px;
+}
+```
+
+`overflow` 还会悄悄影响布局：只要取值不是 `visible`，该元素就会成为其后代绝对定位的包含块，外边距也不再穿透它折叠。此外你可以按轴分别控制：`overflow-x` 与 `overflow-y`。经典技巧是给宽表格的包裹层设置 `overflow-x: auto`，小屏幕上就会出现横向滚动条，而不是把整个页面撑破。
+
+> **在编辑器中试一试：** 把一段长文字放进 120px 高的盒子里，依次尝试四个取值。注意 `hidden` 时文字直接消失——用户没有任何办法再看到它。
+
+## 练习思路
+
+练习给出了一张有四处"毛边"的个人卡片页面，每一处都对应本节课的一个概念。你不需要设计任何东西——只需要把现成的东西摆到位。
+
+按顺序处理启动样式表里的 TODO 注释，每改一处就预览一次：
+
+1. **吸顶页头。** 页头要在滚动时保持可见。给它 `position: sticky` 加一个 `top` 值。如果它始终不吸附，先确认页面确实在滚动。
+2. **锚定徽标。** 徽标需要两步修改，且顺序重要：先用 `position: relative` 把头像包裹层变成**锚点**，再把徽标本身设为 `position: absolute`，用 `top` 和 `right` 引导它。这里出现小的负值是正常的。
+3. **固定按钮。** 返回顶部按钮要悬浮在页面右下角，与滚动无关——这是"视口"的问题，不是"文档"的问题。
+4. **可滚动的提示框。** 长文本目前会把卡片撑开。用一个 `height` 限制盒子，再选出"只在需要时显示滚动条"的那个 `overflow` 取值。
+
+调试时有个好习惯：当绝对定位的元素落到奇怪的位置，给它的包裹层临时加一个醒目的 `background` 颜色，浏览器正在用谁当锚点一目了然。完成后可以打开参考答案——请逐行对比，而不是直接照抄。
+
+## 常见错误
+
+### 1. 没有锚点就绝对定位
+
+子元素设了 `position: absolute`，父元素却还是 `static`，于是元素相对整个页面定位，滚动时跟着乱跑。
+
+```css
+/* 错误：没有已定位的祖先 */
+.parent {
+  width: 200px;
+}
+.child {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+/* 正确：父元素成为锚点 */
+.parent {
+  position: relative;
+  width: 200px;
+}
+.child {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+```
+
+### 2. 指望 z-index 对 static 元素生效
+
+`z-index` 对非定位、非 flex、非 grid 的元素会被静默忽略。先给元素定位，值才有意义。
+
+```css
+/* 错误：毫无反应 */
+.callout {
+  z-index: 100;
+}
+
+/* 正确：现在值被采纳了 */
+.callout {
+  position: relative;
+  z-index: 100;
+}
+```
+
+### 3. 粘性定位却没给 top
+
+没有 `top`（或 `bottom`）值的 `position: sticky` 没有吸附阈值，页头会像普通元素一样直接滚走。
+
+```css
+/* 错误：直接滚走了 */
+.site-header {
+  position: sticky;
+}
+
+/* 正确：吸附在视口顶边 */
+.site-header {
+  position: sticky;
+  top: 0;
+}
+```
+
+### 4. 想用 sticky 却写成了 fixed
+
+`fixed` 的页头**永远**粘在视口上；`sticky` 的页头先随页面滚动，到达阈值才留下。如果页头应该先待在文档里、之后才停住，`fixed` 会把它困在错误的位置。
+
+```css
+/* 错误：还没滚动，页头就悬浮在半空 */
+.site-header {
+  position: fixed;
+  top: 0;
+}
+
+/* 正确：先在文档流中，滚动时再吸附 */
+.site-header {
+  position: sticky;
+  top: 0;
+}
+```
+
+### 5. overflow: hidden 吞掉了内容
+
+`overflow: hidden` 会悄悄丢弃装不下的部分。如果用户需要看到内容，他们需要的是滚动条，而不是更小的盒子。
+
+```css
+/* 错误：文章剩下的部分永远看不到了 */
+.article {
+  height: 150px;
+  overflow: hidden;
+}
+
+/* 正确：需要时可以通过滚动条看到 */
+.article {
+  height: 150px;
+  overflow: auto;
+}
+```
+
+### 6. 给 static 元素写偏移量
+
+`top` 和 `left` 在元素被定位之前毫无作用。这看起来像 bug，其实是 `static` 的既定行为。
+
+```css
+/* 错误：偏移被忽略 */
+.box {
+  top: 20px;
+  left: 20px;
+}
+
+/* 正确：relative 让偏移生效 */
+.box {
+  position: relative;
+  top: 20px;
+  left: 20px;
+}
+```
+
+## 小结
+
+- 普通流是默认布局；`position` 的五个取值是 `static`、`relative`、`absolute`、`fixed`、`sticky`，它们都在回答"相对于谁定位"。
+- 锚点模式 = `relative` 父元素 + `absolute` 子元素；偏移量从最近的已定位祖先开始度量。
+- `sticky` 需要 `top` 偏移并保留自己在文档流中的位置；`fixed` 粘住视口并脱离文档流。
+- 重叠时定位元素优先，`z-index` 更大者赢——但层叠上下文会把子元素困在里面。
+- `overflow: auto` 是可滚动区域的主力；`hidden` 裁掉够不着的内容；`visible` 是默认的溢出行为。
