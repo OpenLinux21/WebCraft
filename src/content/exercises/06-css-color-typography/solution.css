@@ -1,0 +1,36 @@
+/* A calm, readable theme built with hsl() colors and a fallback font stack. */
+
+body {
+  margin: 2rem auto;
+  max-width: 34rem;
+  padding: 0 1rem;
+  /* Font stack: preferred fonts first, generic family last. */
+  font-family: Georgia, 'Times New Roman', 'Songti SC', serif;
+  /* Paper-like background: low saturation, high lightness. */
+  background-color: hsl(45, 30%, 96%);
+  /* Dark, warm text for comfortable contrast. */
+  color: hsl(30, 15%, 20%);
+  /* Baseline font size; everything else uses rem. */
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+h1 {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 1.4rem;
+}
+
+blockquote {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.7;
+  padding-left: 1rem;
+  border-left: 4px solid hsl(30, 30%, 75%);
+}
+
+.attribution {
+  margin: 0;
+  font-size: 0.85rem;
+  color: hsl(30, 10%, 45%);
+}

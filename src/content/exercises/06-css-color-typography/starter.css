@@ -1,0 +1,19 @@
+/* TODO: give the quote page a calm, readable theme.
+   1. On body: a font stack with sensible fallbacks, ending in a generic family.
+   2. On body: a paper-like background color and dark text, both written with hsl().
+   3. On blockquote: font-size 1.25rem and a comfortable line-height.
+   4. On h1: uppercase text and some letter-spacing.
+   5. On .attribution: a smaller font-size and a dimmer color. */
+body {
+  margin: 2rem auto;
+  max-width: 34rem;
+  padding: 0 1rem;
+}
+
+blockquote {
+  margin: 0;
+}
+
+.attribution {
+  margin: 0;
+}

@@ -1,0 +1,339 @@
+---
+lessonId: 05-css-box-model
+order: 5
+module: css
+difficulty: beginner
+minutes: 30
+title: 'CSS 盒模型'
+summary: '把每个元素看成内容、内边距、边框和外边距四层；掌握 box-sizing，用专业的方式处理布局间距。'
+objectives:
+  - '说出盒模型的四层结构及各自的作用。'
+  - '正确使用 padding、border、margin 的简写形式。'
+  - '讲清 content-box 与 border-box 两种尺寸计算的区别。'
+  - '用 max-width 和自动外边距实现居中布局。'
+exercise:
+  task: '把起始页里两张素卡片做成完整的个人卡片：把所有元素切换为 border-box 尺寸计算；给每张卡片加内边距、边框和圆角；设定固定宽度让尺寸规则真正起作用；再用 margin 分隔两张卡片，并用自动外边距加 max-width 把整行在页面上居中。'
+  hints:
+    - 'border-box 切换只需一条规则：通用选择器加 box-sizing。'
+    - '内边距位于边框之内，所以在 border-box 下卡片仍保持声明的宽度，只是内容区随之缩小。'
+    - '当一个块的最大宽度小于父容器、同时左右外边距为 auto 时，它就会自己居中。'
+---
+
+## 概述
+
+第 4 课教你说明元素*长什么样*；本课解释它*位于何处*——而答案出人意料：页面上的每个元素都是一个矩形。段落、标题、链接、图片，全是盒子。一旦你把页面看作"盒子套盒子"，间距就不再是碰运气。
+
+每个盒子都由四层组成：内容本身、包着内容的内边距、再外一圈的边框，以及最外面的外边距。浏览器把这些层加总，决定元素实际占据的空间；两个都声明了 `width: 300px` 的元素最终大小可能完全不同——除非你懂那个叫 `box-sizing` 的诀窍。
+
+这是 CSS 中影响最深远的思维模型。看起来莫名其妙的布局 bug，几乎总可以归因于盒模型的两层在悄悄打架；而"每份样式表都以 border-box 重置开头"的职业习惯，正是你本课要学到的解法。
+
+练习是两张素面朝天的个人卡片，你要用内边距、边框、圆角和真正的居中把它们做完——一个真实网站卡片布局的微缩版。
+
+## 每个元素都是一个盒子
+
+盒模型从内到外共有四层：
+
+```text
+┌─────────────── margin ───────────────┐
+│  ┌──────────── border ────────────┐  │
+│  │  ┌──────── padding ────────┐  │  │
+│  │  │  ┌─────────────────┐  │  │  │
+│  │  │  │ content         │  │  │  │
+│  │  │  └─────────────────┘  │  │  │
+│  │  └───────────────────────┘  │  │
+│  └────────────────────────────────┘  │
+└──────────────────────────────────────┘
+```
+
+| 层        | 作用                                 |
+| --------- | ------------------------------------ |
+| `content` | 元素的文字、图片或子元素             |
+| `padding` | 边框之内的透明空间，衬在元素背景之上 |
+| `border`  | 画在内边距外圈的边线                 |
+| `margin`  | 边框之外的透明空间，把邻居推开       |
+
+这几层可以对应到日常物件。内容是照片；内边距是相片四周的卡纸；边框是相框；外边距是墙面上留给两个相框的间距。padding 和 margin 看起来都是"空白"，所以容易混淆——区别在于背景和边框止于 padding，而 margin 在一切之外。
+
+浏览器为每个元素都画出全部四层，哪怕其中三层是零。一个没有任何样式的 `h1` 也有盒子：文字内容、零内边距、零边框，以及把上下元素隔开的默认外边距。
+
+> **动手试一试：** 在内置编辑器里给一个段落设 `background-color: #e2e8f0;`，再加 `padding: 16px;`。色块随内边距一起变大——这是"padding 在元素内部、共享其背景"的直观证据。
+
+## 内边距、边框与外边距
+
+每层都有自己的属性，而且都支持一次写多边的简写。简写从顶部开始顺时针读取：
+
+```css
+/* one value: all four sides */
+padding: 16px;
+
+/* two values: top/bottom, then left/right */
+padding: 16px 24px;
+
+/* four values: top, right, bottom, left */
+padding: 8px 16px 24px 32px;
+```
+
+`margin` 的模式完全相同。只想设置某一边时，长写形式更清楚：`margin-top`、`padding-bottom`、`margin-left` 等等。
+
+边框有三个要素——宽度、样式、颜色——简写按此顺序合并。圆角是另一个独立属性，有没有可见边框都能生效：
+
+```css
+.card {
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+}
+```
+
+有一个习惯值得尽早养成：标题和段落带着浏览器给的默认外边距，而它们很少与你的设计匹配。把它们设成你真正想要的值——而不是去和浏览器的猜测较劲——是整洁布局的第一步：
+
+```css
+h2 {
+  margin-top: 0;
+}
+```
+
+> **动手试一试：** 在编辑器里给一张卡片设 `border-radius: 12px` 且不加边框。背景照样变圆——圆角是形状属性，不是边框属性。
+
+## 宽高与 box-sizing
+
+早晚会让所有人大吃一惊的问题是：`width: 300px` 到底量的是什么？答案取决于 `box-sizing`，两种模式的差异足以列表对比：
+
+|              | `content-box`（默认） | `border-box`         |
+| ------------ | --------------------- | -------------------- |
+| `width` 度量 | 仅内容                | 内容 + 内边距 + 边框 |
+| 增加内边距   | 盒子变大              | 盒子尺寸不变         |
+| 心智模型     | "width 是我敲的数"    | "width 是我看到的宽" |
+
+算术对比：
+
+```css
+.content-box {
+  box-sizing: content-box; /* the default */
+  width: 300px;
+  padding: 20px;
+  border: 4px solid gray;
+  /* true outer width: 300 + 2x20 + 2x4 = 348px */
+}
+
+.border-box {
+  box-sizing: border-box;
+  width: 300px;
+  padding: 20px;
+  border: 4px solid gray;
+  /* content shrinks to 252px; outer width stays 300px */
+}
+```
+
+在 `content-box` 下，每次调整 padding 或 border 都会悄悄改变元素尺寸——这就是为什么一排"300px"的卡片最后宽窄不一。在 `border-box` 下，你敲的数字就是最终结果，内边距向内挤占内容而不是向外撑大盒子。
+
+正因如此，几乎所有专业样式表都以一条把整页切换为 `border-box` 的重置开头：
+
+```css
+* {
+  box-sizing: border-box;
+}
+```
+
+`*` 选择器匹配每个元素。这条规则之后，`width` 终于名副其实，练习里的卡片也会规规矩矩。
+
+> **动手试一试：** 在编辑器里加上 border-box 重置，然后给卡片设 `width: 300px; padding: 20px;`。核对一下：border-box 下卡片正好 300px；删掉重置再看，它变成了 340px。
+
+## 外边距折叠
+
+垂直方向的外边距有一个著名怪癖：相邻的垂直外边距不会相加——而是折叠成两者中较大的那个：
+
+```css
+.one {
+  margin-bottom: 24px;
+}
+.two {
+  margin-top: 24px;
+}
+/* the gap between them: 24px, not 48px */
+```
+
+同样的折叠还会穿透父元素：子元素的 `margin-top` 可能跑到父元素外面，把父元素一起拽下来——除非父元素有 padding、有边框，或中间夹着内容。
+
+你不必背下完整规范，记住两条实用法则即可。第一，间距只用一个方向：给每张卡片 `margin-bottom`，永远不给 `margin-top`，让外边距永远不相邻。第二，当子元素的外边距神秘地"越狱"出父元素时，给父元素加一点 `padding-top`，漏洞就封上了。
+
+水平方向的外边距从不折叠。左 24px 挨着右 24px 就是实打实的 48px，所以一旦治好了垂直方向，水平间距反而讨人喜欢地可预测。
+
+> **动手试一试：** 在编辑器里给一张卡片 `margin-bottom: 24px`、下一张 `margin-top: 24px`，用眼睛量一下：间距是 24px。把第一个改成 40px，间距跟着较大的值走。
+
+## 用 max-width 和自动外边距居中
+
+过长的行很难阅读——每行 45 到 75 个字符才舒适。这就是为什么几乎所有真实网站都让一栏内容悬浮在页面中央，配方只有两个属性：
+
+```css
+.row {
+  max-width: 340px;
+  margin-left: auto;
+  margin-right: auto;
+}
+```
+
+`max-width` 让栏目在窄屏上优雅收缩而不是出现横向滚动条；`auto` 外边距把剩余空间平分给左右两侧。简写 `margin: 40px auto` 意为"上下 40px，左右 auto"，一行完成同样的事。
+
+这也是你第一次接触单个元素之外的布局。居中栏加 `max-width` 是文章页、仪表盘和卡片墙的骨架；布局模块会把它长成完整的页面结构，但核心技巧不会再变。
+
+> **动手试一试：** 在编辑器里把两个段落包进一个 `class="row"` 的 `div`，加上上面的规则并预览。然后把预览面板拖窄，看着栏目收缩而不是溢出。
+
+## 练习思路：做完个人卡片
+
+起始页面里有一行两张 `article` 卡片——姓名加简短介绍——以及一个写满 TODO 的 CSS 文件。此刻卡片与背景浑然一体；你的工作是赋予它们形状和位置。
+
+按 TODO 标记的顺序推进：
+
+1. 添加通用的 `border-box` 重置，让你敲下的每个宽度都诚实。
+2. 给 `.card` 加 `padding: 16px`、`2px solid` 边框和 `border-radius: 12px`。
+3. 给 `.card` 设 `width: 280px`——在 border-box 下，内边距住在宽度*里面*。
+4. 用 `.card` 上的 `margin-bottom: 20px` 分隔两张卡片。
+5. 居中整行：`.row` 上设 `max-width`，再加 `margin: 40px auto`。
+
+第 3 步之后，对比一下如果没有第 1 步的重置会怎样：卡片将是 `280px` 的内容*加上*内边距*再加上*边框，整行溢出。有了 border-box，`280px` 就是全部真相。
+
+第 5 步之后，两张卡片应当成为间距均匀的居中一列——简单，却与任何生产环境的卡片布局同一套力学。改改数字、反复预览，直到比例在你眼里舒服为止。
+
+> **提示：** 当间距看起来不对时，先问"这是哪一层？"再去动任何数字。文字贴边是 padding；卡片贴卡片是 margin。说出层的名字，属性自然浮现。
+
+## 常见错误
+
+### 1. 设了 width 却没开 border-box
+
+内边距和边框叠在声明的宽度之上，盒子撑破容器。
+
+错误写法：
+
+```css
+.card {
+  width: 300px;
+  padding: 20px;
+} /* really 340px */
+```
+
+正确写法：
+
+```css
+* {
+  box-sizing: border-box;
+}
+.card {
+  width: 300px;
+  padding: 20px;
+} /* really 300px */
+```
+
+### 2. 该用 padding 的地方用了 margin
+
+margin 在元素之外：背景和边框不会覆盖它，视觉盒子永远不会变大。
+
+错误写法：
+
+```css
+.card {
+  margin: 16px;
+} /* text still hugs the edge */
+```
+
+正确写法：
+
+```css
+.card {
+  padding: 16px;
+} /* space inside the card */
+```
+
+### 3. 用空元素撑间距
+
+空段落和 `br` 把固定间距焊死在标记里，在任何屏幕尺寸上都是错的。
+
+错误写法：
+
+```html
+<p></p>
+```
+
+正确写法：
+
+```css
+.card {
+  margin-bottom: 20px;
+}
+```
+
+### 4. 与 body 的默认外边距较劲
+
+浏览器给 `body` 8px 外边距，表现为每个布局周围一圈神秘的空隙。
+
+错误写法：
+
+```css
+.row {
+  margin: 40px auto;
+} /* plus a surprise 8px frame */
+```
+
+正确写法：
+
+```css
+body {
+  margin: 0;
+}
+.row {
+  margin: 40px auto;
+}
+```
+
+### 5. 用 text-align 居中块级元素
+
+`text-align` 居中的是盒子*内部*的文字，不是盒子本身；只有 auto 外边距能居中盒子。
+
+错误写法：
+
+```css
+.row {
+  text-align: center;
+} /* content centered, box is not */
+```
+
+正确写法：
+
+```css
+.row {
+  max-width: 340px;
+  margin: 0 auto;
+}
+```
+
+### 6. 以为 border-radius 需要边框
+
+圆角是盒子的形状属性；没有边框它照样圆滑背景和轮廓。
+
+错误写法：
+
+```css
+.card {
+  border: 2px solid gray;
+  border-radius: 12px;
+} /* border added "for the corners" */
+```
+
+正确写法：
+
+```css
+.card {
+  background: #fef3c7;
+  border-radius: 12px;
+}
+```
+
+> **提示：** 本页这些错误同根同源：靠猜，而不是先说出层的名字。敲下任何数字之前，先判断这空隙属于内容、padding、border 还是 margin——正确的属性随之而来。
+
+## 小结
+
+- 每个元素都是一个四层盒子：内容、内边距、边框、外边距。
+- 简写按顺时针读取——`padding: top right bottom left`——单值与双值形式覆盖大部分需求。
+- 默认 `content-box` 下 `width` 只量内容；border-box 重置让 `width` 包含 padding 和 border。
+- 垂直外边距折叠取较大者；水平外边距相加。间距优先只用一个方向。
+- `max-width` 加自动外边距是居中且可收缩栏目的标准配方。
+- 你用一次重置、盒子样式、诚实的宽度和真正的居中，完成了两张素卡片。

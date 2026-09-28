@@ -1,0 +1,355 @@
+---
+lessonId: 06-css-color-typography
+order: 6
+module: css
+difficulty: beginner
+minutes: 30
+title: 'Colors, Fonts and Typography'
+summary: 'Write colors four ways, build font stacks with fallbacks, and set type that is comfortable to read with size, line height and spacing.'
+objectives:
+  - 'Write colors as names, hex, rgb and hsl, and control transparency.'
+  - 'Build a font-family stack with sensible fallbacks.'
+  - 'Choose between px, em and rem for font sizes.'
+  - 'Tune line-height, letter-spacing and text-transform for readability.'
+exercise:
+  task: 'Give the quote page in the starter a calm, readable theme. Set a font stack with fallbacks on body, pick a paper-like background and dark text color with hsl, size the blockquote at 1.25rem with a comfortable line-height, make the heading uppercase with letter-spacing, and mute the attribution under the quote with a smaller size and dimmer color.'
+  hints:
+    - 'A font stack is a comma-separated list that ends in a generic family such as serif or sans-serif.'
+    - 'hsl takes hue, saturation and lightness - keep the saturation low and the lightness high for a paper-like background.'
+    - 'Set the base size on body first, then size everything else in rem so the page scales as one system.'
+---
+
+## Overview
+
+You can build a page with correct markup and precise boxes and it will still look amateur - because most of what people call "design" is two decisions: which colors, and which type. This lesson covers both, in the measly thirty minutes they deserve.
+
+Colors and fonts share a mechanical core and an artistic surface. The mechanics are small: four ways to write a color, one property for a font, three units for type size. The art is judgment: contrast that respects the reader's eyes, spacing that lets text breathe, restraint that keeps a page to one or two fonts and one accent color.
+
+Typography is also an accessibility topic wearing a design costume. A font stack that degrades gracefully, sizes in `rem` that respect user settings, line heights that leave room between lines - these choices decide whether a page is readable at all, for readers with low vision, on a sunlit phone, or at 200% zoom.
+
+The exercise takes a bare quote page and gives it a complete theme: a paper background, a serif stack, a comfortable measure and a properly shouty heading. It is the last exercise of the CSS module, and it pulls together everything from Lessons 04 and 05.
+
+## Four ways to write a color
+
+CSS accepts colors in four syntaxes, and each earns its keep somewhere:
+
+| Syntax  | Example              | Best for                           |
+| ------- | -------------------- | ---------------------------------- |
+| Named   | `darkblue`           | Quick demos; about 148 names exist |
+| Hex     | `#1e3a8a`            | Copying values from design tools   |
+| `rgb()` | `rgb(30, 58, 138)`   | The same thing, in decimal         |
+| `hsl()` | `hsl(224, 76%, 33%)` | Colors you want to _adjust_        |
+
+Hex and `rgb` describe the same fact - how much red, green and blue - while `hsl` describes a color the way people think about it: the hue on a color wheel from 0 to 360, the saturation as a percentage, and the lightness as a percentage. Want a darker version of a color? Keep the hue, lower the lightness. That is why `hsl` is the syntax designers reach for when building a palette:
+
+```css
+body {
+  color: darkslategray; /* a named color */
+}
+
+h1 {
+  color: #1e3a8a; /* hex: red green blue */
+}
+
+blockquote {
+  color: hsl(224, 76%, 33%); /* hue, saturation, lightness */
+}
+```
+
+Every syntax also accepts a fourth value for opacity, so a color can be partial:
+
+```css
+.overlay {
+  color: rgba(30, 58, 138, 0.7); /* the last number is opacity */
+}
+```
+
+One warning while you are choosing colors: whatever you pick, the text must stay readable against its background. Low-contrast palettes look chic in a portfolio and unreadable on a bus.
+
+> **Try it:** In the built-in editor, color the `h1` with a named color, then rewrite it in hex, then in `hsl`. Preview after each - three syntaxes, one color.
+
+## Font families and fallback stacks
+
+The `font-family` property never names just one font. It names a _stack_: an ordered wish list that the browser walks from left to right, using the first font it can actually find:
+
+```css
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+```
+
+Two details make stacks work. First, names containing spaces need quotes - `"Times New Roman"`. Second, a stack always ends with a _generic family_, the safety net that exists on every machine: `serif` for books and newspapers, `sans-serif` for screens and interfaces, `monospace` for code.
+
+| Generic family | Looks like             | Natural home          |
+| -------------- | ---------------------- | --------------------- |
+| `serif`        | Feet on the letters    | Long-form reading     |
+| `sans-serif`   | No feet, even strokes  | Interfaces, buttons   |
+| `monospace`    | Every glyph same width | Code, data            |
+| `system-ui`    | The device's own font  | Modern app-like pages |
+
+The preview sandbox has no network access, which is quietly good training: you cannot load fancy web fonts here, so you learn to build the offline-safe stacks that real sites use as fallbacks anyway. Georgia plus `serif` is a complete, honest stack.
+
+> **Try it:** In the editor, set a `font-family` stack on `body` and preview. Then move `monospace` to the front of the stack and watch the whole page turn into a terminal.
+
+## Sizing text: px, em and rem
+
+Three units compete for your font sizes, and the differences matter more than they look:
+
+| Unit  | Meaning                                   | Use for                         |
+| ----- | ----------------------------------------- | ------------------------------- |
+| `px`  | Fixed pixels                              | Borders, hairlines, exact icons |
+| `em`  | Relative to the element's _own_ font size | Padding that scales with text   |
+| `rem` | Relative to the _root_ font size          | The type scale itself           |
+
+The catch with `em` is that it compounds: an element inside an element inside an element multiplies. That is why the type scale prefers `rem` - every `rem` refers to the root font size, usually 16px, no matter how deep the element sits:
+
+```css
+body {
+  font-size: 16px;
+}
+
+h1 {
+  font-size: 2rem; /* 32px: 2 x 16 */
+}
+
+h2 {
+  font-size: 1.25rem; /* 20px */
+}
+
+small {
+  font-size: 0.875rem; /* 14px */
+}
+```
+
+Sizing the whole page in `rem` has a quiet accessibility payoff: a reader who raises their browser's default font size scales your entire page proportionally, headings and small print alike. Fixed pixel sizes ignore that preference entirely.
+
+A working scale needs remarkably few steps - base, small print, two heading levels - and each step a single `rem` multiple. Resist the urge to invent a size for every element.
+
+> **Try it:** In the editor, set `body` to `font-size: 16px` and give the `h1` `font-size: 2rem`. Then change the base to `20px` and preview: the heading follows, because `rem` measures from the root.
+
+## Line height, weight and emphasis
+
+A page of text is read in lines, and `line-height` decides whether reading feels easy or claustrophobic. Set it as a unitless number - a multiplier of the font size:
+
+```css
+body {
+  line-height: 1.6; /* roomy: body text wants 1.5 to 1.7 */
+}
+
+h1 {
+  line-height: 1.2; /* headings want to hug their own size */
+}
+```
+
+The rest of this section is a small toolbox of text-dressing properties, each doing exactly one job:
+
+```css
+h1 {
+  font-weight: 800; /* 400 normal, 700 bold, up to 900 */
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+a {
+  text-decoration: none; /* or underline, the default */
+}
+
+blockquote footer {
+  font-style: italic;
+}
+```
+
+`font-weight` runs from 100 to 900 in steps of 100; `font-style` slants; `text-decoration` underlines (or un-underlines links); `text-transform` shifts case without touching the underlying text; `letter-spacing` adds air inside a word and shines on short, uppercase headings.
+
+One strong opinion to adopt now: never type capital letters into your HTML to fake small caps or headings. Type the sentence normally and let `text-transform` do the cosmetics - screen readers then read "Words to keep" as words, not as a spelling bee.
+
+> **Try it:** In the editor, give `body` `line-height: 1.6` and the `h1` `text-transform: uppercase` plus `letter-spacing: 0.1em`. Compare against the defaults - the page gains gravitas without a single new font.
+
+## A small typographic system
+
+Everything above assembles into half a dozen declarations that give a page a coherent voice:
+
+```css
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: hsl(215, 25%, 20%);
+  background-color: hsl(40, 40%, 96%);
+}
+
+h1,
+h2 {
+  line-height: 1.2;
+}
+
+blockquote {
+  font-size: 1.25rem;
+}
+```
+
+Read that rule aloud: a serif stack, a calm near-black on warm paper, roomy line height, tighter headings, quotes slightly larger for presence. Five decisions, one system - and because they live on `body`, inheritance from Lesson 04 delivers them to every element for free.
+
+The last ingredient is measure - how wide a line of text runs - and you already own it: `max-width` from Lesson 05 keeps lines in the 45-to-75-character comfort zone. Typography and box model meet exactly there.
+
+Real design systems add a spacing scale and a second font for headings, but the shape of this rule set is the shape of all of them. Start with the body, scale in `rem`, and let inheritance do the delivery.
+
+> **Try it:** In the editor, type the body rule above and preview. Then change the hue in `background-color` from 40 to 120 and watch the page re-theme itself - one number, whole new mood.
+
+## The exercise: theme the quote page
+
+The starter is a page of words with no voice: a heading, a blockquote with an attribution, and an explanatory paragraph. The markup is done; the TODO comments in the CSS mark out the theme.
+
+Work through the TODO markers in order:
+
+1. On `body`, set a `font-family` stack ending in a generic family - a serif stack suits a page of quotations.
+2. On `body`, pick a paper-like `background-color` and a dark text `color`, both written in `hsl()`.
+3. Size the `blockquote` at `1.25rem` with `line-height: 1.6`.
+4. Make the `h1` uppercase and give it `letter-spacing`.
+5. Mute the `blockquote footer`: `0.875rem` and a dimmer color.
+
+Steps 1 and 2 give the page its voice, steps 3 to 5 set the hierarchy: the quote largest, the heading emphasized by spacing rather than size, the attribution quiet. If your two `hsl` colors feel off, adjust the lightness first - paper is high lightness, ink is low.
+
+When you finish, preview and read the page as a reader would: can you tell the quote from the commentary at a glance? Can you read it in one sweep without losing the line? Those are the tests the numbers are really for.
+
+> **Tip:** Steal like a designer: pick one hue for the background family and one accent, and derive everything else by adjusting lightness. Whole websites run on two `hsl` starting points.
+
+## Common Mistakes
+
+### 1. Low-contrast text
+
+Pale gray on white looks refined and reads terribly; keep body text dark against its background.
+
+Wrong:
+
+```css
+body {
+  color: #cccccc;
+} /* barely visible on white */
+```
+
+Right:
+
+```css
+body {
+  color: hsl(215, 15%, 25%);
+}
+```
+
+### 2. Line height too tight
+
+Below about 1.4, lines of body text visually merge and the eye loses its place.
+
+Wrong:
+
+```css
+body {
+  line-height: 1;
+}
+```
+
+Right:
+
+```css
+body {
+  line-height: 1.6;
+}
+```
+
+### 3. Unquoted font names
+
+A multi-word family name without quotes breaks the declaration, and the browser falls through to the next font.
+
+Wrong:
+
+```css
+body {
+  font-family:
+    Times New Roman,
+    serif;
+}
+```
+
+Right:
+
+```css
+body {
+  font-family: 'Times New Roman', serif;
+}
+```
+
+### 4. Fixed pixel sizes everywhere
+
+Pixel-only type ignores the reader's browser settings; `rem` sizes scale with their preferences.
+
+Wrong:
+
+```css
+h1 {
+  font-size: 48px;
+}
+```
+
+Right:
+
+```css
+h1 {
+  font-size: 3rem;
+}
+```
+
+### 5. Too many font families
+
+Every extra family spends attention; one for headings and one for body text is already generous.
+
+Wrong:
+
+```css
+body {
+  font-family: Georgia, Verdana, 'Comic Sans MS', Impact, serif;
+}
+```
+
+Right:
+
+```css
+body {
+  font-family: Georgia, serif;
+}
+h1 {
+  font-family: Verdana, sans-serif;
+}
+```
+
+### 6. Typing capitals into the HTML
+
+Screen readers may spell out or shout all-caps text; the case belongs to CSS, not to the words.
+
+Wrong:
+
+```html
+<h1>WORDS TO KEEP</h1>
+```
+
+Right:
+
+```html
+<h1>Words to keep</h1>
+```
+
+```css
+h1 {
+  text-transform: uppercase;
+}
+```
+
+> **Tip:** Typography mistakes are invisible in the code and obvious on the page. Every time you finish a theme, read the page once at arm's length: if you squint, so does everyone else.
+
+## Summary
+
+- Colors come as names, hex, `rgb()` and `hsl()`; `hsl` is the one you adjust, and a fourth value sets opacity.
+- `font-family` takes a stack: quoted names, then a generic family as the safety net.
+- `px` is fixed, `em` compounds, `rem` measures from the root - the type scale belongs in `rem`.
+- `line-height` as a unitless multiplier keeps text readable; body text wants 1.5 to 1.7, headings tighter.
+- `font-weight`, `font-style`, `text-decoration`, `text-transform` and `letter-spacing` dress text without changing it.
+- A theme is a handful of declarations on `body`, delivered everywhere by inheritance - you built one for the quote page.

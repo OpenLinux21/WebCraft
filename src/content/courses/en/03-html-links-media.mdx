@@ -1,0 +1,333 @@
+---
+lessonId: 03-html-links-media
+order: 3
+module: html
+difficulty: beginner
+minutes: 30
+title: 'Links, Images, Lists and Media'
+summary: 'Connect pages with anchors, draw inline SVG images, structure content with lists, and embed audio and video.'
+objectives:
+  - 'Write links with href: other pages, in-page anchors and email addresses.'
+  - 'Add images with alt text and wrap them in figure and figcaption.'
+  - 'Choose between ul, ol and dl, and nest lists correctly.'
+  - 'Embed audio and video with controls and useful attributes.'
+exercise:
+  task: 'Build a field-notes page. Turn the three section names at the top into a nav whose links jump to sections with matching ids, draw a small sun-over-water picture with inline SVG inside a figure with a figcaption, list your gear in a ul and your steps in an ol, and add a link to glossary.html that opens in a new tab with target and rel.'
+  hints:
+    - 'An in-page link points at a fragment such as #setup, and the section it targets needs a matching id attribute.'
+    - 'Inline SVG goes straight into the HTML: one circle for the sun and two rects for the water already read as a picture.'
+    - 'For the new-tab link, set the target attribute to _blank and add rel=noreferrer alongside it.'
+---
+
+## Overview
+
+A page with only headings and paragraphs is a document. The web became _the web_ when documents learned to point at each other. Links, images, lists and media are the four tools that turn a page of words into something worth visiting - and all four are introduced in this lesson.
+
+The lesson also introduces a new way of thinking about markup: attributes that _reference_ things. `href` points at another page, `id` names a spot on the current one, `src` points at an image file. None of those references need a network connection - every example here works offline in the built-in editor, and your exercise draws its picture with pure markup.
+
+That picture deserves a special mention: you will meet inline SVG, a way to describe a drawing with elements instead of pixels. SVG is not just a party trick - it is how icons and logos are shipped on real sites, and it behaves like any other HTML element you have met.
+
+Here is the plan: links first, including the trick of jumping inside one page; then images and their captions; then the three kinds of lists; then audio and video; and finally the exercise, a field-notes page that uses every one of them.
+
+## Links and anchors
+
+The `a` element - short for _anchor_ - is the hyper in hypertext. Its `href` attribute holds the destination, and its content is the text the reader clicks:
+
+```html
+<p>
+  Read the <a href="packing-list.html">packing list</a> before you go, or
+  <a href="mailto:sam@example.com">email me</a> questions.
+</p>
+```
+
+An `href` can point to several kinds of places. A _relative path_ like `packing-list.html` means "the file next to this one". A _full URL_ starts with a protocol and can reach any site on the internet. And `mailto:` opens the reader's email client instead of navigating.
+
+The third destination is your own page. A fragment link - the `#` sign followed by an `id` - scrolls the browser to the element carrying that id:
+
+```html
+<nav>
+  <a href="#setup">Setup</a>
+  <a href="#gear">Gear</a>
+</nav>
+
+<h2 id="setup">The setup</h2>
+<p>Every morning this week, at the pond behind my apartment.</p>
+
+<h2 id="gear">The gear</h2>
+<p>Small kit only: it all fits in one pocket.</p>
+```
+
+The `id` attribute can be added to any element, and its value must be unique on the page. Think of ids as house numbers: the link is the address, the id is the door it opens.
+
+One more link superpower - opening a new tab:
+
+```html
+<a href="glossary.html" target="_blank" rel="noreferrer">Glossary</a>
+```
+
+`target="_blank"` asks for a new tab instead of reusing the current one, and `rel="noreferrer"` is the security courtesy that should always travel with it. Save new-tab links for places a reader genuinely might not want to leave - reference pages, documentation - and let ordinary navigation stay in the same tab.
+
+> **Try it:** In the built-in editor, write a two-link `nav` pointing at two sections with matching `id`s, then preview and click. The page jumps - you just built the "skip to content" pattern real sites use.
+
+## Images: img, alt and figure
+
+The `img` element embeds an image. It is an empty element - no closing tag - and its two most important attributes are `src`, the address of the image file, and `alt`, the text that stands in for it:
+
+```html
+<img src="sunrise.svg" alt="The sun rising over a still pond" width="320" height="200" />
+```
+
+`alt` deserves care. It is read aloud by screen readers, shown when the image fails to load, and indexed by search engines. Write it as a short description of what the image _shows_, not what it _is_: "The sun rising over a still pond" beats "image" or "photo" every time.
+
+The `width` and `height` attributes look like styling, but they are really a promise: they tell the browser how much room the image will take _before_ it loads, so the text below does not jump when the picture arrives.
+
+When an image and a caption belong together, wrap them in `figure`:
+
+```html
+<figure>
+  <img src="sunrise.svg" alt="The sun rising over a still pond" />
+  <figcaption>Day two began at 6:14, ten minutes late.</figcaption>
+</figure>
+```
+
+`figcaption` is a visible comment on the image, while `alt` is an invisible stand-in for it - the caption is for every reader, the alt text is for readers who cannot see the picture.
+
+And when no file exists at all, you can draw the picture in markup. Inline SVG lives directly in your HTML and is made of ordinary elements:
+
+```html
+<svg width="120" height="80" role="img" aria-label="A sun over water">
+  <circle cx="60" cy="34" r="16" fill="#f4b23e" />
+  <rect x="8" y="52" width="104" height="6" fill="#7db4d8" />
+  <rect x="16" y="62" width="88" height="6" fill="#5a93b8" />
+</svg>
+```
+
+A `circle` with a center, a radius and a fill; two `rect`s as bands of water. SVG scales perfectly at any size, which is why real sites use it for icons and logos. On an `svg`, the alt-text role is played by `role="img"` plus `aria-label`.
+
+> **Try it:** In the editor, paste the sun-over-water SVG and change the circle's `fill` to another color. Then add a second `rect` for a third band of water. You are drawing, but with attributes.
+
+## Lists: ul, ol and dl
+
+Lists are everywhere on the web - menus, steps, feature comparisons, search results. HTML has three list elements, and picking the right one is a meaning decision, not a styling one:
+
+```html
+<ul>
+  <li>Sketchbook, A5</li>
+  <li>Two pencils: HB and 2B</li>
+  <li>A folding stool</li>
+</ul>
+
+<ol>
+  <li>Sit facing the water for five quiet minutes.</li>
+  <li>Block in the horizon and the biggest shapes.</li>
+  <li>Add shading once the shapes feel right.</li>
+</ol>
+```
+
+Every list is a wrapper element holding `li` (list item) children. The browser puts a bullet before each item in a `ul` and a number before each item in an `ol` - but the numbers are the side effect, not the point. The point is what you are claiming about the content: a `ul` says the order is irrelevant; an `ol` says the sequence matters, as in steps or rankings.
+
+| Element | Use it when                                       |
+| ------- | ------------------------------------------------- |
+| `ul`    | The order of items is irrelevant                  |
+| `ol`    | The sequence matters: steps, rankings, directions |
+| `dl`    | Term-description pairs: a glossary, FAQs, specs   |
+
+The third kind, the description list, pairs each term with a description:
+
+```html
+<dl>
+  <dt>en plein air</dt>
+  <dd>Drawing outdoors, in front of the subject.</dd>
+  <dt>thumbnail</dt>
+  <dd>A tiny rough sketch used to plan a composition.</dd>
+</dl>
+```
+
+Lists nest naturally, which is how multi-level menus are built: put a whole new list _inside_ an `li`, not between lists:
+
+```html
+<ul>
+  <li>
+    Drawing gear
+    <ul>
+      <li>Sketchbook</li>
+      <li>Pencils</li>
+    </ul>
+  </li>
+  <li>Picnic gear</li>
+</ul>
+```
+
+> **Try it:** In the editor, build your gear as a `ul`, your steps as an `ol`, and add one nested `ul` under one of the items. Change a `ul` to an `ol` and back, and watch the meaning change with the markers.
+
+## Audio and video
+
+HTML5 made media first-class citizens: the `video` and `audio` elements play files with nothing more than a `src` - and, crucially, the `controls` attribute:
+
+```html
+<video src="pond-timelapse.mp4" controls width="320">Your browser cannot play this video.</video>
+
+<audio src="morning-birds.mp3" controls loop></audio>
+```
+
+Without `controls`, a video shows only its first frame and an audio element shows nothing at all - there is no way to press play. The text inside a `video` element is fallback content, shown by browsers that cannot play the file.
+
+A handful of attributes cover most needs:
+
+| Attribute  | Effect                                            |
+| ---------- | ------------------------------------------------- |
+| `controls` | Shows the browser's built-in play interface       |
+| `autoplay` | Starts playing on load - usually a bad idea       |
+| `loop`     | Restarts from the beginning forever               |
+| `muted`    | Starts silenced; browsers require it for autoplay |
+| `poster`   | Image displayed before the video plays            |
+
+One honest caveat: the preview sandbox has no network access, so a real media file would not load there. The markup is still exactly what you would ship - on a site with the files in place, these elements stream and play as-is. In the editor you will see an empty player or the fallback text, and that is your cue to check the attributes rather than hunt for a bug.
+
+> **Try it:** In the editor, add a `video` element with `controls`, `loop` and fallback text, then add an `audio` element below it. Toggle `controls` off and on to see how much the browser does for free.
+
+## The exercise: a field-notes page
+
+The starter page describes a week of sketching at a pond. One section already exists, and the rest is waiting in TODO comments. Your job is to finish it using every tool from this lesson.
+
+Work through the TODO markers in order:
+
+1. Turn the plain section names at the top into a `nav` with three links pointing at `#setup`, `#gear` and `#steps`.
+2. After the setup paragraph, add a `figure` containing an inline SVG - a sun over water, like the one in this lesson - with a `figcaption` underneath.
+3. Create the gear section: an `h2` with `id="gear"` and a `ul` of three items.
+4. Create the steps section: an `h2` with `id="steps"` and an `ol` of three steps.
+5. End with a link to `glossary.html` that opens in a new tab using `target` and `rel`.
+
+Preview and click every link: each one should scroll to its section. If a link does nothing, the usual cause is a typo where the `id` and the fragment disagree - the link says `#steps` but the heading says `id="step"`, for example.
+
+The SVG does not need to be pretty; it needs to be _yours_. Change the sun's position, add a cloud made of a second `circle`, and give the drawing an `aria-label` that describes what you actually drew.
+
+> **Tip:** `alt` and `figcaption` answer different questions. `alt` describes the picture for someone who cannot see it; `figcaption` is the remark you would scribble under it in a notebook.
+
+## Common Mistakes
+
+### 1. An anchor pointing nowhere
+
+A fragment link with no matching `id` is a dead click - the most common broken link on the web.
+
+Wrong:
+
+```html
+<a href="#steps">Steps</a>
+```
+
+Right:
+
+```html
+<a href="#steps">Steps</a>
+<h2 id="steps">Steps</h2>
+```
+
+### 2. Meaningless or missing alt text
+
+Empty strings are reserved for purely decorative images; every meaningful image needs a real description.
+
+Wrong:
+
+```html
+<img src="sunrise.svg" alt="image" />
+```
+
+Right:
+
+```html
+<img src="sunrise.svg" alt="The sun rising over a still pond" />
+```
+
+### 3. Fake lists made of paragraphs
+
+Dashes and manual numbering look like lists to humans but read as loose paragraphs to machines.
+
+Wrong:
+
+```html
+<p>- Sketchbook</p>
+<p>- Pencils</p>
+<p>1. Sit down</p>
+```
+
+Right:
+
+```html
+<ul>
+  <li>Sketchbook</li>
+  <li>Pencils</li>
+</ul>
+```
+
+### 4. A nested list between list items
+
+A nested list belongs _inside_ the `li` it expands; putting it between items breaks the outer list.
+
+Wrong:
+
+```html
+<ul>
+  <li>Drawing gear</li>
+  <ul>
+    <li>Sketchbook</li>
+  </ul>
+</ul>
+```
+
+Right:
+
+```html
+<ul>
+  <li>
+    Drawing gear
+    <ul>
+      <li>Sketchbook</li>
+    </ul>
+  </li>
+</ul>
+```
+
+### 5. Opening new tabs without rel
+
+`target="_blank"` on its own leaks information to the page you open; pair the two attributes as a habit.
+
+Wrong:
+
+```html
+<a href="glossary.html" target="_blank">Glossary</a>
+```
+
+Right:
+
+```html
+<a href="glossary.html" target="_blank" rel="noreferrer">Glossary</a>
+```
+
+### 6. Media without controls
+
+Without the `controls` attribute there is no play button - your video and audio are decoration.
+
+Wrong:
+
+```html
+<audio src="morning-birds.mp3"></audio>
+```
+
+Right:
+
+```html
+<audio src="morning-birds.mp3" controls></audio>
+```
+
+> **Tip:** Broken links and missing `id`s are invisible in code review but obvious in one click. After any exercise with anchors, preview and click every single link before calling it done.
+
+## Summary
+
+- The `a` element links pages with `href`: relative paths, full URLs, `mailto:` and `#fragment` jumps.
+- In-page anchors pair `href="#name"` with an element whose `id="name"`; ids are unique per page.
+- `target="_blank"` opens a new tab and should always be paired with `rel="noreferrer"`.
+- `img` needs `src`, a real `alt` description, and `width`/`height` to reserve space; `figure` and `figcaption` group image and caption.
+- Inline SVG draws pictures with elements - `circle`, `rect` and friends - using `role="img"` and `aria-label` as its alt text.
+- `ul`, `ol` and `dl` express three different relationships between items; only `li` lives directly inside `ul` and `ol`.
+- `video` and `audio` play media with `src` and `controls`; without `controls` there is nothing to press.

@@ -1,0 +1,9 @@
+/* The markup is done - this lesson lives entirely in the stylesheet. */
+
+/* TODO 1: one rule for every .card: 16px padding, a 2px solid border,
+   8px rounded corners and 12px bottom margin */
+/* TODO 2: use the descendant selector .card h2 to color the headings dark blue */
+/* TODO 3: give .featured a golden border color and a pale yellow background */
+/* TODO 4: add a .card:hover rule that changes a card's border color */
+/* TODO 5: give .featured h2 its own color and watch it beat .card h2
+   on specificity - no !important allowed */

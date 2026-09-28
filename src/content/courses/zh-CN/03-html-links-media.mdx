@@ -1,0 +1,333 @@
+---
+lessonId: 03-html-links-media
+order: 3
+module: html
+difficulty: beginner
+minutes: 30
+title: '链接、图片、列表与多媒体'
+summary: '用锚点连接页面，用内联 SVG 画图，用列表组织内容，并学会嵌入音频与视频。'
+objectives:
+  - '用 href 写出各种链接：其他页面、页内锚点和邮箱地址。'
+  - '为图片写好 alt 文本，并用 figure 和 figcaption 组织图文。'
+  - '在 ul、ol 和 dl 之间做出正确选择，并能正确嵌套列表。'
+  - '用 controls 等属性嵌入音频和视频。'
+exercise:
+  task: '制作一个田野笔记页面：把顶部的三个章节名变成 nav，让链接跳转到带对应 id 的章节；用内联 SVG 在 figure 里画一幅太阳照水面的简图并配上 figcaption；用 ul 列出装备、用 ol 列出步骤；最后添加一个指向 glossary.html 的链接，用 target 和 rel 让它在新标签页打开。'
+  hints:
+    - '页内链接指向 #setup 这样的片段，被指向的章节需要带有匹配的 id 属性。'
+    - '内联 SVG 直接写进 HTML：一个圆当太阳、两个矩形当水面，看上去就已经是一幅画了。'
+    - '新标签页链接要把 target 属性设为 _blank，并同时加上 rel=noreferrer。'
+---
+
+## 概述
+
+只有标题和段落的页面只是一份文档。当文档学会互相指认时，Web 才成为了*网络*。链接、图片、列表和多媒体正是把一页文字变成值得驻足之物所需的四件工具——本课会把它们一次讲全。
+
+本课还会引入一种新的标记思维：*引用*事物的属性。`href` 指向另一个页面，`id` 给当前页面的某个位置命名，`src` 指向一个图片文件。这些引用都不需要联网——本课的每个示例都能在内置编辑器里离线运行，练习里的图画也完全用标记绘制。
+
+那张图值得特别一提：你会见到内联 SVG，一种用元素而非像素来描述图画的方式。SVG 不只是小把戏——真实网站的图标和 logo 都用它发布，而且它的行为和你见过的任何 HTML 元素一样。
+
+路线图：先讲链接，包括在同一页面内跳转的技巧；然后是图片及其说明；接着是三种列表；再是音频与视频；最后是练习——一个把这些全都用上的田野笔记页面。
+
+## 链接与锚点
+
+`a` 元素（anchor，锚）就是超文本里那个"超"。它的 `href` 属性存放目的地，元素内容是读者点击的文字：
+
+```html
+<p>
+  Read the <a href="packing-list.html">packing list</a> before you go, or
+  <a href="mailto:sam@example.com">email me</a> questions.
+</p>
+```
+
+`href` 可以指向几类地方。_相对路径_（如 `packing-list.html`）表示"与当前文件同目录的那个文件"；_完整 URL_ 以协议开头，可以抵达互联网上的任何站点；而 `mailto:` 打开的是读者的邮件客户端，不做页面跳转。
+
+第三种目的地是你自己的页面。片段链接——`#` 号加一个 `id`——会让浏览器滚动到携带该 id 的元素：
+
+```html
+<nav>
+  <a href="#setup">Setup</a>
+  <a href="#gear">Gear</a>
+</nav>
+
+<h2 id="setup">The setup</h2>
+<p>Every morning this week, at the pond behind my apartment.</p>
+
+<h2 id="gear">The gear</h2>
+<p>Small kit only: it all fits in one pocket.</p>
+```
+
+`id` 属性可以加在任何元素上，其值在页面内必须唯一。把 id 想成门牌号：链接是地址，id 是它打开的那扇门。
+
+还有一个链接超能力——在新标签页打开：
+
+```html
+<a href="glossary.html" target="_blank" rel="noreferrer">Glossary</a>
+```
+
+`target="_blank"` 请求新开一个标签页，而不是复用当前页；`rel="noreferrer"` 是应当随行的安全礼节。新标签页链接要留给读者真正不想离开的地方——参考页、文档——普通导航保持在同一标签页内。
+
+> **动手试一试：** 在内置编辑器里写一个含两个链接的 `nav`，指向两个带对应 `id` 的章节，然后预览并点击。页面跳转了——你刚实现了真实网站使用的"跳到正文"模式。
+
+## 图片：img、alt 与 figure
+
+`img` 元素嵌入图片。它是空元素——没有结束标签——两个最重要的属性是 `src`（图片文件地址）和 `alt`（代替图片显示的文字）：
+
+```html
+<img src="sunrise.svg" alt="The sun rising over a still pond" width="320" height="200" />
+```
+
+`alt` 值得用心。屏幕阅读器会把它读出来；图片加载失败时显示的是它；搜索引擎索引的也是它。把它写成描述图片*内容*的短句，而不是说明图片*是什么*："The sun rising over a still pond" 永远好过 "image" 或 "photo"。
+
+`width` 和 `height` 属性看似样式，实则是一个承诺：它们告诉浏览器，图片*尚未加载*时就要占多大地方，这样图片到达时下方的文字不会跳动。
+
+当图片和说明文字属于一体时，用 `figure` 包起来：
+
+```html
+<figure>
+  <img src="sunrise.svg" alt="The sun rising over a still pond" />
+  <figcaption>Day two began at 6:14, ten minutes late.</figcaption>
+</figure>
+```
+
+`figcaption` 是图片下方*可见*的评注，而 `alt` 是*不可见*的替身——说明文字面向所有读者，alt 文本面向看不到图片的读者。
+
+而当根本没有文件时，你可以直接用标记作画。内联 SVG 就住在你的 HTML 里，由普通元素构成：
+
+```html
+<svg width="120" height="80" role="img" aria-label="A sun over water">
+  <circle cx="60" cy="34" r="16" fill="#f4b23e" />
+  <rect x="8" y="52" width="104" height="6" fill="#7db4d8" />
+  <rect x="16" y="62" width="88" height="6" fill="#5a93b8" />
+</svg>
+```
+
+一个带圆心、半径和填充色的 `circle`；两条 `rect` 当作水波。SVG 在任何尺寸下都完美缩放，这正是真实网站用它做图标和 logo 的原因。在 `svg` 上，alt 文本的角色由 `role="img"` 加 `aria-label` 承担。
+
+> **动手试一试：** 在编辑器里粘入这幅太阳照水面的 SVG，把圆的 `fill` 换成别的颜色，再加一条 `rect` 当第三层水波。你在画画，只是用的属性。
+
+## 列表：ul、ol 与 dl
+
+列表在网页上无处不在——菜单、步骤、功能对比、搜索结果。HTML 有三种列表元素，选对哪一种是一个语义决定，而不是样式决定：
+
+```html
+<ul>
+  <li>Sketchbook, A5</li>
+  <li>Two pencils: HB and 2B</li>
+  <li>A folding stool</li>
+</ul>
+
+<ol>
+  <li>Sit facing the water for five quiet minutes.</li>
+  <li>Block in the horizon and the biggest shapes.</li>
+  <li>Add shading once the shapes feel right.</li>
+</ol>
+```
+
+每种列表都是一个包裹元素，里面放 `li`（列表项）子元素。浏览器在 `ul` 的每项前画圆点、在 `ol` 的每项前画数字——但数字只是副作用，不是重点。重点是你在对内容做出什么声明：`ul` 声明顺序无关紧要；`ol` 声明先后很重要，比如步骤或排名。
+
+| 元素 | 使用时机                       |
+| ---- | ------------------------------ |
+| `ul` | 条目顺序无关紧要               |
+| `ol` | 顺序重要：步骤、排名、路线指引 |
+| `dl` | 术语—描述对：词汇表、FAQ、规格 |
+
+第三种——描述列表——把每个术语和它的描述配成一对：
+
+```html
+<dl>
+  <dt>en plein air</dt>
+  <dd>Drawing outdoors, in front of the subject.</dd>
+  <dt>thumbnail</dt>
+  <dd>A tiny rough sketch used to plan a composition.</dd>
+</dl>
+```
+
+列表可以自然嵌套，多级菜单就是这么做的：把一个完整的新列表放进某个 `li` _内部_，而不是两个列表之间：
+
+```html
+<ul>
+  <li>
+    Drawing gear
+    <ul>
+      <li>Sketchbook</li>
+      <li>Pencils</li>
+    </ul>
+  </li>
+  <li>Picnic gear</li>
+</ul>
+```
+
+> **动手试一试：** 在编辑器里把你的装备写成 `ul`、把步骤写成 `ol`，并在其中一项下嵌套一个 `ul`。把 `ul` 改成 `ol` 再改回来，观察标记随符号一起改变含义。
+
+## 音频与视频
+
+HTML5 让多媒体成为一等公民：`video` 和 `audio` 元素只需要一个 `src` 就能播放文件——关键是要加 `controls` 属性：
+
+```html
+<video src="pond-timelapse.mp4" controls width="320">Your browser cannot play this video.</video>
+
+<audio src="morning-birds.mp3" controls loop></audio>
+```
+
+没有 `controls`，视频只显示第一帧，音频元素什么都不显示——没有任何办法按下播放。`video` 元素内部的文本是回退内容，供无法播放该文件的浏览器显示。
+
+少数几个属性覆盖了大部分需求：
+
+| 属性       | 效果                                 |
+| ---------- | ------------------------------------ |
+| `controls` | 显示浏览器自带的播放界面             |
+| `autoplay` | 加载后自动播放——通常是个坏主意       |
+| `loop`     | 永远从头再来                         |
+| `muted`    | 静音起步；浏览器要求自动播放必须静音 |
+| `poster`   | 视频播放前显示的海报图               |
+
+一个诚实的提醒：预览沙盒没有网络访问权限，真实的媒体文件无法在那里加载。标记本身和你要上线的一模一样——只要站点上文件就位，这些元素就能照常播放。在编辑器里你会看到空播放器或回退文本，这时该做的是检查属性，而不是寻找 bug。
+
+> **动手试一试：** 在编辑器里加一个带 `controls`、`loop` 和回退文本的 `video`，再在下方加一个 `audio`。把 `controls` 关掉再打开，看看浏览器免费替你做了多少事。
+
+## 练习思路：田野笔记页面
+
+起始页面记录了一个星期在池塘边的速写。一个章节已经就位，其余的都在 TODO 注释里等你。本课的每件工具都会被用上。
+
+按 TODO 标记的顺序推进：
+
+1. 把顶部的三个章节名变成 `nav`，三个链接分别指向 `#setup`、`#gear` 和 `#steps`。
+2. 在 setup 段落之后添加一个 `figure`，里面放一幅内联 SVG——类似本课那幅太阳照水面——并在下面配 `figcaption`。
+3. 创建装备章节：一个 `id="gear"` 的 `h2`，加一个含三件的 `ul`。
+4. 创建步骤章节：一个 `id="steps"` 的 `h2`，加一个含三步的 `ol`。
+5. 结尾添加指向 `glossary.html` 的链接，用 `target` 和 `rel` 让它在新标签页打开。
+
+预览并点击每个链接：每一个都应滚动到对应章节。如果某个链接点了没反应，常见原因是 `id` 和片段对不上——链接写着 `#steps`，标题却写成 `id="step"`。
+
+SVG 不必漂亮，但必须是*你的*：挪一挪太阳的位置，用第二个 `circle` 添朵云，并给这幅画写一个描述它真实模样的 `aria-label`。
+
+> **提示：** `alt` 和 `figcaption` 回答的是不同的问题。`alt` 向看不到图的人描述画面；`figcaption` 是你会在笔记本里写在图下的那句话。
+
+## 常见错误
+
+### 1. 指向空处的锚点
+
+片段链接找不到匹配的 `id` 就是死链接——这是网上最常见的坏链接。
+
+错误写法：
+
+```html
+<a href="#steps">Steps</a>
+```
+
+正确写法：
+
+```html
+<a href="#steps">Steps</a>
+<h2 id="steps">Steps</h2>
+```
+
+### 2. 无意义或缺失的 alt 文本
+
+空字符串只属于纯装饰性图片；每一张有意义的图片都值得一句真正的描述。
+
+错误写法：
+
+```html
+<img src="sunrise.svg" alt="image" />
+```
+
+正确写法：
+
+```html
+<img src="sunrise.svg" alt="The sun rising over a still pond" />
+```
+
+### 3. 用段落伪造列表
+
+短横线和手写编号在人眼里像列表，在机器读来只是散落的段落。
+
+错误写法：
+
+```html
+<p>- Sketchbook</p>
+<p>- Pencils</p>
+<p>1. Sit down</p>
+```
+
+正确写法：
+
+```html
+<ul>
+  <li>Sketchbook</li>
+  <li>Pencils</li>
+</ul>
+```
+
+### 4. 嵌套列表放在列表项之间
+
+嵌套列表应位于它所展开的那个 `li` _内部_；放在条目之间会破坏外层列表。
+
+错误写法：
+
+```html
+<ul>
+  <li>Drawing gear</li>
+  <ul>
+    <li>Sketchbook</li>
+  </ul>
+</ul>
+```
+
+正确写法：
+
+```html
+<ul>
+  <li>
+    Drawing gear
+    <ul>
+      <li>Sketchbook</li>
+    </ul>
+  </li>
+</ul>
+```
+
+### 5. 开新标签页却不带 rel
+
+单独使用 `target="_blank"` 会向被打开的页面泄露信息；把两个属性配成固定习惯。
+
+错误写法：
+
+```html
+<a href="glossary.html" target="_blank">Glossary</a>
+```
+
+正确写法：
+
+```html
+<a href="glossary.html" target="_blank" rel="noreferrer">Glossary</a>
+```
+
+### 6. 没有 controls 的媒体
+
+少了 `controls` 属性就没有播放按钮——你的视频和音频只是装饰。
+
+错误写法：
+
+```html
+<audio src="morning-birds.mp3"></audio>
+```
+
+正确写法：
+
+```html
+<audio src="morning-birds.mp3" controls></audio>
+```
+
+> **提示：** 坏链接和缺失的 `id` 在代码里看不出来，点一下就露馅。凡是带锚点的练习，收工前在预览里把每个链接都点一遍。
+
+## 小结
+
+- `a` 元素用 `href` 链接页面：相对路径、完整 URL、`mailto:` 和 `#fragment` 跳转。
+- 页内锚点由 `href="#name"` 和某个 `id="name"` 的元素配对；id 在页面内唯一。
+- `target="_blank"` 打开新标签页，应始终与 `rel="noreferrer"` 搭配。
+- `img` 需要 `src`、一句真正的 `alt` 描述和预留空间的 `width`/`height`；`figure` 与 `figcaption` 组合图片与说明。
+- 内联 SVG 用元素作画——`circle`、`rect` 等——并用 `role="img"` 和 `aria-label` 充当 alt 文本。
+- `ul`、`ol` 和 `dl` 表达条目之间的三种不同关系；`ul` 与 `ol` 内部只能直接放 `li`。
+- `video` 和 `audio` 用 `src` 和 `controls` 播放媒体；没有 `controls` 就无键可按。

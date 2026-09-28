@@ -1,0 +1,386 @@
+---
+lessonId: 04-css-selectors-cascade
+order: 4
+module: css
+difficulty: beginner
+minutes: 30
+title: 'CSS Selectors, Cascade and Inheritance'
+summary: 'Target elements with type, class and id selectors, combine them, and learn how the cascade and inheritance decide which rule wins.'
+objectives:
+  - 'Write CSS rules and attach them to a page in three ways.'
+  - 'Select elements by type, class and id, and combine selectors.'
+  - 'Use pseudo-classes such as :hover and :first-child.'
+  - 'Predict which rule wins using the cascade and specificity.'
+  - 'Know which properties inherit and how to control that.'
+exercise:
+  task: "Style the three cards in the starter page. Give every card padding, a border and rounded corners with one rule, color the card headings with a descendant selector, make the featured card stand out with a golden border and a pale yellow background, and add a hover state. Then give the featured card's heading its own color and confirm that the more specific selector wins without any !important."
+  hints:
+    - 'One .card rule covers all three cards, so start by writing the shared box styles there.'
+    - 'A descendant selector such as .card h2 reaches the headings without touching anything else on the page.'
+    - '.featured and .card have equal specificity, so .featured h2 - two classes plus a type - is what beats .card h2.'
+---
+
+## Overview
+
+HTML says what things _are_; CSS says what they _look like_. Until now, every page in this course wore the browser's default styling - black text, blue links, a serif font. This lesson hands you the paintbrush.
+
+CSS stands for _Cascading Style Sheets_, and every word carries weight. A _sheet_ is a list of rules; a _style_ is a set of property-value pairs describing appearance; and _cascading_ is the peace treaty that resolves what happens when two rules disagree. Between them sits the selector - the part of a rule that decides which elements it touches.
+
+Selectors are the grammar you will type most often. By the end of this lesson you will target elements by type, by class, by id, by their relationships to other elements, and even by their current state such as being hovered - and you will be able to _predict_ which rule wins when several apply at once. The exercise puts every one of those tools on a single three-card page.
+
+## How CSS is written and attached
+
+Every CSS rule has the same shape: a selector, then a pair of braces holding declarations:
+
+```css
+selector {
+  property: value;
+  another-property: another-value;
+}
+```
+
+The selector says _who_; the declarations say _what_. Each declaration is a `property: value` pair ending in a semicolon. A concrete rule, aimed at every `h1` on the page:
+
+```css
+h1 {
+  color: darkblue;
+  font-size: 32px;
+}
+```
+
+A rule is useless until it reaches the browser, and there are three ways to attach CSS to a page: a `style` attribute on one element (`<p style="color: darkblue;">`), a `style` element in the head for page-wide rules, or an external file connected with a `link` element:
+
+```html
+<head>
+  <style>
+    p {
+      color: darkblue;
+    }
+  </style>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+```
+
+The `style` element holds rules right inside the page; the `link` lets many pages share one stylesheet and is the professional default. In the built-in editor the CSS pane is wired into the preview automatically, so you can simply type rules and watch them land - everything you learn here applies to all three attachment styles.
+
+> **Try it:** In the editor's CSS pane, write a rule that turns the `h1` darkblue and gives it `font-size: 32px`. Preview, then change the color and watch the page repaint on every keystroke.
+
+## The basic selectors
+
+Three selectors cover most everyday styling. Each answers a different question about an element:
+
+| Selector         | Question it asks                      | Example                          |
+| ---------------- | ------------------------------------- | -------------------------------- |
+| Type - `p`       | Are you this kind of element?         | Every paragraph                  |
+| Class - `.intro` | Does your `class` contain this name?  | Any element with `class="intro"` |
+| Id - `#top`      | Are you the one element with this id? | A single unique element          |
+
+The same three at work on real markup:
+
+```html
+<h1 id="site-title">Field Notes</h1>
+<p class="intro">Every morning, at the pond.</p>
+<p class="intro">The rules are simple.</p>
+```
+
+```css
+h1 {
+  font-size: 28px;
+}
+
+.intro {
+  color: #444444;
+}
+
+#site-title {
+  color: darkblue;
+}
+```
+
+A note on choosing between them: classes are reusable - one class, any number of elements, and one element may carry several classes. An id must be unique per page and is best reserved for JavaScript hooks and one-of-a-kind landmarks. When in doubt, style with classes.
+
+Selectors can also share one declaration block with a comma, which keeps identical styles in sync:
+
+```css
+h1,
+h2,
+h3 {
+  color: darkblue;
+}
+```
+
+> **Try it:** In the editor, give two paragraphs the same `intro` class and style the class once. Then add a second class to one of them and give that class a different color - one element, two classes, both applied.
+
+## Combinators and pseudo-classes
+
+Selectors get sharper when they describe _relationships_. The space between two selectors is the descendant combinator - it matches anything inside, at any depth:
+
+```css
+/* every h2 anywhere inside .card */
+.card h2 {
+  color: darkblue;
+}
+
+/* only p elements that are direct children of .card */
+.card > p {
+  color: #444444;
+}
+```
+
+The child combinator `>` is the stricter version: it only matches direct children, so structure nested one level deeper escapes it. In practice the descendant combinator is the everyday choice, and the child combinator is the scalpel for when nesting gets deep.
+
+Pseudo-classes add a dimension the markup cannot express: the _state_ of an element. They start with a colon and describe moments rather than structure:
+
+| Pseudo-class   | Matches when                                 |
+| -------------- | -------------------------------------------- |
+| `:hover`       | The pointer is over the element              |
+| `:focus`       | The element is ready for keyboard input      |
+| `:first-child` | The element is the first child of its parent |
+| `:last-child`  | The element is the last child of its parent  |
+
+```css
+.card:hover {
+  border-color: royalblue;
+}
+a:focus {
+  outline: 2px solid royalblue;
+}
+li:first-child {
+  font-weight: 700;
+}
+```
+
+This is a quiet superpower: one rule describes an interaction that would otherwise need JavaScript. The browser watches the pointer and the keyboard for you, applies the rule exactly while the state holds, and removes it the instant it ends.
+
+> **Try it:** In the editor, add a `:hover` rule to a paragraph that changes its color. Hover it in the preview, move the mouse away, and watch the state apply and release.
+
+## The cascade and specificity
+
+Sooner or later, two rules will want to style the same element. The cascade is the browser's set of tie-breakers, and its logic is short.
+
+First, _more specific wins_. Specificity is counted as three numbers - ids, classes, types - and the selector with the higher score takes the element:
+
+| Selector      | Score (ids, classes, types) |
+| ------------- | --------------------------- |
+| `p`           | 0, 0, 1                     |
+| `.card`       | 0, 1, 0                     |
+| `.card h2`    | 0, 1, 1                     |
+| `#site-title` | 1, 0, 0                     |
+
+A class beats any number of types; an id beats any number of classes. Watch it in action:
+
+```css
+p {
+  color: gray;
+}
+.intro {
+  color: black;
+}
+```
+
+Every `.intro` paragraph is black: both rules match, but `0, 1, 0` outranks `0, 0, 1`.
+
+Second, _on a tie, later wins_. When two rules have exactly the same specificity, the one further down the stylesheet applies:
+
+```css
+.intro {
+  color: black;
+}
+.intro {
+  color: gray;
+}
+```
+
+The paragraphs end up gray - the second rule simply overwrote the first. That is not a bug to avoid but a tool to use: later rules deliberately refine earlier ones.
+
+There is an emergency override called `!important` that beats everything, and that is exactly the problem: it beats the system instead of working within it, so specificity fights get louder instead of getting solved. Treat `!important` as a code smell - the fix is almost always a more specific selector, never a bigger hammer.
+
+> **Try it:** In the editor, write a type rule and a class rule that set different colors on the same element, then swap the order of the two rules in the file. The order changes nothing - only specificity did.
+
+## Inheritance
+
+Some properties do not need to be re-declared at all, because they flow down the document tree from parents to children. Text-related properties behave this way:
+
+| Inherited     | Not inherited       |
+| ------------- | ------------------- |
+| `color`       | `border`            |
+| `font-family` | `margin`, `padding` |
+| `font-size`   | `background`        |
+| `line-height` | `width`, `height`   |
+
+The logic is sensible: properties that describe _writing_ are passed on, because a paragraph of text is written by its ancestors; properties that describe a _box_ - edges, spacing, size - apply only to the element you named:
+
+```css
+body {
+  color: #333333;
+  font-family: sans-serif;
+}
+```
+
+Those two declarations style every word of the page, because every element descends from `body`. No paragraph rule is needed.
+
+Two keywords give you manual control when the defaults get in the way. `inherit` takes the parent's value even for properties that normally do not flow down, and `initial` resets a property to its built-in default:
+
+```css
+a {
+  color: inherit;
+}
+```
+
+That link rule is a common real-world trick: links take on the color of their surroundings instead of the browser's blue, which is exactly right for links inside headings or dark panels.
+
+> **Try it:** In the editor, set `color` and `font-family` on `body` only. Confirm the headings and paragraphs pick them up for free, then add `color: inherit` to a link and see it join the family.
+
+## The exercise: style the card list
+
+The starter page has three article cards - one of them marked `featured` - and a CSS file full of TODOs. The markup is finished; your job lives entirely in the stylesheet.
+
+Work through the TODO markers in order:
+
+1. Write one `.card` rule with `padding: 16px`, a `2px solid` border, `border-radius: 8px` and `margin-bottom: 12px` - all three cards change at once.
+2. Use the descendant selector `.card h2` to give every card heading a dark blue color.
+3. Style `.featured` with a golden border color and a pale yellow background.
+4. Add a `.card:hover` rule that changes the border color, then hover the cards in the preview.
+5. Finally, give `.featured h2` its own color and prove that it beats `.card h2` on specificity, with no `!important` anywhere.
+
+Steps 1 and 2 show selectors doing their basic job; steps 3 to 5 are a small cascade in action. `.featured` and `.card` have equal specificity, so the featured heading needs `.featured h2` - two classes and a type - to outrank the one class plus one type of `.card h2`.
+
+Preview after each rule rather than after all five. When something looks wrong, you will know exactly which rule you just wrote.
+
+> **Tip:** Hover styles are the cheapest delight in web design. One rule, no JavaScript, and the page suddenly feels alive - which is why every interface you love has them.
+
+## Common Mistakes
+
+### 1. Missing semicolons between declarations
+
+Without the semicolon, the next declaration is parsed as part of the value and silently dropped.
+
+Wrong:
+
+```css
+h1 {
+  color: darkblue
+  font-size: 32px;
+}
+```
+
+Right:
+
+```css
+h1 {
+  color: darkblue;
+  font-size: 32px;
+}
+```
+
+### 2. Forgetting units
+
+A length without a unit is invalid, and the whole declaration is ignored - not an error, just silence.
+
+Wrong:
+
+```css
+h1 {
+  font-size: 32;
+}
+```
+
+Right:
+
+```css
+h1 {
+  font-size: 32px;
+}
+```
+
+### 3. Styling with ids everywhere
+
+Ids outrank classes, so each one you add raises the stakes for every future rule that touches the same element.
+
+Wrong:
+
+```css
+#card-one {
+  border: 2px solid gray;
+}
+```
+
+Right:
+
+```css
+.card {
+  border: 2px solid gray;
+}
+```
+
+### 4. Reaching for !important in a specificity fight
+
+The override wins today and poisons tomorrow; a more specific selector wins forever.
+
+Wrong:
+
+```css
+.featured h2 {
+  color: sienna !important;
+}
+```
+
+Right:
+
+```css
+.featured h2 {
+  color: sienna;
+}
+```
+
+### 5. Misspelled properties or values
+
+CSS never complains; it ignores the line and moves on, so a typo looks exactly like a broken rule.
+
+Wrong:
+
+```css
+h1 {
+  colour: darkblue;
+}
+```
+
+Right:
+
+```css
+h1 {
+  color: darkblue;
+}
+```
+
+### 6. Selecting too broadly
+
+A bare type selector or `*` applies to everything on the page, including elements you did not intend to touch.
+
+Wrong:
+
+```css
+div {
+  border: 2px solid gray;
+}
+```
+
+Right:
+
+```css
+.card {
+  border: 2px solid gray;
+}
+```
+
+> **Tip:** When a rule "does not work", check three things in order: is the property spelled correctly, does the selector actually match the markup, and is a more specific rule overriding it. That order resolves almost every mystery.
+
+## Summary
+
+- A CSS rule is a selector plus declarations of `property: value` pairs ending in semicolons.
+- CSS reaches a page through a `style` attribute, a `style` element, or an external file linked in the head.
+- Type selectors match elements, classes match names and are reusable, ids match one unique element.
+- Combinators describe relationships (`.card h2`), and pseudo-classes describe states (`:hover`, `:focus`, `:first-child`).
+- The cascade picks winners: higher specificity wins, and on a tie the later rule wins - `!important` is a last resort.
+- Text properties inherit down the tree; box properties do not; `inherit` and `initial` steer the flow by hand.
+- You styled a three-card page with one shared rule, a descendant selector, a featured variant and a hover state.

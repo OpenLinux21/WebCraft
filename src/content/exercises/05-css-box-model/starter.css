@@ -1,0 +1,9 @@
+/* Two bare cards are waiting for the box model. */
+
+/* TODO 1: switch every element to border-box sizing */
+/* TODO 2: give .card 16px of padding, a 2px solid border
+   and 12px rounded corners */
+/* TODO 3: give .card a width of 280px - border-box keeps
+   the padding and border inside that width */
+/* TODO 4: separate the cards with margin-bottom: 20px on .card */
+/* TODO 5: center the row: a max-width on .row plus margin: 40px auto */

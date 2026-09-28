@@ -1,0 +1,339 @@
+---
+lessonId: 05-css-box-model
+order: 5
+module: css
+difficulty: beginner
+minutes: 30
+title: 'The CSS Box Model'
+summary: 'See every element as content, padding, border and margin; master box-sizing and space out layouts the professional way.'
+objectives:
+  - 'Name the four layers of the box model and what each one does.'
+  - 'Use padding, border and margin shorthand correctly.'
+  - 'Explain the difference between content-box and border-box sizing.'
+  - 'Center a layout with max-width and auto margins.'
+exercise:
+  task: 'Turn the two bare cards in the starter into finished profile cards. Switch everything to border-box sizing, give each card padding, a border and rounded corners, set a fixed width so the sizing rule matters, then separate the two cards with margin and center the row on the page using auto margins and a max-width.'
+  hints:
+    - 'The border-box switch is a one-line rule: the universal selector, then box-sizing.'
+    - 'Padding sits inside the border, so with border-box a card keeps its declared width while the padding shrinks its content area.'
+    - 'A block centers itself when it has a max-width smaller than its parent plus margin-left and margin-right of auto.'
+---
+
+## Overview
+
+In Lesson 04 you learned to say _what_ an element looks like. This lesson explains _where it sits_ - and the answer, surprisingly, is that every element on the page is a rectangle. Paragraphs, headings, links, images: all boxes. Once you see the page as boxes inside boxes, spacing stops being guesswork.
+
+Every box is built from four layers: the content itself, the padding around it, the border around that, and the margin outside everything. The browser adds these layers up to decide how much room the element really takes, and two elements that both claim `width: 300px` can easily end up different sizes - unless you know the trick called `box-sizing`.
+
+This is the most consequential mental model in CSS. Layout bugs that look mysterious almost always turn out to be two layers of the box model quietly disagreeing, and the professional habit of starting every stylesheet with a border-box reset is exactly the fix you will learn here.
+
+The exercise is two bare profile cards that you will finish with padding, borders, rounded corners and honest centering - a miniature of the card layouts on real sites.
+
+## Every element is a box
+
+The box model has four layers, nested from the inside out:
+
+```text
+┌─────────────── margin ───────────────┐
+│  ┌──────────── border ────────────┐  │
+│  │  ┌──────── padding ────────┐  │  │
+│  │  │  ┌─────────────────┐  │  │  │
+│  │  │  │ content         │  │  │  │
+│  │  │  └─────────────────┘  │  │  │
+│  │  └───────────────────────┘  │  │
+│  └────────────────────────────────┘  │
+└──────────────────────────────────────┘
+```
+
+| Layer     | What it does                                                         |
+| --------- | -------------------------------------------------------------------- |
+| `content` | The element's text, image or children                                |
+| `padding` | Transparent space inside the border, behind the element's background |
+| `border`  | The edge line drawn around the padding                               |
+| `margin`  | Transparent space outside the border, pushing neighbors away         |
+
+The words map cleanly onto everyday objects. The content is a photograph; the padding is the mat board around it; the border is the frame; the margin is how much wall you leave between frames. Padding and margin both look like "empty space", which is why they get confused - the difference is that the background and border stop at the padding, while margin is outside all of it.
+
+Browsers draw every element with all four layers, even when three of them are zero. An `h1` with no styling still has a box: text content, no padding, no border, and default margins that separate it from neighboring elements.
+
+> **Try it:** In the built-in editor, give a paragraph `background-color: #e2e8f0;` and then `padding: 16px;`. The tint grows with the padding - visible proof that padding is inside the element and shares its background.
+
+## Padding, border and margin
+
+Each layer has its own property, and each supports a shorthand that writes several sides at once. The shorthand reads clockwise from the top:
+
+```css
+/* one value: all four sides */
+padding: 16px;
+
+/* two values: top/bottom, then left/right */
+padding: 16px 24px;
+
+/* four values: top, right, bottom, left */
+padding: 8px 16px 24px 32px;
+```
+
+`margin` follows exactly the same pattern. When you only want one side, the longhand names are clearer: `margin-top`, `padding-bottom`, `margin-left`, and so on.
+
+Borders have three ingredients - width, style and color - which the shorthand combines in that order. Rounded corners are a separate property that works with or without a visible border:
+
+```css
+.card {
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+}
+```
+
+One habit worth building early: headings and paragraphs come with default margins from the browser, and they rarely match your design. Setting them to what you actually want - rather than fighting what the browser guessed - is the first step of a tidy layout.
+
+```css
+h2 {
+  margin-top: 0;
+}
+```
+
+> **Try it:** In the editor, give a card `border-radius: 12px` and no border at all. The background still rounds - radius is a shape property, not a border property.
+
+## Width, height and box-sizing
+
+Here is the surprise that trips up everyone eventually: what does `width: 300px` measure? The answer depends on `box-sizing`, and the two options are different enough to deserve a table:
+
+|                  | `content-box` (default) | `border-box`                |
+| ---------------- | ----------------------- | --------------------------- |
+| `width` measures | content only            | content + padding + border  |
+| Adding padding   | makes the box bigger    | keeps the box the same size |
+| Mental model     | "width is what I typed" | "width is what I see"       |
+
+The arithmetic, side by side:
+
+```css
+.content-box {
+  box-sizing: content-box; /* the default */
+  width: 300px;
+  padding: 20px;
+  border: 4px solid gray;
+  /* true outer width: 300 + 2x20 + 2x4 = 348px */
+}
+
+.border-box {
+  box-sizing: border-box;
+  width: 300px;
+  padding: 20px;
+  border: 4px solid gray;
+  /* content shrinks to 252px; outer width stays 300px */
+}
+```
+
+With `content-box`, every design change to padding or border silently resizes the element - which is why two "300px" cards in a row can come out different widths. With `border-box`, the number you type is the number you get, and padding eats into the content instead of growing the box.
+
+This is why nearly every professional stylesheet opens with a reset that opts the whole page into `border-box`:
+
+```css
+* {
+  box-sizing: border-box;
+}
+```
+
+The `*` selector matches every element. After this one rule, `width` finally means what it says, and the exercise's cards will behave.
+
+> **Try it:** In the editor, add the border-box reset, then give a card `width: 300px; padding: 20px;`. Inspect the math: with border-box the card is 300px wide; delete the reset and watch it become 340px.
+
+## Margin collapsing
+
+Vertical margins have one famous quirk: adjacent vertical margins do not add up - they collapse into the larger of the two:
+
+```css
+.one {
+  margin-bottom: 24px;
+}
+.two {
+  margin-top: 24px;
+}
+/* the gap between them: 24px, not 48px */
+```
+
+The same collapse happens through a parent: a child's `margin-top` can leak outside the parent and drag the parent down with it, unless the parent has padding, a border, or content in between.
+
+You do not need to memorize the full specification - you need two working rules of thumb. First, prefer one-directional spacing: give every card a `margin-bottom` and never a `margin-top`, so margins never meet. Second, when a child's margin mysteriously escapes its parent, give the parent some `padding-top` and the leak seals.
+
+Horizontal margins never collapse. A left margin of 24px next to a right margin of 24px really does produce 48px, which makes horizontal spacing pleasantly predictable once vertical is tamed.
+
+> **Try it:** In the editor, give one card `margin-bottom: 24px` and the next `margin-top: 24px`, then measure the gap by eye: it is 24px. Change the first to 40px and the gap follows the larger value.
+
+## Centering with max-width and auto margins
+
+Long lines of text are hard to read - around 45 to 75 characters is the comfortable range. That is why almost every real site floats a centered column down the middle of the page, and the recipe is two properties:
+
+```css
+.row {
+  max-width: 340px;
+  margin-left: auto;
+  margin-right: auto;
+}
+```
+
+`max-width` lets the column shrink gracefully on small screens instead of forcing horizontal scrolling, and `auto` margins split all leftover space equally between the two sides. The shorthand `margin: 40px auto` means "40px top and bottom, auto left and right" and does the same job in one line.
+
+This is also your first taste of layout beyond single elements. A centered column plus a `max-width` is the skeleton of articles, dashboards and card walls; the layout module will grow it into full page structures, but the core trick will not change.
+
+> **Try it:** In the editor, wrap two paragraphs in a `div` with the class `row`, add the rule above, and preview. Then drag the preview pane narrow and watch the column shrink instead of overflow.
+
+## The exercise: finish the profile cards
+
+The starter has a row with two `article` cards - names and short bios - and a CSS file full of TODOs. Right now the cards are indistinguishable from the background; your job is to give them shape and place.
+
+Work through the TODO markers in order:
+
+1. Add the universal `border-box` reset so every width you type stays honest.
+2. Give `.card` `padding: 16px`, a `2px solid` border and `border-radius: 12px`.
+3. Give `.card` `width: 280px` - with border-box, the padding now lives _inside_ that width.
+4. Separate the cards with `margin-bottom: 20px` on `.card`.
+5. Center the whole row: `max-width` on `.row` plus `margin: 40px auto`.
+
+After step 3, compare against what would happen without the reset from step 1: the cards would be `280px` of content _plus_ padding _plus_ border, and the row would overflow. With border-box, `280px` is the whole truth.
+
+After step 5, the two cards should sit as a centered column with even spacing - simple, but the same mechanics as any production card layout. Change the numbers and preview until the proportions feel right to you.
+
+> **Tip:** When spacing looks wrong, ask "which layer?" before touching any number. Text too close to the edge is padding; cards too close to each other is margin. Naming the layer picks the property.
+
+## Common Mistakes
+
+### 1. Setting width without border-box
+
+Padding and border stack on top of the declared width and the box overflows its container.
+
+Wrong:
+
+```css
+.card {
+  width: 300px;
+  padding: 20px;
+} /* really 340px */
+```
+
+Right:
+
+```css
+* {
+  box-sizing: border-box;
+}
+.card {
+  width: 300px;
+  padding: 20px;
+} /* really 300px */
+```
+
+### 2. Using margin where padding is meant
+
+Margin is outside the element: backgrounds and borders do not cover it, so the visual box never grows.
+
+Wrong:
+
+```css
+.card {
+  margin: 16px;
+} /* text still hugs the edge */
+```
+
+Right:
+
+```css
+.card {
+  padding: 16px;
+} /* space inside the card */
+```
+
+### 3. Spacing with empty elements
+
+Empty paragraphs and `br` tags bake a fixed gap into the markup, wrong on every screen size.
+
+Wrong:
+
+```html
+<p></p>
+```
+
+Right:
+
+```css
+.card {
+  margin-bottom: 20px;
+}
+```
+
+### 4. Fighting the default body margin
+
+The browser gives `body` an 8px margin, which shows up as a mystery gap around every layout.
+
+Wrong:
+
+```css
+.row {
+  margin: 40px auto;
+} /* plus a surprise 8px frame */
+```
+
+Right:
+
+```css
+body {
+  margin: 0;
+}
+.row {
+  margin: 40px auto;
+}
+```
+
+### 5. Centering a block with text-align
+
+`text-align` centers the text _inside_ a box, not the box itself; only auto margins center the box.
+
+Wrong:
+
+```css
+.row {
+  text-align: center;
+} /* content centered, box is not */
+```
+
+Right:
+
+```css
+.row {
+  max-width: 340px;
+  margin: 0 auto;
+}
+```
+
+### 6. Assuming border-radius needs a border
+
+Radius is a shape property of the box; it rounds backgrounds and outlines with no border in sight.
+
+Wrong:
+
+```css
+.card {
+  border: 2px solid gray;
+  border-radius: 12px;
+} /* border added "for the corners" */
+```
+
+Right:
+
+```css
+.card {
+  background: #fef3c7;
+  border-radius: 12px;
+}
+```
+
+> **Tip:** The four mistakes on this page share one root: guessing instead of naming the layer. Before you type any number, say whether the gap is content, padding, border or margin - the right property follows.
+
+## Summary
+
+- Every element is a box of four layers: content, padding, border, margin.
+- Shorthands read clockwise - `padding: top right bottom left` - and one- and two-value forms cover most needs.
+- `width` means content-only under the default `content-box`; the border-box reset makes `width` include padding and border.
+- Vertical margins collapse to the larger one; horizontal margins add. Prefer one-directional spacing.
+- `max-width` plus auto margins is the standard recipe for a centered, shrink-friendly column.
+- You finished two bare cards with a reset, box styles, honest widths and true centering.

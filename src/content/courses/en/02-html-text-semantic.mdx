@@ -1,0 +1,300 @@
+---
+lessonId: 02-html-text-semantic
+order: 2
+module: html
+difficulty: beginner
+minutes: 25
+title: 'Text and Semantic HTML'
+summary: 'Mark up text with headings, paragraphs and inline meaning, then replace anonymous divs with the semantic layout elements.'
+objectives:
+  - 'Build a clean heading hierarchy with h1 to h6.'
+  - 'Choose the right inline element for the meaning: strong, em, mark, small and code.'
+  - 'Lay out a page with header, nav, main, article and footer.'
+  - 'Explain why semantic HTML beats a pile of divs.'
+exercise:
+  task: 'The starter page is a pile of anonymous divs. Rebuild it with meaning: mark up the banner, the menu, the post and the byline with semantic elements, fix the heading hierarchy so there is exactly one h1, and inside the paragraph add strong emphasis on one phrase and a highlight on another word.'
+  hints:
+    - 'The page has four zones - banner, menu, story and byline - and each zone has a natural semantic element.'
+    - 'The big title should become the only h1 on the page, and the smaller line under it should become an h2.'
+    - 'Wrap the story zone in main and the post itself in article, use strong for importance and mark for a visual highlight, then finish with footer.'
+---
+
+## Overview
+
+Web pages are overwhelmingly made of words: articles, captions, prices, buttons, footnotes. Lesson 01 gave you the frame of a document; this lesson is about what goes inside it, and about the difference between text that merely _looks_ right and text that _means_ something.
+
+The key word is _semantic_. A semantic element is one whose name describes its content: a main heading is an `h1`, a navigation menu is a `nav`, an independent story is an `article`. Compare that with the generic `div`, which means nothing at all - it is a blank box you can style. When every box on the page is a `div`, only a human looking at the rendered pixels can tell the navigation from the footer.
+
+Semantic markup pays off the moment anything other than your eyes reads the page. Screen readers announce a `nav` as a landmark their users can jump to. Search engines weight an `h1` more than a styled `div`. Reader modes and browser extensions strip pages down to `article` and `main`. And future you can navigate a semantic file at a glance.
+
+Here is the plan: first headings, which give a page its outline; then paragraphs and their inline friends, which carry the meaning inside the text; then the semantic containers that shape the page; and finally the exercise, where you rebuild a page that is currently nothing but divs.
+
+## Headings: the outline of the page
+
+Headings turn a wall of text into a document people can scan. The browser renders `h1` through `h6` in decreasing size, but the size is the least important part: headings are an _outline_, the same table of contents you would put at the front of a book.
+
+```html
+<h1>Hiking the Blue Ridge</h1>
+<h2>Day one: fog, then sunshine</h2>
+<h3>Morning: the switchbacks</h3>
+<h3>Afternoon: the ridge line</h3>
+```
+
+Two rules keep an outline healthy. First, exactly one `h1` per page: it names the topic, and everything else nests under it. Second, never skip levels: an `h3` should live under an `h2`, which lives under the `h1` - assistive technology builds a navigation tree from your levels, and a jump from `h1` to `h4` reads as missing content.
+
+| Level        | Typical use                                |
+| ------------ | ------------------------------------------ |
+| `h1`         | The topic of the page, used once           |
+| `h2`         | Major sections of the page                 |
+| `h3`         | Subsections inside an `h2`                 |
+| `h4` to `h6` | Deeper nesting - rarely needed in practice |
+
+Choose heading levels by structure, not by size. If the browser's default `h3` is too big or too small for your design, you will fix that with CSS in the next module - never by reaching for a different level.
+
+> **Try it:** In the built-in editor, outline a week of your life: one `h1`, three `h2` sections, and an `h3` inside one of them. Preview and watch the browser size each level for you.
+
+## Paragraphs, breaks and dividers
+
+The `p` element is the workhorse of the web: one idea per paragraph, as many paragraphs as you need. The browser adds vertical space between paragraphs automatically, and screen readers pause on them - both of which make long text digestible.
+
+```html
+<p>Our first day on the trail began in thick fog.</p>
+<p>By noon the sun had burned it off, and the ridge appeared.</p>
+```
+
+Two neighbours complete the set. `br` forces a line break _inside_ a paragraph, and `hr` draws a divider that marks a thematic break - a change of scene, a shift of topic.
+
+```html
+<address>
+  50 Forest Road<br />
+  Blue Ridge, NC
+</address>
+<hr />
+<p>Next up: day two on the trail.</p>
+```
+
+Both are easy to misuse. Reserve `br` for text where the line break is part of the content itself - poems, addresses, song lyrics - and do not use `br` or `hr` to push content around the page. Separation of ideas is an element's job; separation of pixels is CSS's job, which starts in Lesson 04.
+
+> **Try it:** In the editor, write two paragraphs, then put an `hr` between them. Next, type a two-line address using one `br`. Notice the different rhythm: `hr` separates blocks, `br` breaks a line.
+
+## Inline meaning: text-level elements
+
+Inside a paragraph you often need to mark up individual words: a phrase that matters more than the rest, a stressed word, a highlighted detail. HTML has a small vocabulary of _text-level_ elements for exactly this, and each one carries meaning rather than just appearance:
+
+| Element  | Meaning                                   | Default look      |
+| -------- | ----------------------------------------- | ----------------- |
+| `strong` | Strong importance                         | bold              |
+| `em`     | Emphasis, spoken stress                   | italic            |
+| `mark`   | Highlight relevant to the current context | yellow background |
+| `small`  | Side comments and fine print              | smaller text      |
+| `code`   | A fragment of computer code               | monospace         |
+
+Used together in one paragraph:
+
+```html
+<p>
+  Pack <strong>two liters of water</strong> - the ridge has no shade. It was <em>hotter</em> than
+  the forecast promised, and my <mark>favorite pen</mark> melted. The route notes live in
+  <code>route/day1.txt</code>.
+</p>
+```
+
+You may also meet `b` (bold) and `i` (italic). They still exist, but they only say "draw this differently", while `strong` and `em` say _why_. When choosing, ask a simple question: would I stress this word while reading aloud? That is `em`. Is this phrase important to understand the sentence? That is `strong`. If the answer is only "I want it to look different", you probably want CSS instead.
+
+> **Try it:** In the editor, write a paragraph with one `strong`, one `em` and one `mark`. Then preview and see how the three looks differ - and notice that the markup still makes sense with all styling removed.
+
+## Semantic containers: from div to main
+
+Most pages share a shape: a banner on top, navigation under it, one main content area, tangential notes at the side, a footer at the bottom. HTML gives each of these regions a purpose-built element:
+
+| Element   | Role                                                 |
+| --------- | ---------------------------------------------------- |
+| `header`  | Introductory content: site name, logo, tagline       |
+| `nav`     | Major navigation links                               |
+| `main`    | The dominant content of the page - only one per page |
+| `section` | A thematic group, usually with its own heading       |
+| `article` | Content complete on its own: a post, a news item     |
+| `aside`   | Tangential content: a sidebar, a pull quote          |
+| `footer`  | Footer information: author, copyright, links         |
+| `div`     | A neutral box for when nothing else fits             |
+
+Assembled into a small blog page:
+
+```html
+<header>
+  <p>My Travel Blog</p>
+  <nav>Home | Posts | About</nav>
+</header>
+<main>
+  <article>
+    <h1>Hiking the Blue Ridge</h1>
+    <h2>Day one: fog, then sunshine</h2>
+    <p>The trail started in fog and ended in sunshine.</p>
+  </article>
+  <aside>
+    <p>This week: three posts from the trail.</p>
+  </aside>
+</main>
+<footer>
+  <p>Written by Sam</p>
+</footer>
+```
+
+Note that `div` is not banned - it is the honest choice when a grouping has no meaning, such as a wrapper that exists purely for styling. The rule of thumb: pick the element whose name matches the content, and reach for `div` only when no name fits.
+
+> **Try it:** In the editor, rebuild this blog shape with your own words. The preview will barely look different - that is expected. The structure is now machine-readable, which is the whole point.
+
+## Why semantics matter
+
+Three audiences read your markup, and only one of them sees pixels. People using assistive technology get a map: `nav` is a landmark they can jump to, headings are a skimmable outline, `main` tells them where the content starts. Search engines get clues about what matters on the page. And future you gets a file that explains itself.
+
+Contrast the two versions of a menu:
+
+```html
+<div class="menu">Home | Posts | About</div>
+```
+
+```html
+<nav>Home | Posts | About</nav>
+```
+
+To a browser they render identically. To everything else, the first line is noise and the second is a labeled landmark. With the `nav` version, a screen reader user hears "navigation" and can skip straight to it or past it; with the `div` version, they must listen to the whole page.
+
+There is a maintenance bonus too. Semantic markup reads almost like a diagram of the page, so when you return to a file months later - or when a teammate does - the structure is visible without running anything.
+
+> **Try it:** In the editor, open the solution file of this lesson's exercise and read only the element names, top to bottom. You can reconstruct what the page is about without reading a single sentence of content - that is what semantic HTML buys you.
+
+## The exercise: from div soup to meaning
+
+The starter page is a tiny travel blog written entirely with `div` elements and class names. It renders, and it even looks reasonable - but to every machine reading it, the page is four meaningless boxes.
+
+Rebuild it following the TODO markers:
+
+1. Turn the banner `div` into a `header`, and the menu `div` into a `nav`.
+2. Wrap the story zone in `main`, and the post itself in `article`.
+3. Fix the heading hierarchy: the big title becomes the page's only `h1`, and the subtitle becomes an `h2`.
+4. Inside the paragraph, mark _worth every step_ with `strong` and highlight _fog_ with `mark`.
+5. Turn the byline `div` into a `footer`.
+
+Preview as you go and you will notice something surprising: the page looks the same. That is not a bug - semantics is invisible to the eye and visible to machines. What should change is how the document reads: one `h1`, no skipped levels, and every region with a name.
+
+When you finish, compare your file with the solution. The exact words will differ from yours, but the element names should match one for one.
+
+> **Tip:** If you are unsure which element fits, say out loud what the content is: "this is the site banner" is a `header`; "this is the story" is an `article`; "this is just a box" stays a `div`.
+
+## Common Mistakes
+
+### 1. More than one h1 on a page
+
+Two `h1` elements tell screen readers and search engines that the page has two topics - which means it has none.
+
+Wrong:
+
+```html
+<h1>My Travel Blog</h1>
+<h1>Hiking the Blue Ridge</h1>
+```
+
+Right:
+
+```html
+<h1>Hiking the Blue Ridge</h1>
+<h2>Day one: fog, then sunshine</h2>
+```
+
+### 2. Skipping heading levels
+
+Levels exist to nest; jumping from `h1` straight to `h3` makes the outline look like content is missing.
+
+Wrong:
+
+```html
+<h1>Hiking the Blue Ridge</h1>
+<h3>Day one</h3>
+```
+
+Right:
+
+```html
+<h1>Hiking the Blue Ridge</h1>
+<h2>Day one</h2>
+```
+
+### 3. Using br to fake paragraphs
+
+A run of `br` elements looks like paragraphs but reads as one; the browser cannot tell ideas apart.
+
+Wrong:
+
+```html
+<p>First thought.<br />Second thought.<br />Third thought.</p>
+```
+
+Right:
+
+```html
+<p>First thought.</p>
+<p>Second thought.</p>
+<p>Third thought.</p>
+```
+
+### 4. Using b and i when you mean strong and em
+
+The old visual elements say nothing about importance, so tools cannot tell a keyword from a stylistic whim.
+
+Wrong:
+
+```html
+<p>This is <b>important</b> and <i>really</i> matters.</p>
+```
+
+Right:
+
+```html
+<p>This is <strong>important</strong> and <em>really</em> matters.</p>
+```
+
+### 5. Wrapping everything in section
+
+Reaching for `section` on every block is div soup in new clothes; use it only when the group has a heading and a theme.
+
+Wrong:
+
+```html
+<section>My Travel Blog</section>
+<section>Home | Posts</section>
+```
+
+Right:
+
+```html
+<header>My Travel Blog</header>
+<nav>Home | Posts</nav>
+```
+
+### 6. Choosing elements by their default look
+
+Picking `h3` because it is small, or `blockquote` because it indents, bakes browser styling into your structure and breaks the moment you restyle.
+
+Wrong:
+
+```html
+<blockquote>The sidebar links</blockquote>
+```
+
+Right:
+
+```html
+<aside>The sidebar links</aside>
+```
+
+> **Tip:** The preview cannot catch semantic mistakes - it looks fine either way. Read your markup back to yourself instead: every element name should be a word you would use to describe the page.
+
+## Summary
+
+- Headings `h1` to `h6` are the page's outline: one `h1`, no skipped levels.
+- `p` carries paragraphs; `br` breaks a line inside one; `hr` marks a thematic break.
+- `strong`, `em`, `mark`, `small` and `code` add meaning to individual words - prefer them over `b` and `i`.
+- `header`, `nav`, `main`, `section`, `article`, `aside` and `footer` name the regions of a page; `div` is the neutral fallback.
+- Semantic markup looks identical in the preview but is readable by screen readers, search engines and future you.
+- You rebuilt a page of anonymous divs into a document whose every region has a name.

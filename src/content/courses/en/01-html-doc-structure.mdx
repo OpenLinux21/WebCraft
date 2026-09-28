@@ -1,0 +1,304 @@
+---
+lessonId: 01-html-doc-structure
+order: 1
+module: html
+difficulty: beginner
+minutes: 25
+title: 'Getting Started with HTML: Document Structure and Tags'
+summary: 'Meet HTML, learn the anatomy of a web page, and build your first complete document from doctype to closing tag.'
+objectives:
+  - 'Explain what tags, elements and attributes are, and how elements nest.'
+  - 'Write the skeleton of an HTML5 document from memory.'
+  - 'Use head elements such as `title` and `meta charset` correctly.'
+  - 'Recognize empty (void) elements and know why they have no closing tag.'
+  - 'Build and preview a complete first page in the built-in editor.'
+exercise:
+  task: 'Turn the starter file into a complete, valid HTML5 page. Add a descriptive title, an `h1` greeting, a short introductory paragraph, and a footer with your name. When you preview, the browser tab shows your title and the page shows all three pieces of content in order.'
+  hints:
+    - 'A valid page starts with the doctype, and one `html` element with a `lang` attribute wraps everything else.'
+    - 'The `head` holds information about the page, so `meta charset` and `title` go there; anything the reader should see belongs in the `body`.'
+    - 'Put the `h1`, then the paragraph, then the `footer` inside the body, in that order, and make sure every opening tag has a matching closing tag.'
+---
+
+## Overview
+
+Every website you have ever visited - a search engine, a news site, this very course - begins life as a plain text file full of HTML. A browser is, at its heart, a machine for reading that text: it parses the tags, works out what each piece of content is, and paints the result. Before you can style a page or make it interactive, you need to speak its native language.
+
+HTML stands for HyperText Markup Language, and the _markup_ part matters. HTML is not a programming language; it has no loops, no conditions and no logic. Instead, you take ordinary text and label it: this string is a heading, that one is a paragraph, this block is navigation. The browser reads your labels and decides what each piece means and how it should behave.
+
+In this lesson you will dissect a minimal page line by line, meet the small set of tags every document needs, and then assemble your first complete page in the built-in editor. Every later lesson builds on this skeleton, so it is worth getting fluent with it now.
+
+## What HTML actually is
+
+The words _tag_ and _element_ are used interchangeably, but the difference is worth one minute of your time. A tag is the marker you type. An element is the whole package: opening tag, content, and closing tag taken together.
+
+```html
+<p>Welcome to the course.</p>
+```
+
+Reading left to right: `<p>` is the opening tag, `Welcome to the course.` is the content, and `</p>` is the closing tag. The forward slash is what tells the browser the element has ended. The whole thing - tag, content, tag - is one paragraph element.
+
+The browser does not care how you lay the source out. Line breaks and indentation in your file are for you, not for it. These two snippets produce exactly the same page:
+
+```html
+<p>Written on one line.</p>
+
+<p>Written across several lines.</p>
+```
+
+Most elements follow this open-content-close pattern, and once you see it, HTML stops looking like a wall of angle brackets and starts looking like labeling. That is genuinely all it is.
+
+> **Try it:** Open the built-in editor and type a `<p>` element with your own sentence, then add a second one below it. Preview the page: each paragraph starts on a fresh line even though you never asked for one. That behavior belongs to the element, not to your formatting.
+
+## Elements you will meet everywhere
+
+There are a bit more than a hundred HTML elements in total, but a working web page needs far fewer. These are the ones you will type most often in this course:
+
+| Element          | What it is for                                |
+| ---------------- | --------------------------------------------- |
+| `h1` to `h6`     | Headings, from most to least important        |
+| `p`              | A paragraph of text                           |
+| `a`              | A link to somewhere else                      |
+| `img`            | An image                                      |
+| `ul`, `ol`, `li` | Unordered and ordered lists, and their items  |
+| `footer`         | A footer with author or copyright information |
+| `div`            | A generic box for grouping other content      |
+
+Do not memorize this table - you will meet each element properly over the next two lessons, and your fingers will learn them faster than your head does.
+
+> **Try it:** In the editor, replace one of your paragraphs with an `h2` and then an `h3`. Notice how each level gets progressively smaller and bolder: the browser has default styling for every element.
+
+## The skeleton of every page
+
+Loose elements are not enough. A browser expects every document to share the same frame, and while browsers quietly repair broken frames, screen readers, search engines and developer tools all depend on the real structure being there. Here is the smallest complete HTML5 document:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>My first page</title>
+  </head>
+  <body>
+    <h1>Hello, world!</h1>
+  </body>
+</html>
+```
+
+Each part of the skeleton has exactly one job:
+
+| Piece              | Job                                                                             |
+| ------------------ | ------------------------------------------------------------------------------- |
+| `<!DOCTYPE html>`  | Declares a modern HTML5 document. It must be the very first line.               |
+| `<html lang="en">` | The root element that wraps everything else. `lang` declares the page language. |
+| `<head>`           | Holds information _about_ the page - none of it is displayed directly.          |
+| `<body>`           | Holds everything the reader actually sees.                                      |
+
+The doctype looks like a historical fossil because it is one, but it is not optional: without it, browsers switch to "quirks mode" with old rendering rules that will quietly break your CSS later in the course. Type it first, every time.
+
+> **Try it:** Paste the skeleton into the editor, then change the `lang` value and the title text and preview. The tab title updates instantly - your first taste of controlling the browser itself, not just the page.
+
+## Inside the head: metadata
+
+The head is the page's backstage. Readers never see it directly, but it tells the browser how to treat the document. Two children appear on virtually every page ever written, plus a few common extras:
+
+```html
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Field Notes: September</title>
+  <meta name="description" content="Short walks, long thoughts, and what I noticed on the way." />
+</head>
+```
+
+`meta charset` declares the character encoding so that every symbol, accent and emoji survives the trip from your file to the screen. Put it first inside the head.
+
+`title` is not a heading on the page. It is the name shown on the browser tab, in bookmarks and in search results, so make it specific: _My page_ helps nobody, while _Field Notes: September_ tells people and search engines exactly what to expect.
+
+The viewport line is what makes a page behave sensibly on phones. File it away for now - we will return to it in the layout module - but include it from the start, because retrofitting it later is easy to forget.
+
+> **Try it:** In the editor, add a `meta` description under your title, then change the title and preview again. Nothing visible moves - and that is the point: the head works behind the scenes.
+
+## Nesting, attributes and empty elements
+
+Elements live inside other elements. Nesting is how HTML expresses structure: list items inside a list, a heading inside a banner. There is exactly one rule - close the inner element before the outer one:
+
+```html
+<body>
+  <main>
+    <h1>Cake recipe</h1>
+    <p>Preheat the oven <strong>before</strong> you mix anything.</p>
+  </main>
+</body>
+```
+
+Elements can also carry attributes: extra facts written inside the opening tag as `name="value"` pairs. You already saw `lang="en"` on the `html` element. You will meet many more - `href` for links, `src` for images, and `class` plus `id` for styling and scripting.
+
+```html
+<p class="intro" id="welcome">Some text.</p>
+```
+
+A handful of elements have no content at all, so they never take a closing tag. These are called empty, or void, elements:
+
+```html
+<meta charset="UTF-8" />
+<hr />
+<br />
+```
+
+`meta` carries information, `hr` draws a divider line, and `br` forces a line break. The trailing slash before `>` is optional in HTML5 - `<br>` and `<br />` are both valid - but writing it makes the element obviously empty at a glance.
+
+> **Try it:** In the editor, nest a `strong` element inside a paragraph, then add an `hr` after it and preview. If part of your page disappears, you almost certainly closed the inner element in the wrong order.
+
+## Comments and whitespace
+
+HTML has a comment syntax, and unlike the code around it, comments are ignored by the browser entirely. They exist for humans: notes to your future self, explanations for teammates, or a temporary switch for a line you are not ready to delete.
+
+```html
+<p>Visible text.</p>
+<!-- This sentence never appears on the page. -->
+```
+
+Whitespace works on the same principle. The browser collapses any run of spaces, tabs and newlines into a single space, which is why a paragraph written across three source lines still renders as one flowing sentence:
+
+```html
+<p>This paragraph has extra spaces and runs across two source lines.</p>
+```
+
+Write source code that reads well to humans - indented, commented, one element per line where it helps. The browser will handle the rest.
+
+> **Try it:** In the editor, add a comment above your heading, put twenty spaces between two words in a paragraph, and preview. The comment disappears and the spaces collapse to one.
+
+## The exercise: your first complete page
+
+The starter file opens with a doctype, a `lang` attribute and a head that already declares the character encoding - but the page has no title and no body content. Your job is to finish it into a document you could hand to anyone.
+
+Work through the TODO markers in order:
+
+1. In the head, add a `title` element with a name you would recognize in a row of browser tabs.
+2. In the body, add an `h1` that greets the reader.
+3. Below the heading, add a `p` with two or three sentences introducing yourself.
+4. Finish with a `footer` containing your name and today's date.
+
+As you work, preview often. Two quick checks tell you the document is healthy: the browser tab shows your title, and every piece of content appears exactly once. If content is missing, look for a tag you opened but never closed; if it appears twice, you may have nested an element inside another by accident.
+
+The solution does not need anything clever. A complete skeleton with three children in the body _is_ the lesson - when you finish, compare your structure with the solution file: the tags should match one for one even if the words differ.
+
+> **Tip:** From now on, every exercise in this course starts from the same skeleton. If you can type the doctype, `html`, `head`, `meta charset`, `title` and `body` without looking, you have already automated the most repetitive part of web development.
+
+## Common Mistakes
+
+### 1. Forgetting the closing tag
+
+The browser recovers, but usually in surprising ways - a missing `</p>` can swallow the elements that come after it.
+
+Wrong:
+
+```html
+<p>Welcome to the course.</p>
+```
+
+Right:
+
+```html
+<p>Welcome to the course.</p>
+```
+
+### 2. Nesting in the wrong order
+
+Inner elements must close before outer ones; overlapping tags confuse everyone, including the browser.
+
+Wrong:
+
+```html
+<p>Text with <strong>emphasis</p></strong>
+```
+
+Right:
+
+```html
+<p>Text with <strong>emphasis</strong></p>
+```
+
+### 3. Putting visible content in the head
+
+The head is for metadata only; content there either vanishes or gets relocated unpredictably.
+
+Wrong:
+
+```html
+<head>
+  <p>This text never shows up.</p>
+</head>
+```
+
+Right:
+
+```html
+<body>
+  <p>This text shows up.</p>
+</body>
+```
+
+### 4. Skipping the doctype
+
+The page still renders, but in quirks mode, and your CSS will misbehave in ways that are hard to trace back to one missing line.
+
+Wrong:
+
+```html
+<html lang="en">
+  <head></head>
+</html>
+```
+
+Right:
+
+```html
+<!DOCTYPE html>
+<html lang="en"></html>
+```
+
+### 5. Unquoted attribute values
+
+Attributes follow the `name="value"` pattern; a missing opening quote makes the browser swallow the rest of the tag.
+
+Wrong:
+
+```html
+<p class="intro">Text.</p>
+```
+
+Right:
+
+```html
+<p class="intro">Text.</p>
+```
+
+### 6. Block elements inside a paragraph
+
+A `p` may only contain text and inline elements; browsers will forcibly close it around a heading or a div.
+
+Wrong:
+
+```html
+<p>Introduction line <h2>Details</h2></p>
+```
+
+Right:
+
+```html
+<p>Introduction line</p>
+<h2>Details</h2>
+```
+
+> **Tip:** If content suddenly vanishes in the preview, the cause is almost always one of the first two mistakes. Read the code backwards from the missing part and check every tag is closed, in order.
+
+## Summary
+
+- An element is an opening tag, content and a closing tag; void elements such as `meta`, `hr` and `br` have no closing tag.
+- Every document needs the doctype, one `html` root with `lang`, a `head` and a `body`.
+- The head carries metadata such as `meta charset`, `title` and the viewport line; the body carries everything visible.
+- Attributes are `name="value"` pairs written inside the opening tag.
+- Comments and extra whitespace never reach the reader - write source code for humans.
+- You built and previewed a complete HTML5 document in the built-in editor.
