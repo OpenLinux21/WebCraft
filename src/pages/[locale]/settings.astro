@@ -1,5 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import AiSettingsSection from '@/components/settings/AiSettingsSection.astro';
+import BackupSection from '@/components/settings/BackupSection.astro';
 import { createTranslator } from '@/lib/i18n/core';
 import { APP_LOCALES, type AppLocale } from '@/lib/i18n/types';
 import '@/styles/pages.css';
@@ -57,6 +59,10 @@ const t = createTranslator(locale);
       </md-outlined-select>
     </div>
   </section>
+
+  <AiSettingsSection locale={locale} />
+
+  <BackupSection locale={locale} />
 
   <section class="card settings-section" aria-labelledby="settings-data">
     <h2 id="settings-data">{t.t('settings.sectionData')}</h2>

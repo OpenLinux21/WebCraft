@@ -1,0 +1,203 @@
+---
+/**
+ * Settings section: backup export/import. Exports are versioned JSON files
+ * without secrets unless the user explicitly opts in.
+ */
+import '@/components/material/register';
+import { createTranslator } from '@/lib/i18n/core';
+import type { AppLocale } from '@/lib/i18n/core';
+
+interface Props {
+  locale: AppLocale;
+}
+
+const { locale } = Astro.props;
+const t = createTranslator(locale);
+---
+
+<section
+  class="card settings-section"
+  aria-labelledby="settings-backup"
+  data-backup-section
+  data-locale={locale}
+>
+  <h2 id="settings-backup">{t.t('settings.sectionBackup')}</h2>
+
+  <h3>{t.t('settings.backup.exportTitle')}</h3>
+  <p class="form-hint">{t.t('settings.backup.exportBody')}</p>
+  <label class="backup-option">
+    <input type="checkbox" data-include-sensitive />
+    {t.t('settings.backup.includeSensitive')}
+  </label>
+  <p class="form-hint form-warning" data-sensitive-warning hidden>
+    {t.t('settings.backup.includeSensitiveWarning')}
+  </p>
+  <md-filled-tonal-button type="button" data-export>
+    {t.t('common.download')}
+  </md-filled-tonal-button>
+
+  <h3>{t.t('settings.backup.importTitle')}</h3>
+  <p class="form-hint">{t.t('settings.backup.importBody')}</p>
+  <div class="form-row">
+    <input
+      class="backup-file-input"
+      type="file"
+      accept="application/json,.json"
+      data-import-file
+      aria-label={t.t('settings.backup.importTitle')}
+    />
+  </div>
+</section>
+
+<dialog class="confirm-dialog" data-import-dialog data-locale={locale}>
+  <p data-import-dialog-text></p>
+  <div class="confirm-dialog__actions">
+    <md-text-button type="button" data-dialog-cancel autofocus>
+      {t.t('common.cancel')}
+    </md-text-button>
+    <md-filled-button type="button" data-dialog-confirm>
+      {t.t('common.confirm')}
+    </md-filled-button>
+  </div>
+</dialog>
+
+<script>
+  import '@/components/material/register';
+  import { createTranslator, isAppLocale } from '@/lib/i18n/core';
+  import { showToast } from '@/lib/ui/toast';
+  import { getStorage } from '@/lib/storage/storage';
+  import { collectBackupStores, restoreBackup } from '@/lib/backup/restore';
+  import { backupFileName, buildBackupFile, serializeBackup } from '@/lib/backup/export';
+  import { BackupError, parseBackupJson } from '@/lib/backup/import';
+  import type { BackupFile } from '@/lib/backup/types';
+  import { parseThemeSetting, setThemeSetting } from '@/lib/theme/theme';
+  import { parsePreviewSettings, savePreviewSettings } from '@/lib/storage/settings';
+  import { parseAIConfig, saveAIConfig } from '@/lib/ai/settings';
+
+  function downloadJson(fileName: string, content: string): void {
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function applyBackupSettings(file: BackupFile): void {
+    const { settings } = file.data;
+    const theme = parseThemeSetting(settings.theme);
+    if (theme) setThemeSetting(theme);
+    const preview = parsePreviewSettings(settings.preview);
+    if (preview) savePreviewSettings(preview);
+    const ai = parseAIConfig(settings.ai);
+    if (ai) saveAIConfig(ai);
+  }
+
+  function initBackupSection(): void {
+    const root = document.querySelector<HTMLElement>('[data-backup-section]');
+    if (!root) return;
+    const localeRaw: unknown = root.dataset.locale;
+    if (!isAppLocale(localeRaw)) return;
+    const t = createTranslator(localeRaw);
+
+    const dialog = document.querySelector<HTMLDialogElement>('[data-import-dialog]');
+    const dialogText = dialog?.querySelector<HTMLElement>('[data-import-dialog-text]');
+    const dialogCancel = dialog?.querySelector<HTMLElement>('[data-dialog-cancel]');
+    const dialogConfirm = dialog?.querySelector<HTMLElement>('[data-dialog-confirm]');
+
+    const sensitiveCheckbox = root.querySelector<HTMLInputElement>('[data-include-sensitive]');
+    const warning = root.querySelector<HTMLElement>('[data-sensitive-warning]');
+    sensitiveCheckbox?.addEventListener('change', () => {
+      if (warning) warning.hidden = !sensitiveCheckbox.checked;
+    });
+
+    root.querySelector<HTMLElement>('[data-export]')?.addEventListener('click', () => {
+      void (async () => {
+        const storage = await getStorage();
+        const stores = await collectBackupStores(storage);
+        const includeSensitive = sensitiveCheckbox?.checked ?? false;
+        const rawString = (key: string): string | undefined =>
+          globalThis.localStorage?.getItem(key) ?? undefined;
+        const rawJson = (key: string): unknown => {
+          try {
+            const raw = globalThis.localStorage?.getItem(key);
+            return raw === null ? undefined : (JSON.parse(raw) as unknown);
+          } catch {
+            return undefined;
+          }
+        };
+        const theme = rawString('webcraft.theme');
+        const locale = rawString('webcraft.locale');
+        const file = buildBackupFile({
+          progress: stores.progress,
+          drafts: stores.drafts,
+          playground: stores.playground,
+          settings: {
+            ...(theme !== undefined ? { theme } : {}),
+            ...(locale !== undefined ? { locale } : {}),
+            preview: rawJson('webcraft.preview'),
+            ai: rawJson('webcraft.ai'),
+          },
+          includeSensitive,
+        });
+        downloadJson(backupFileName(), serializeBackup(file));
+      })();
+    });
+
+    const importInput = root.querySelector<HTMLInputElement>('[data-import-file]');
+    importInput?.addEventListener('change', () => {
+      const file = importInput.files?.[0];
+      if (!file || !dialog || !dialogText || !dialogConfirm) return;
+      void (async () => {
+        let parsed: BackupFile;
+        try {
+          parsed = parseBackupJson(await file.text());
+        } catch (error: unknown) {
+          if (error instanceof BackupError && error.reason === 'newer-version') {
+            showToast(t.t('settings.backup.newerVersion'));
+          } else {
+            showToast(t.t('settings.backup.invalidFile'));
+          }
+          importInput.value = '';
+          return;
+        }
+        dialogText.textContent = t.t('settings.backup.importConfirm');
+        dialog.showModal();
+        dialogCancel?.addEventListener(
+          'click',
+          () => {
+            dialog.close();
+            importInput.value = '';
+          },
+          { once: true },
+        );
+        dialogConfirm.addEventListener(
+          'click',
+          () => {
+            void (async () => {
+              try {
+                const storage = await getStorage();
+                await restoreBackup(storage, parsed, { replace: true });
+                applyBackupSettings(parsed);
+                dialog.close();
+                showToast(t.t('settings.backup.importSuccess'));
+                window.setTimeout(() => window.location.reload(), 600);
+              } catch {
+                dialog.close();
+                showToast(t.t('errors.generic', { reason: 'restore failed' }));
+              }
+            })();
+          },
+          { once: true },
+        );
+      })();
+    });
+
+    dialog?.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  }
+
+  initBackupSection();
+</script>
