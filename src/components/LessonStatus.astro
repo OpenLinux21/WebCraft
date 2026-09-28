@@ -11,6 +11,8 @@ const { locale, lessonId } = Astro.props;
 
 <section
   class="lesson-status card"
+  role="status"
+  aria-live="polite"
   data-lesson-status
   data-lesson-id={lessonId}
   data-locale={locale}

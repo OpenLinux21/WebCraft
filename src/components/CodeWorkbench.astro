@@ -70,7 +70,14 @@ const t = createTranslator(locale);
         </div>
       </div>
 
-      <div class="workbench__editor" data-editor></div>
+      <div
+        class="workbench__editor"
+        data-editor
+        id="workbench-editor-panel"
+        role="tabpanel"
+        aria-label={t.t('workbench.editorLabel')}
+        tabindex="0"
+      ></div>
 
       <div class="workbench__statusbar">
         <label class="workbench__autorun">
@@ -111,7 +118,7 @@ const t = createTranslator(locale);
         {t.t('workbench.consoleClear')}
       </md-text-button>
     </div>
-    <ol class="console-panel__list" data-console-list></ol>
+    <ol class="console-panel__list" data-console-list aria-live="polite" aria-relevant="additions"></ol>
     <p class="console-panel__empty" data-console-empty>
       {t.t('workbench.consoleEmpty')}
     </p>
@@ -227,6 +234,24 @@ const t = createTranslator(locale);
       const lang = tab.dataset.tab ?? '';
       if (isLang(lang)) tab.addEventListener('click', () => switchTo(lang));
     }
+    // WAI-ARIA tabs: arrow keys move between tabs, Home/End jump to the ends.
+    root.querySelector('[role="tablist"]')?.addEventListener('keydown', (event) => {
+      const keyboardEvent = event as KeyboardEvent;
+      const currentIndex = tabs.findIndex((tab) => tab.getAttribute('aria-selected') === 'true');
+      let next = -1;
+      if (keyboardEvent.key === 'ArrowRight') next = (currentIndex + 1) % tabs.length;
+      else if (keyboardEvent.key === 'ArrowLeft') next = (currentIndex - 1 + tabs.length) % tabs.length;
+      else if (keyboardEvent.key === 'Home') next = 0;
+      else if (keyboardEvent.key === 'End') next = tabs.length - 1;
+      if (next < 0) return;
+      keyboardEvent.preventDefault();
+      const nextTab = tabs[next];
+      const nextLang = nextTab?.dataset.tab ?? '';
+      if (isLang(nextLang)) {
+        switchTo(nextLang);
+        nextTab?.focus();
+      }
+    });
 
     // Preview + console
     const iframe = root.querySelector<HTMLIFrameElement>('[data-preview]');
