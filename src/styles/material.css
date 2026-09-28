@@ -1,0 +1,47 @@
+/* Bridge between the app design tokens and @material/web component tokens.
+   The `--md-sys-color-*` palettes defined in tokens.css are picked up by the
+   components automatically; only typography and a few defaults live here. */
+
+:root {
+  --md-ref-typeface-plain: var(--md-sys-typescale-font);
+  --md-ref-typeface-brand: var(--md-sys-typescale-font);
+}
+
+/* Full-width form controls inside settings/workbench forms. */
+.w-full {
+  width: 100%;
+}
+
+md-outlined-text-field,
+md-filled-text-field {
+  flex: 1;
+}
+
+md-outlined-select {
+  flex: 1;
+}
+
+/* Form rows used by the settings page. */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--md-sys-spacing-3);
+  margin-block-end: var(--md-sys-spacing-4);
+}
+
+.form-row--column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.form-hint {
+  margin: 0 0 var(--md-sys-spacing-4);
+  font-size: var(--md-sys-typescale-small-size);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.form-error {
+  color: var(--md-sys-color-error);
+  font-size: var(--md-sys-typescale-small-size);
+}

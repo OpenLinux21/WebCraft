@@ -1,0 +1,20 @@
+---
+import { createTranslator } from '@/lib/i18n/core';
+import type { AppLocale } from '@/lib/i18n/core';
+
+interface Props {
+  locale: AppLocale;
+}
+
+const { locale } = Astro.props;
+const t = createTranslator(locale);
+---
+
+<footer class="app-footer">
+  <div class="app-footer__inner">
+    <p>{t.t('footer.privacyNote')}</p>
+    <p>
+      © {new Date().getFullYear()} WebCraft · {t.t('footer.openSource')}
+    </p>
+  </div>
+</footer>

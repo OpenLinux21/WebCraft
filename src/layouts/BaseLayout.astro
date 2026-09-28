@@ -1,0 +1,57 @@
+---
+import AppFooter from '@/components/AppFooter.astro';
+import AppHeader from '@/components/AppHeader.astro';
+import { createTranslator } from '@/lib/i18n/core';
+import { LOCALE_STORAGE_KEY } from '@/lib/i18n/inline-scripts';
+import { HTML_LANG, type AppLocale } from '@/lib/i18n/types';
+import { NO_FLASH_SCRIPT } from '@/lib/theme/no-flash';
+import '@/styles/tokens.css';
+import '@/styles/base.css';
+import '@/styles/material.css';
+
+interface Props {
+  locale: AppLocale;
+  title: string;
+  description: string;
+}
+
+const { locale, title, description } = Astro.props;
+const t = createTranslator(locale);
+const themeColorLight = '#fef7ff';
+const themeColorDark = '#141218';
+---
+
+<!doctype html>
+<html lang={HTML_LANG[locale]} data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content={themeColorLight} />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content={themeColorDark} />
+    <link rel="icon" type="image/svg+xml" href={`${import.meta.env.BASE_URL}favicon.svg`} />
+    <script is:inline set:html={NO_FLASH_SCRIPT} />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">
+      {t.t('common.skipToContent')}
+    </a>
+    <AppHeader locale={locale} />
+    <main id="main-content" class="app-main app-container">
+      <slot />
+    </main>
+    <AppFooter locale={locale} />
+    <script is:inline define:vars={{ locale, key: LOCALE_STORAGE_KEY }}>
+      // Remember the last visited locale so the root page can redirect there.
+      try {
+        localStorage.setItem(key, locale);
+      } catch {
+        /* storage unavailable: browser-language detection still works */
+      }
+    </script>
+  </body>
+</html>

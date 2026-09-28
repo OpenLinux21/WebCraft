@@ -1,0 +1,54 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { createTranslator } from '@/lib/i18n/core';
+import { APP_LOCALES, type AppLocale } from '@/lib/i18n/types';
+import { coursesPath, playgroundPath, relativeHref } from '@/lib/routes';
+import '@/styles/pages.css';
+
+export function getStaticPaths() {
+  return APP_LOCALES.map((locale) => ({ params: { locale }, props: { locale } }));
+}
+
+interface Props {
+  locale: AppLocale;
+}
+
+const { locale } = Astro.props;
+const t = createTranslator(locale);
+const from = Astro.url.pathname;
+---
+
+<BaseLayout locale={locale} title={t.t('meta.homeTitle')} description={t.t('meta.homeDescription')}>
+  <section class="hero">
+    <h1>{t.t('home.heroTitle')}</h1>
+    <p>{t.t('home.heroSubtitle')}</p>
+    <div class="hero__actions">
+      <a class="btn btn--filled" href={relativeHref(coursesPath(locale), from)}>
+        {t.t('home.ctaStart')}
+      </a>
+      <a class="btn btn--outlined" href={relativeHref(playgroundPath(locale), from)}>
+        {t.t('home.ctaPlayground')}
+      </a>
+    </div>
+  </section>
+
+  <section aria-labelledby="features-title">
+    <h2 class="section-title" id="features-title">
+      {t.t('home.featuresTitle')}
+    </h2>
+    <div class="feature-grid">
+      <article class="card">
+        <h3>{t.t('home.featurePrivacyTitle')}</h3>
+        <p>{t.t('home.featurePrivacyBody')}</p>
+      </article>
+      <article class="card">
+        <h3>{t.t('home.featureStaticTitle')}</h3>
+        <p>{t.t('home.featureStaticBody')}</p>
+      </article>
+      <article class="card">
+        <h3>{t.t('home.featureAiTitle')}</h3>
+        <p>{t.t('home.featureAiBody')}</p>
+      </article>
+    </div>
+  </section>
+</BaseLayout>
