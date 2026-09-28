@@ -117,7 +117,7 @@ test('settings page shows all sections and the language switch navigates', async
   await expect(async () => {
     await languageSelect.click();
     await page.waitForFunction(
-      () => document.querySelector('[data-setting="language"]')?.open === true,
+      () => (document.querySelector('[data-setting="language"]') as { open?: boolean } | null)?.open === true,
       undefined,
       { timeout: 2_000 },
     );
