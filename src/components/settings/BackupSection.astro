@@ -105,6 +105,9 @@ const t = createTranslator(locale);
     const dialogText = dialog?.querySelector<HTMLElement>('[data-import-dialog-text]');
     const dialogCancel = dialog?.querySelector<HTMLElement>('[data-dialog-cancel]');
     const dialogConfirm = dialog?.querySelector<HTMLElement>('[data-dialog-confirm]');
+    // The section and its dialog are always rendered together; bail out
+    // (instead of sprinkling optional chaining) when the markup changed.
+    if (!dialog || !dialogText || !dialogCancel || !dialogConfirm) return;
 
     const sensitiveCheckbox = root.querySelector<HTMLInputElement>('[data-include-sensitive]');
     const warning = root.querySelector<HTMLElement>('[data-sensitive-warning]');
@@ -192,11 +195,11 @@ const t = createTranslator(locale);
           const storage = await getStorage();
           await restoreBackup(storage, fileToRestore, { replace: true });
           applyBackupSettings(fileToRestore);
-          dialog?.close();
+          dialog.close();
           showToast(t.t('settings.backup.importSuccess'));
           window.setTimeout(() => window.location.reload(), 600);
         } catch {
-          dialog?.close();
+          dialog.close();
           showToast(t.t('errors.generic', { reason: 'restore failed' }));
         }
       })();

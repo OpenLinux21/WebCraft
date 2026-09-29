@@ -13,7 +13,7 @@ body {
    4: ... swapped for self-reflowing tracks, still no media query */
 main {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
   gap: 16px;
   max-width: 880px;
   margin: 0 auto;
@@ -55,7 +55,7 @@ main {
 }
 
 /* 3: two tracks wide, wherever it lands */
-.featured {
+.tile.featured {
   grid-column: span 2;
   min-height: 200px;
   background: #f59e0b;
