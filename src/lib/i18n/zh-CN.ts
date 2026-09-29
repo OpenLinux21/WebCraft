@@ -232,6 +232,7 @@ export const zhCN: Dictionary = {
     taskReopen: '重新打开',
     taskCompletedLabel: '已完成',
     deleteTaskConfirm: '删除这个挑战？',
+    backToSandbox: '返回自由练习',
     newTaskFailed: '无法生成挑战：{reason}',
     builtinTasks: {
       t1Title: '彩虹列表',

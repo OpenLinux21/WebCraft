@@ -236,6 +236,7 @@ export const en = {
     taskReopen: 'Reopen',
     taskCompletedLabel: 'Done',
     deleteTaskConfirm: 'Delete this challenge?',
+    backToSandbox: 'Back to free sandbox',
     newTaskFailed: 'Could not generate a challenge: {reason}',
     builtinTasks: {
       t1Title: 'Rainbow list',

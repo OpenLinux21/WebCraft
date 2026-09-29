@@ -87,7 +87,10 @@ const t = createTranslator(locale);
 
         const head = document.createElement('div');
         head.className = 'tasks-panel__item-head';
-        const title = document.createElement('strong');
+        // The title opens the task in its own workspace (?task=<id>).
+        const title = document.createElement('a');
+        title.className = 'tasks-panel__title';
+        title.href = `?task=${encodeURIComponent(id)}`;
         title.textContent = task.title;
         const chips = document.createElement('span');
         chips.className = 'tasks-panel__chips';
@@ -213,6 +216,17 @@ const t = createTranslator(locale);
 
   .tasks-panel__item[data-status='completed'] {
     opacity: 0.75;
+  }
+
+  .tasks-panel__title {
+    color: var(--md-sys-color-on-surface);
+    text-decoration: none;
+  }
+
+  .tasks-panel__title:hover {
+    color: var(--md-sys-color-primary);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
   .tasks-panel__item-head {

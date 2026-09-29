@@ -92,6 +92,7 @@ const settingsHref = '../settings/';
   import '@/components/material/register';
   import { createTranslator, isAppLocale, type AppLocale } from '@/lib/i18n/core';
   import { getSharedFiles } from '@/lib/editor/registry';
+  import { getStorage } from '@/lib/storage/storage';
   import { getAIProvider } from '@/lib/ai/provider';
   import { loadAIConfig } from '@/lib/ai/settings';
   import { describeFetchError } from '@/lib/ai/errors';
@@ -115,7 +116,7 @@ const settingsHref = '../settings/';
     }));
   }
 
-  function initAiPanel(): void {
+  async function initAiPanel(): Promise<void> {
     const root = document.querySelector<HTMLElement>('[data-ai-panel]');
     if (!root) return;
     const localeRaw: unknown = root.dataset.locale;
@@ -148,6 +149,20 @@ const settingsHref = '../settings/';
         }
       } catch {
         lesson = undefined;
+      }
+    }
+
+    // Task workspace (?task=<id>): the tutor gets the challenge brief as its
+    // lesson context. Loaded from IndexedDB; overrides a static payload.
+    const taskId = root.dataset.taskId;
+    if (taskId) {
+      try {
+        const { createPlaygroundRepo } = await import('@/lib/storage/repos/playground');
+        const repo = createPlaygroundRepo(await getStorage());
+        const task = (await repo.list()).find((entry) => entry.id === taskId)?.task;
+        if (task) lesson = { title: task.title, objectives: [], task: task.task };
+      } catch {
+        // Task context is best-effort; the tutor still works without it.
       }
     }
 

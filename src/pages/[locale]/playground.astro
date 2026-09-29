@@ -35,6 +35,48 @@ const PLAYGROUND_STARTER: CodeFiles = {
   <h1 class="page-title">{t.t('playground.title')}</h1>
   <p class="page-subtitle">{t.t('playground.subtitle')}</p>
 
+  <!--
+    Task workspace: ?task=<id> switches the page into a per-task workspace.
+    The inline script below runs BEFORE any module script and re-keys the
+    workbench (drafts), the AI panel (context) and itself via data
+    attributes, so each challenge gets its own sandbox without new routes.
+  -->
+  <script is:inline>
+    (function () {
+      var taskId = new URLSearchParams(location.search).get('task');
+      if (!taskId || !/^[0-9a-f]{4,32}$/i.test(taskId)) return;
+      taskId = taskId.toLowerCase();
+      window.__webcraftTaskId = taskId;
+      var workbench = document.querySelector('[data-workbench]');
+      if (workbench) {
+        workbench.dataset.draftKey = 'task-' + taskId;
+        workbench.dataset.instanceId = 'task-' + taskId;
+      }
+      var panel = document.querySelector('[data-ai-panel]');
+      if (panel) panel.dataset.taskId = taskId;
+      var tasksPanel = document.querySelector('[data-tasks-panel]');
+      if (tasksPanel) tasksPanel.dataset.activeTask = taskId;
+    })();
+  </script>
+  <!-- Per-task banner, filled by the script below when a task is active. -->
+  <section class="card task-banner" data-task-banner hidden aria-labelledby="task-banner-title">
+    <div class="task-banner__head">
+      <h2 id="task-banner-title" data-task-title></h2>
+      <span class="tasks-panel__chips">
+        <span class="tasks-panel__chip" data-task-source></span>
+        <span class="tasks-panel__chip" data-task-difficulty></span>
+      </span>
+    </div>
+    <p class="task-banner__task" data-task-body></p>
+    <div class="task-banner__actions">
+      <md-filled-tonal-button type="button" data-task-complete hidden></md-filled-tonal-button>
+      <md-text-button type="button" data-task-reopen hidden></md-text-button>
+      <a class="task-banner__back" href="?">
+        {t.t('playground.backToSandbox')}
+      </a>
+    </div>
+  </section>
+
   <CodeWorkbench
     locale={locale}
     draftKey={PLAYGROUND_DRAFT_KEY}
@@ -47,3 +89,79 @@ const PLAYGROUND_STARTER: CodeFiles = {
     <PlaygroundTasksPanel locale={locale} />
   </div>
 </BaseLayout>
+
+<script>
+  import '@/components/material/register';
+  import { createTranslator, isAppLocale } from '@/lib/i18n/core';
+  import { getStorage } from '@/lib/storage/storage';
+  import { createPlaygroundRepo } from '@/lib/storage/repos/playground';
+
+  declare global {
+    interface Window {
+      __webcraftTaskId?: string;
+    }
+  }
+
+  async function initTaskBanner(): Promise<void> {
+    const taskId = window.__webcraftTaskId;
+    const banner = document.querySelector<HTMLElement>('[data-task-banner]');
+    if (!taskId || !banner) return;
+    const localeRaw: unknown = document.documentElement.lang;
+    if (!isAppLocale(localeRaw)) return;
+    const t = createTranslator(localeRaw);
+
+    const repo = createPlaygroundRepo(await getStorage());
+    const task = (await repo.list()).find((entry) => entry.id === taskId)?.task;
+    if (!task) {
+      // Unknown id: drop back to the free sandbox without a reload.
+      window.history.replaceState(null, '', window.location.pathname);
+      delete window.__webcraftTaskId;
+      return;
+    }
+
+    banner.hidden = false;
+    const title = banner.querySelector<HTMLElement>('[data-task-title]');
+    const body = banner.querySelector<HTMLElement>('[data-task-body]');
+    const source = banner.querySelector<HTMLElement>('[data-task-source]');
+    const difficulty = banner.querySelector<HTMLElement>('[data-task-difficulty]');
+    if (title) title.textContent = task.title;
+    if (body) body.textContent = task.task;
+    if (source)
+      source.textContent = t.t(task.source === 'ai' ? 'playground.fromAi' : 'playground.builtin');
+    if (difficulty) difficulty.textContent = t.t(`courses.difficulty.${task.difficulty}`);
+
+    // AI panel context: the tutor sees the challenge brief via the
+    // lesson-payload channel it already understands.
+    const aiPanel = document.querySelector<HTMLElement>('[data-ai-panel]');
+    const aiPayload = aiPanel?.querySelector<HTMLScriptElement>('[data-lesson-payload]');
+    if (aiPanel && !aiPayload) {
+      const payload = document.createElement('script');
+      payload.type = 'application/json';
+      payload.dataset.lessonPayload = '';
+      payload.textContent = JSON.stringify({ title: task.title, objectives: [], task: task.task });
+      aiPanel.appendChild(payload);
+    }
+
+    const completeButton = banner.querySelector<HTMLElement>('[data-task-complete]');
+    const reopenButton = banner.querySelector<HTMLElement>('[data-task-reopen]');
+    const syncButtons = (): void => {
+      if (completeButton) completeButton.hidden = task.status === 'completed';
+      if (reopenButton) reopenButton.hidden = task.status !== 'completed';
+    };
+    completeButton?.addEventListener('click', () => {
+      void repo.setStatus(taskId, 'completed').then(() => {
+        task.status = 'completed';
+        syncButtons();
+      });
+    });
+    reopenButton?.addEventListener('click', () => {
+      void repo.setStatus(taskId, 'active').then(() => {
+        task.status = 'active';
+        syncButtons();
+      });
+    });
+    syncButtons();
+  }
+
+  void initTaskBanner();
+</script>

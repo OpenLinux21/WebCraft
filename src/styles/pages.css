@@ -133,3 +133,46 @@
 .progress-card__meta a {
   font-weight: 600;
 }
+
+/* Task workspace banner (?task=<id>). */
+
+.task-banner {
+  border: var(--app-border-strong-width) solid var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-md);
+  margin-block-end: var(--md-sys-spacing-4);
+}
+
+.task-banner[hidden] {
+  display: none;
+}
+
+.task-banner__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-sys-spacing-2);
+}
+
+.task-banner__head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.task-banner__task {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.task-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--md-sys-spacing-2);
+}
+
+.task-banner__back {
+  font-family: var(--font-display);
+  font-size: var(--md-sys-typescale-small-size);
+  margin-inline-start: auto;
+}
