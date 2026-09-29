@@ -30,6 +30,7 @@ shared-ai.config.json
 !.vscode/extensions.json
 .idea/
 .zcode/
+.zcodeignore
 .DS_Store
 Thumbs.db
 
