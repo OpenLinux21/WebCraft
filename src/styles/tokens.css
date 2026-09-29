@@ -96,12 +96,13 @@
   /* Typography — Plex Sans for prose, Plex Mono for display/labels */
   --md-sys-typescale-font:
     'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif;
   --font-display:
     'IBM Plex Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, 'PingFang SC',
-    'Microsoft YaHei', monospace;
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', monospace;
   --md-sys-typescale-mono:
-    'IBM Plex Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, 'Courier New', monospace;
+    'IBM Plex Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, 'Noto Sans Mono CJK SC',
+    'Noto Sans CJK SC', 'Courier New', monospace;
   --md-sys-typescale-body-size: 1rem;
   --md-sys-typescale-body-line: 1.65;
   --md-sys-typescale-small-size: 0.875rem;
