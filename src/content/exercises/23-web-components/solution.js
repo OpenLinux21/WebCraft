@@ -26,7 +26,10 @@ class ColorChip extends HTMLElement {
   render() {
     // Attributes are the configuration channel and are strings,
     // which is exactly right for colors and short captions.
-    const hex = this.getAttribute('hex') ?? '#cccccc';
+    // Attribute values are attacker-controllable strings: validate the color
+    // and never interpolate the caption into markup.
+    const rawHex = this.getAttribute('hex') ?? '#cccccc';
+    const hex = /^#[0-9a-f]{3,8}$/i.test(rawHex) ? rawHex : '#cccccc';
     const label = this.getAttribute('label') ?? hex;
 
     this.shadowRoot.innerHTML = `
@@ -49,8 +52,10 @@ class ColorChip extends HTMLElement {
         }
       </style>
       <span class="chip" part="chip"></span>
-      <span class="caption">${label}</span>
+      <span class="caption"></span>
     `;
+    // textContent keeps the caption inert even when it contains markup.
+    this.shadowRoot.querySelector('.caption').textContent = label;
   }
 }
 

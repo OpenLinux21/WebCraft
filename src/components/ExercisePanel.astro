@@ -1,5 +1,6 @@
 ---
 import '@/components/material/register';
+import { serializeJsonScript } from '@/lib/utils/json-script';
 import { createTranslator } from '@/lib/i18n/core';
 import type { AppLocale } from '@/lib/i18n/core';
 
@@ -39,7 +40,11 @@ const hasSolution = [solution.html, solution.css, solution.js].some((code) => co
       <md-outlined-button type="button" data-load-solution>
         {t.t('lesson.loadSolution')}
       </md-outlined-button>
-      <script type="application/json" data-solution-payload set:html={JSON.stringify(solution)} />
+      <script
+        type="application/json"
+        data-solution-payload
+        set:html={serializeJsonScript(solution)}
+      />
     </details>
   )}
 </section>

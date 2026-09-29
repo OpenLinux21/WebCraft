@@ -40,12 +40,14 @@ function buildSystemPrompt(context: AssistantContext): string {
     );
   }
   if (context.code) {
+    // Delimiters mark student-authored content as untrusted data: the model
+    // is told (in aiPrompts.base) never to treat them as instructions.
     parts.push(
-      t.t('aiPrompts.codeContext', {
+      `<student_code>\n${t.t('aiPrompts.codeContext', {
         html: context.code.html || '(empty)',
         css: context.code.css || '(empty)',
         js: context.code.js || '(empty)',
-      }),
+      })}\n</student_code>`,
     );
   }
   const lines = (context.consoleLines ?? []).filter((line) => line.text.trim() !== '');

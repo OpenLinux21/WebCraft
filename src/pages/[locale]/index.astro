@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { getLessons, lessonIdOf } from '@/lib/courses/server';
+import { serializeJsonScript } from '@/lib/utils/json-script';
 import { createTranslator } from '@/lib/i18n/core';
 import { APP_LOCALES, type AppLocale } from '@/lib/i18n/types';
 import { coursesPath, lessonPath, playgroundPath, relativeHref } from '@/lib/routes';
@@ -86,7 +87,11 @@ const firstLesson = homeLessons[0];
           {t.t('home.startFirst')}
         </a>
       </p>
-      <script type="application/json" data-lessons-payload set:html={JSON.stringify(homeLessons)} />
+      <script
+        type="application/json"
+        data-lessons-payload
+        set:html={serializeJsonScript(homeLessons)}
+      />
     </section>
   )}
 </BaseLayout>

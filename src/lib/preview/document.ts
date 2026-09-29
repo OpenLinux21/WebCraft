@@ -74,7 +74,10 @@ const CAPTURE_SCRIPT = `
  * parent's message listener.
  */
 export function buildPreviewDocument(files: PreviewSource, token: string): string {
-  const capture = CAPTURE_SCRIPT.replace('__TOKEN__', token);
+  // JSON.stringify quotes the token and escapes anything dangerous; the
+  // function replacer keeps `$` sequences in the token literal.
+  const safeToken = JSON.stringify(token).replace(/</g, '\\u003c');
+  const capture = CAPTURE_SCRIPT.replace('__TOKEN__', () => safeToken);
   // Prevent user code from closing the wrapping tags early ('\/' is a valid
   // escape for '/' in both JS strings and CSS identifiers).
   const js = files.js.replace(/<\/script/gi, '<\\/script');
