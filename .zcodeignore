@@ -1,0 +1,72 @@
+# Dependencies
+node_modules/
+
+# Build output & packaged artifacts
+dist/
+release/
+*.zip
+
+# Astro generated types/cache
+.astro/
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Environment variables & secrets
+.env
+.env.*
+*.key
+secrets*.json
+
+# Shared AI config (contains the publisher's API key)
+shared-ai.config.json
+
+# Editor private config & OS junk
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.zcode/
+.DS_Store
+Thumbs.db
+
+# Logs & temp files
+logs/
+*.log
+npm-debug.log*
+tmp/
+.cache/
+
+# Local code-review artifacts
+bug.txt
+
+# ===== ↑ 以上同步自 .gitignore（「从 .gitignore 同步」只重写以上部分）=====
+.git/
+.hg/
+.svn/
+bower_components/
+jspm_packages/
+__pycache__/
+site-packages/
+venv/
+htmlcov/
+lcov-report/
+cmakefiles/
+cmake-build-*/
+bazel-*/
+pods/
+deriveddata/
+storybook-static/
+allure-results/
+allure-report/
+cdk.out/
+*.egg-info/
+*.dist-info/
+eggs/
+pip-wheel-metadata/
+wheels/
+# ----- ↑ 以上为 ZCode 默认排除规则（自定义规则请写在本行下方，不会被同步/恢复改动）-----
+# 自定义规则写在下方（本行提示可删除）

@@ -73,6 +73,13 @@ export const en = {
     continueLearning: 'Continue: {title}',
     startFirst: 'Start with the first lesson',
     viewAll: 'View all courses',
+    typewriterLines: [
+      'Learn front-end development by writing real code.',
+      'HTML, CSS, and JavaScript — one lesson at a time.',
+      'Type. Run. Break things. Fix them. Understand.',
+      'Every exercise runs live, right in your browser.',
+      'An AI tutor that guides, never spoils.',
+    ],
   },
   meta: {
     homeTitle: 'WebCraft — Learn web design & front-end programming',

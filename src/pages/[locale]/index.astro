@@ -2,7 +2,7 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { getLessons, lessonIdOf } from '@/lib/courses/server';
 import { serializeJsonScript } from '@/lib/utils/json-script';
-import { createTranslator } from '@/lib/i18n/core';
+import { createTranslator, getDictionary } from '@/lib/i18n/core';
 import { APP_LOCALES, type AppLocale } from '@/lib/i18n/types';
 import { coursesPath, lessonPath, playgroundPath, relativeHref } from '@/lib/routes';
 import '@/styles/pages.css';
@@ -32,11 +32,27 @@ const homeLessons: HomeLesson[] = lessons.map((lesson) => ({
   href: relativeHref(lessonPath(locale, lessonIdOf(lesson)), from),
 }));
 const firstLesson = homeLessons[0];
+
+// English hero gets the typewriter; other locales keep the static title.
+const typewriterLines = locale === 'en' ? getDictionary('en').home.typewriterLines : [];
+const staticTitle = typewriterLines[0] ?? t.t('home.heroTitle');
 ---
 
 <BaseLayout locale={locale} title={t.t('meta.homeTitle')} description={t.t('meta.homeDescription')}>
   <section class="hero immersive-section" data-immersive>
-    <h1>{t.t('home.heroTitle')}</h1>
+    {locale === 'en' ? (
+      <h1 class="hero-title" data-typewriter data-locale={locale}>
+        <span class="visually-hidden">{staticTitle}</span>
+        <span aria-hidden="true" data-typewriter-text>
+          {staticTitle}
+        </span>
+        <span class="hero-cursor" aria-hidden="true">
+          |
+        </span>
+      </h1>
+    ) : (
+      <h1>{t.t('home.heroTitle')}</h1>
+    )}
     <p>{t.t('home.heroSubtitle')}</p>
     <div class="hero__actions">
       <a class="btn btn--filled" href={relativeHref(coursesPath(locale), from)}>
@@ -182,30 +198,12 @@ const firstLesson = homeLessons[0];
     );
     for (const section of sections) revealer.observe(section);
 
+    // Compact layout: sections are content-sized, so there is nothing to
+    // snap to — Lenis only provides the smooth inertia.
     const { default: Lenis } = await import('lenis');
-    const lenis = new Lenis({ duration: 1.1, smoothWheel: true });
+    const lenis = new Lenis({ duration: 0.9, smoothWheel: true });
     const root = document.documentElement;
     root.dataset.lenisReady = 'true';
-
-    let settleTimer: ReturnType<typeof setTimeout> | null = null;
-    const snapToNearest = (): void => {
-      if (settleTimer !== null) clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => {
-        const viewportMid = window.scrollY + window.innerHeight / 2;
-        let best = sections[0];
-        let bestDistance = Number.POSITIVE_INFINITY;
-        for (const section of sections) {
-          const mid = section.offsetTop + section.offsetHeight / 2;
-          const distance = Math.abs(mid - viewportMid);
-          if (distance < bestDistance) {
-            bestDistance = distance;
-            best = section;
-          }
-        }
-        if (best) lenis.scrollTo(best, { duration: 0.7 });
-      }, 140);
-    };
-    lenis.on('scroll', snapToNearest);
 
     const raf = (time: number): void => {
       lenis.raf(time);
@@ -215,4 +213,62 @@ const firstLesson = homeLessons[0];
   }
 
   void initImmersive();
+</script>
+
+<script>
+  // Human-feel typewriter for the English hero (see home.typewriterLines).
+  // Timing: type 60-120 ms/char (longer around punctuation and spaces),
+  // hold 1-1.8 s per sentence, erase at 30-70 ms/char, breathe 0.3-0.6 s.
+  // prefers-reduced-motion users get the static first line, no cursor.
+  import { getDictionary, isAppLocale } from '@/lib/i18n/core';
+
+  async function initTypewriter(): Promise<void> {
+    const host = document.querySelector<HTMLElement>('[data-typewriter]');
+    if (!host) return; // non-English locales keep the static title
+    const localeRaw: unknown = host.dataset.locale;
+    if (!isAppLocale(localeRaw) || !localeRaw.startsWith('en')) return;
+
+    const textEl = host.querySelector<HTMLElement>('[data-typewriter-text]');
+    if (!textEl) return;
+
+    const lines = getDictionary(localeRaw).home.typewriterLines;
+    if (lines.length === 0) return;
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      textEl.textContent = lines[0] ?? '';
+      return; // static first line; the cursor is hidden by CSS
+    }
+
+    const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+    const rand = (min: number, max: number): number => min + Math.random() * (max - min);
+
+    const typeLine = async (line: string): Promise<void> => {
+      for (const ch of line) {
+        textEl.textContent = (textEl.textContent ?? '') + ch;
+        let delay = rand(60, 120);
+        if (/[.,!?;:—]/.test(ch)) delay = rand(150, 300);
+        else if (ch === ' ') delay += rand(0, 40);
+        await sleep(delay);
+      }
+    };
+
+    const eraseLine = async (): Promise<void> => {
+      while ((textEl.textContent ?? '').length > 0) {
+        textEl.textContent = (textEl.textContent ?? '').slice(0, -1);
+        await sleep(rand(30, 70));
+      }
+    };
+
+    // Hand the heading over to the animation from a blank slate.
+    textEl.textContent = '';
+    for (let index = 0; ; index += 1) {
+      const line = lines[index % lines.length] ?? '';
+      await typeLine(line);
+      await sleep(rand(1000, 1800));
+      await eraseLine();
+      await sleep(rand(300, 600));
+    }
+  }
+
+  void initTypewriter();
 </script>

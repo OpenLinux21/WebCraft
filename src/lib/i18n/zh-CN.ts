@@ -75,6 +75,13 @@ export const zhCN: Dictionary = {
     continueLearning: '继续学习：{title}',
     startFirst: '从第一课开始',
     viewAll: '查看全部课程',
+    typewriterLines: [
+      '通过编写真实代码学习前端开发。',
+      'HTML、CSS 和 JavaScript——一次一课。',
+      '编写、运行、破坏、修复、理解。',
+      '每个练习都在浏览器中实时运行。',
+      '一位引导而非代劳的 AI 助教。',
+    ],
   },
   meta: {
     homeTitle: 'WebCraft — 网页设计与前端编程教学平台',

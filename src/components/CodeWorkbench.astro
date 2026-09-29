@@ -187,7 +187,8 @@ const t = createTranslator(locale);
     // module scripts run before inline body scripts, so the URL is the
     // single source of truth (the inline banner script mirrors it).
     const taskParam = new URLSearchParams(window.location.search).get('task');
-    const taskId = taskParam && /^[0-9a-f]{4,32}$/i.test(taskParam) ? taskParam.toLowerCase() : null;
+    const taskId =
+      taskParam && /^[0-9a-f]{4,32}$/i.test(taskParam) ? taskParam.toLowerCase() : null;
     const draftKey = taskId ? `task-${taskId}` : (root.dataset.draftKey ?? '');
     const instanceId = taskId ? `task-${taskId}` : (root.dataset.instanceId ?? 'workbench');
     if (taskId) {
