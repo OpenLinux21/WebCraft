@@ -5,6 +5,13 @@ import { createTranslator } from '@/lib/i18n/core';
 import { LOCALE_STORAGE_KEY } from '@/lib/i18n/inline-scripts';
 import { HTML_LANG, type AppLocale } from '@/lib/i18n/types';
 import { NO_FLASH_SCRIPT } from '@/lib/theme/no-flash';
+// Self-hosted IBM Plex (latin subsets, bundled by Vite): zero third-party
+// requests, works offline. Chinese text falls back to the system stacks in
+// tokens.css.
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/ibm-plex-mono/600.css';
+import '@fontsource/ibm-plex-sans/400.css';
+import '@fontsource/ibm-plex-sans/600.css';
 import '@/styles/tokens.css';
 import '@/styles/base.css';
 import '@/styles/material.css';
@@ -17,8 +24,8 @@ interface Props {
 
 const { locale, title, description } = Astro.props;
 const t = createTranslator(locale);
-const themeColorLight = '#fef7ff';
-const themeColorDark = '#141218';
+const themeColorLight = '#f2f3f5';
+const themeColorDark = '#131519';
 ---
 
 <!doctype html>
