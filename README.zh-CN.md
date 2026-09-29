@@ -127,6 +127,18 @@ e2e/                             # Playwright 冒烟套件
 | `typecheck` | `astro check` |
 | `verify` | lint + typecheck + test + build |
 
+## 共享 AI 模式（`serve:shared`）
+
+在可信环境（家庭实验室、课堂、内网）中，可以让所有访客无需任何配置直接使用 AI 助教：
+
+```bash
+npm run build
+# 创建 shared-ai.config.json（provider、baseUrl、model、apiKey 等）
+npm run serve:shared   # 在 http://127.0.0.1:2020 上服务 dist/
+```
+
+若存在 `shared-ai.config.json`，服务器会把它发布为 `shared-ai.json`，站点进入共享模式：访客开箱即用 AI 助教（任意位置右键唤出），个人 AI 设置锁定。**API Key 对该站点的所有访客可见**——绝不要把此模式暴露到公网。没有该配置文件时，此命令就是一个普通静态文件服务器。`shared-ai.config.json` 已加入 gitignore。
+
 ## 安全说明
 
 - 用户代码在沙箱 iframe 中运行（`allow-scripts`、**无** `allow-same-origin`，经 `srcdoc` 注入）；宿主页面从不 `eval` 用户代码。预览消息以每次运行随机 token + `event.source` 校验完成认证。

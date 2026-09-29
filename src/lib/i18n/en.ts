@@ -196,6 +196,8 @@ export const en = {
       clearKey: 'Clear API key',
       keyCleared: 'API key cleared',
       saved: 'AI settings saved',
+      sharedNotice:
+        'This site provides a shared AI tutor ({model}) configured by the host. Personal AI settings are disabled.',
     },
     backup: {
       exportTitle: 'Export data',

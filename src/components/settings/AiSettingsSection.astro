@@ -237,12 +237,31 @@ const t = createTranslator(locale);
     };
   }
 
-  function initAiSettings(): void {
+  async function initAiSettings(): Promise<void> {
     const root = document.querySelector<HTMLElement>('[data-ai-settings]');
     if (!root) return;
     const localeRaw: unknown = root.dataset.locale;
     if (!isAppLocale(localeRaw)) return;
     const t = createTranslator(localeRaw);
+
+    // Shared mode: show the publisher-provided tutor read-only.
+    const { hasSharedAI } = await import('@/lib/ai/settings');
+    if (hasSharedAI()) {
+      const notice = document.createElement('p');
+      notice.className = 'form-hint form-warning';
+      const shared = loadAIConfig();
+      notice.textContent = t.t('settings.ai.sharedNotice', {
+        model: shared?.model ?? '',
+      });
+      root.prepend(notice);
+      for (const field of root.querySelectorAll<HTMLElement>(
+        '[data-ai-field], [data-ai-save], [data-ai-test], [data-ai-clear-key]',
+      )) {
+        (field as HTMLElement).setAttribute('inert', '');
+        (field as HTMLElement).style.opacity = '0.5';
+      }
+      return;
+    }
 
     writeForm(root, loadAIConfig());
 
@@ -306,5 +325,5 @@ const t = createTranslator(locale);
     });
   }
 
-  initAiSettings();
+  void initAiSettings();
 </script>

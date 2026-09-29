@@ -22,6 +22,9 @@ playwright/.cache/
 *.key
 secrets*.json
 
+# Shared AI config (contains the publisher's API key)
+shared-ai.config.json
+
 # Editor private config & OS junk
 .vscode/*
 !.vscode/extensions.json

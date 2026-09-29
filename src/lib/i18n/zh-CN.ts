@@ -196,6 +196,7 @@ export const zhCN: Dictionary = {
       clearKey: '清除 API Key',
       keyCleared: '已清除 API Key',
       saved: 'AI 设置已保存',
+      sharedNotice: '本站由站长提供了共享 AI 助教（{model}），个人 AI 设置已停用。',
     },
     backup: {
       exportTitle: '导出数据',

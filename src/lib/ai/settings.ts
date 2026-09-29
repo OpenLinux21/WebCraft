@@ -49,7 +49,21 @@ export function parseAIConfig(value: unknown): AIConfig | null {
   };
 }
 
+let sharedOverride: AIConfig | null | undefined;
+
+/** Installs the shared-provider override (serve:shared mode). */
+export function setSharedAIConfig(config: AIConfig | null): void {
+  sharedOverride = config;
+}
+
+/** True when the site runs with a publisher-provided shared tutor. */
+export function hasSharedAI(): boolean {
+  return sharedOverride !== null && sharedOverride !== undefined;
+}
+
 export function loadAIConfig(): AIConfig | null {
+  // Shared mode wins: visitors cannot (and must not need to) override it.
+  if (sharedOverride !== null && sharedOverride !== undefined) return sharedOverride;
   try {
     const raw = globalThis.localStorage?.getItem(AI_CONFIG_KEY);
     if (raw === null) return null;

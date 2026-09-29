@@ -56,6 +56,11 @@ const themeColorDark = '#131519';
     <AppFooter locale={locale} />
     <GlobalAiOverlay locale={locale} />
     <script>
+      // Shared-AI mode: pick up a publisher-provided tutor config if present.
+      import { bootSharedAI } from '@/lib/ai/shared';
+      void bootSharedAI();
+    </script>
+    <script>
       // Scroll progress bar (scrollbars are hidden site-wide).
       const progressBar = document.querySelector<HTMLElement>('[data-scroll-progress]');
       if (progressBar) {

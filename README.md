@@ -128,6 +128,18 @@ e2e/                             # Playwright smoke suite
 | `typecheck` | `astro check` |
 | `verify` | lint + typecheck + test + build |
 
+## Shared AI mode (`serve:shared`)
+
+For trusted environments (home lab, classroom, intranet) you can publish a tutor that every visitor can use without configuring anything:
+
+```bash
+npm run build
+# create shared-ai.config.json (provider, baseUrl, model, apiKey, …)
+npm run serve:shared   # serves dist/ on http://127.0.0.1:2020
+```
+
+If `shared-ai.config.json` exists, the server publishes it as `shared-ai.json` and the site runs in shared mode: visitors get the tutor out of the box (right-click anywhere opens it) and personal AI settings are locked. **The API key is readable by every visitor of the site** — never expose this mode to the public internet. Without the config file the command is a plain static file server. `shared-ai.config.json` is gitignored.
+
 ## Security notes
 
 - User code runs in a sandboxed iframe (`allow-scripts`, **no** `allow-same-origin`) via `srcdoc`; the host page never `eval`s user code. Inbound messages are authenticated with a per-run random token plus an `event.source` check.
