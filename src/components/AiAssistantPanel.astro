@@ -163,6 +163,8 @@ const settingsHref = '../settings/';
     const addBubble = (role: 'user' | 'assistant'): HTMLElement => {
       const bubble = document.createElement('div');
       bubble.className = `ai-panel__bubble ai-panel__bubble--${role}`;
+      // Locale-independent terminal prefixes rendered by CSS (attr(data-speaker)).
+      bubble.dataset.speaker = role === 'user' ? '>' : 'AI';
       messages.appendChild(bubble);
       messages.scrollTop = messages.scrollHeight;
       return bubble;

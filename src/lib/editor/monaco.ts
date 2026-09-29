@@ -37,8 +37,44 @@ javascriptDefaults.setCompilerOptions({
   checkJs: false,
 });
 
-export function currentMonacoTheme(): 'vs' | 'vs-dark' {
-  return document.documentElement.dataset.theme === 'dark' ? 'vs-dark' : 'vs';
+/** Editor themes matched to the workshop-terminal token palette. */
+const THEMES = {
+  light: 'webcraft-light',
+  dark: 'webcraft-dark',
+} as const;
+
+monaco.editor.defineTheme('webcraft-light', {
+  base: 'vs',
+  inherit: true,
+  rules: [{ token: 'comment', foreground: '74777f', fontStyle: 'italic' }],
+  colors: {
+    'editor.background': '#ffffff',
+    'editor.lineHighlightBackground': '#f0f1f4',
+    'editor.selectionBackground': '#dce4f7',
+    'editorCursor.foreground': '#35548f',
+    'editorIndentGuide.background1': '#e0e2e7',
+    'editorWidget.background': '#f7f8fa',
+    'editorWidget.border': '#c4c7cf',
+  },
+});
+
+monaco.editor.defineTheme('webcraft-dark', {
+  base: 'vs-dark',
+  inherit: true,
+  rules: [{ token: 'comment', foreground: '8e9199', fontStyle: 'italic' }],
+  colors: {
+    'editor.background': '#1a1c21',
+    'editor.lineHighlightBackground': '#1e2126',
+    'editor.selectionBackground': '#2b4680',
+    'editorCursor.foreground': '#a8c2ff',
+    'editorIndentGuide.background1': '#33363d',
+    'editorWidget.background': '#1e2126',
+    'editorWidget.border': '#44474e',
+  },
+});
+
+export function currentMonacoTheme(): (typeof THEMES)[keyof typeof THEMES] {
+  return document.documentElement.dataset.theme === 'dark' ? THEMES.dark : THEMES.light;
 }
 
 export interface EditorFactoryOptions {
@@ -73,7 +109,7 @@ export function createCodeEditor(options: EditorFactoryOptions): EditorInstance 
   // Follow app theme switches (event dispatched by lib/theme).
   const themeListener = (event: Event): void => {
     const resolved = (event as CustomEvent<{ resolved?: string }>).detail?.resolved;
-    editor.updateOptions({ theme: resolved === 'dark' ? 'vs-dark' : 'vs' });
+    editor.updateOptions({ theme: resolved === 'dark' ? THEMES.dark : THEMES.light });
   };
   document.addEventListener('webcraft:theme-change', themeListener);
 
