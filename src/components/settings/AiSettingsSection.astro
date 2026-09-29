@@ -274,7 +274,13 @@ const t = createTranslator(locale);
       const apiKeyField = root.querySelector<MdFilledTextField>('[data-ai-field="apiKey"]');
       if (apiKeyField) apiKeyField.value = '';
       const config = buildConfig(readForm(root));
-      if (config) saveAIConfig(config);
+      if (!config) {
+        // Invalid form (e.g. headers JSON): clear the field but do not claim
+        // success — the stored key must not silently survive.
+        showToast(t.t('settings.ai.customHeadersInvalid'));
+        return;
+      }
+      saveAIConfig(config);
       showToast(t.t('settings.ai.keyCleared'));
     });
 

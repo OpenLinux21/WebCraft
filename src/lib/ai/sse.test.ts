@@ -16,6 +16,11 @@ describe('parseOpenAiDeltas', () => {
     expect(await collect(parseOpenAiDeltas(stream))).toEqual(['He', 'llo']);
   });
 
+  it('processes an unterminated final data line', async () => {
+    const stream = streamFromChunks(['data: {"choices":[{"delta":{"content":"end"}}]}']);
+    expect(await collect(parseOpenAiDeltas(stream))).toEqual(['end']);
+  });
+
   it('skips malformed and non-content lines', async () => {
     const stream = streamFromChunks([
       'data: {broken}\ndata: {"choices":[{"delta":{}}]}\ndata: {"choices":[{"delta":{"content":"ok"}}]}\n\n',
@@ -33,6 +38,11 @@ describe('parseOllamaDeltas', () => {
       '{"message":{"content":"also ignored"},"done":false}\n',
     ]);
     expect(await collect(parseOllamaDeltas(stream))).toEqual(['Hi', ' there']);
+  });
+
+  it('processes an unterminated final ndjson line', async () => {
+    const stream = streamFromChunks(['{"message":{"content":"tail"},"done":true}']);
+    expect(await collect(parseOllamaDeltas(stream))).toEqual([]);
   });
 
   it('tolerates blank lines and malformed JSON', async () => {

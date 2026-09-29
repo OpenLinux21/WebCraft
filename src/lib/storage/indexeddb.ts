@@ -13,21 +13,58 @@ function openDatabase(): Promise<IDBDatabase> {
       }
     };
     request.onsuccess = () => {
-      resolve(request.result);
+      const db = request.result;
+      // Step aside for schema upgrades triggered by other tabs; holding the
+      // connection open here would deadlock their versionchange.
+      db.onversionchange = () => {
+        db.close();
+      };
+      resolve(db);
     };
     request.onerror = () => {
       reject(request.error ?? new Error('Failed to open IndexedDB'));
     };
+    // 'blocked' is transient, not fatal: the open can still succeed once the
+    // other connection closes. Rejecting here would poison the promise for
+    // good while the later onsuccess would leak an unclosed connection.
     request.onblocked = () => {
-      reject(new Error('IndexedDB open blocked by another connection'));
+      console.warn('[webcraft] IndexedDB open is blocked by another connection; waiting…');
     };
   });
 }
 
 /**
- * IndexedDB adapter. Values must be structured-cloneable; all app records
- * are plain JSON-like objects.
+ * Wraps a single-request operation and rejects from `transaction.onabort`
+ * as well: a transaction can abort without any request error event (quota
+ * exceeded, connection closed mid-transaction), which would otherwise leave
+ * the promise unsettled forever.
  */
+function requestViaTransaction<T>(
+  store: StoreName,
+  start: (objectStore: IDBObjectStore) => IDBRequest<T>,
+  mode: IDBTransactionMode,
+  db: IDBDatabase,
+  describe: (action: string) => Error,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(store, mode);
+    const settle = () => {
+      const request = start(transaction.objectStore(store));
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      request.onerror = () => {
+        reject(request.error ?? describe('failed'));
+      };
+    };
+    transaction.onabort = () => {
+      reject(transaction.error ?? describe('aborted'));
+    };
+    settle();
+  });
+}
+
+/** IndexedDB adapter. Values must be structured-cloneable. */
 export class IndexedDbAdapter implements StorageAdapter {
   private readonly db: Promise<IDBDatabase>;
 
@@ -42,47 +79,42 @@ export class IndexedDbAdapter implements StorageAdapter {
 
   async get<T>(store: StoreName, key: string): Promise<T | undefined> {
     const db = await this.db;
-    return new Promise((resolve, reject) => {
-      const request = db.transaction(store, 'readonly').objectStore(store).get(key);
-      request.onsuccess = () => {
-        resolve(request.result as T | undefined);
-      };
-      request.onerror = () => {
-        reject(request.error ?? new Error(`Failed to read ${store}/${key}`));
-      };
-    });
+    return requestViaTransaction<T>(
+      store,
+      (objectStore) => objectStore.get(key),
+      'readonly',
+      db,
+      (action) => new Error(`Failed to read ${store}/${key}: transaction ${action}`),
+    );
   }
 
   async set<T>(store: StoreName, key: string, value: T): Promise<void> {
     const db = await this.db;
-    return new Promise((resolve, reject) => {
-      const request = db.transaction(store, 'readwrite').objectStore(store).put(value, key);
-      request.onsuccess = () => {
-        resolve();
-      };
-      request.onerror = () => {
-        reject(request.error ?? new Error(`Failed to write ${store}/${key}`));
-      };
-    });
+    await requestViaTransaction<IDBValidKey>(
+      store,
+      (objectStore) => objectStore.put(value, key),
+      'readwrite',
+      db,
+      (action) => new Error(`Failed to write ${store}/${key}: transaction ${action}`),
+    );
   }
 
   async delete(store: StoreName, key: string): Promise<void> {
     const db = await this.db;
-    return new Promise((resolve, reject) => {
-      const request = db.transaction(store, 'readwrite').objectStore(store).delete(key);
-      request.onsuccess = () => {
-        resolve();
-      };
-      request.onerror = () => {
-        reject(request.error ?? new Error(`Failed to delete ${store}/${key}`));
-      };
-    });
+    await requestViaTransaction<undefined>(
+      store,
+      (objectStore) => objectStore.delete(key),
+      'readwrite',
+      db,
+      (action) => new Error(`Failed to delete ${store}/${key}: transaction ${action}`),
+    );
   }
 
   async list<T>(store: StoreName): Promise<Array<{ key: string; value: T }>> {
     const db = await this.db;
     return new Promise((resolve, reject) => {
-      const objectStore = db.transaction(store, 'readonly').objectStore(store);
+      const transaction = db.transaction(store, 'readonly');
+      const objectStore = transaction.objectStore(store);
       const keysRequest = objectStore.getAllKeys();
       const valuesRequest = objectStore.getAll();
       let finished = 0;
@@ -111,20 +143,21 @@ export class IndexedDbAdapter implements StorageAdapter {
       };
       keysRequest.onerror = fail;
       valuesRequest.onerror = fail;
+      transaction.onabort = () => {
+        reject(transaction.error ?? new Error(`Failed to list ${store}: transaction aborted`));
+      };
     });
   }
 
   async clear(store: StoreName): Promise<void> {
     const db = await this.db;
-    return new Promise((resolve, reject) => {
-      const request = db.transaction(store, 'readwrite').objectStore(store).clear();
-      request.onsuccess = () => {
-        resolve();
-      };
-      request.onerror = () => {
-        reject(request.error ?? new Error(`Failed to clear ${store}`));
-      };
-    });
+    await requestViaTransaction<undefined>(
+      store,
+      (objectStore) => objectStore.clear(),
+      'readwrite',
+      db,
+      (action) => new Error(`Failed to clear ${store}: transaction ${action}`),
+    );
   }
 
   async clearAll(): Promise<void> {
@@ -139,6 +172,9 @@ export class IndexedDbAdapter implements StorageAdapter {
       };
       transaction.onerror = () => {
         reject(transaction.error ?? new Error('Failed to clear database'));
+      };
+      transaction.onabort = () => {
+        reject(transaction.error ?? new Error('Failed to clear database: transaction aborted'));
       };
     });
   }

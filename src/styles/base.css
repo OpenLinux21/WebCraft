@@ -104,8 +104,10 @@ video {
   transform: translateY(0);
 }
 
-/* Keep custom elements invisible until defined to avoid unstyled flashes. */
-:not(:defined) {
+/* Keep custom elements invisible until defined to avoid unstyled flashes.
+   Gated on the `js` class (added by the early inline theme script) so the
+   page still renders its static content when scripts are blocked. */
+html.js :not(:defined) {
   visibility: hidden;
 }
 

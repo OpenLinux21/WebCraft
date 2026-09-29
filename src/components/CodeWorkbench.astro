@@ -135,6 +135,7 @@ const t = createTranslator(locale);
   import '@/components/material/register';
   import type { MdOutlinedSelect } from '@/components/material/register';
   import type { CodeFiles } from '@/lib/courses/code-files';
+  import type { CodeDraft } from '@/lib/courses/types';
   import { createTranslator, isAppLocale } from '@/lib/i18n/core';
   import { generateToken } from '@/lib/utils/id';
   import { debounce } from '@/lib/utils/debounce';
@@ -198,13 +199,27 @@ const t = createTranslator(locale);
     // Editor + models
     const editorEl = root.querySelector<HTMLElement>('[data-editor]');
     if (!editorEl) return;
-    const storage = await getStorage();
-    const drafts = createDraftRepo(storage);
-    const savedDraft = draftKey ? await drafts.get(draftKey) : undefined;
+    // Storage failures (private mode, quota) must not leave the workbench
+    // dead: fall back to the starter code and keep the session working.
+    let drafts: ReturnType<typeof createDraftRepo> | null = null;
+    let savedDraft: CodeDraft | undefined;
+    try {
+      const storage = await getStorage();
+      drafts = createDraftRepo(storage);
+      savedDraft = draftKey ? await drafts.get(draftKey) : undefined;
+    } catch {
+      drafts = null;
+    }
     const filesAtStart = savedDraft
       ? { html: savedDraft.html, css: savedDraft.css, js: savedDraft.js }
       : initial;
     if (savedDraft) showToast(t.t('workbench.draftRestored'));
+
+    const saveDraft = (files: CodeFiles): void => {
+      drafts?.set(draftKey, files).catch(() => {
+        // Draft persistence is best-effort; the editor keeps working.
+      });
+    };
 
     const models = createModels(
       { html: filesAtStart.html, css: filesAtStart.css, javascript: filesAtStart.js },
@@ -296,7 +311,7 @@ const t = createTranslator(locale);
 
     // Autosave (debounced) + live preview on every content change.
     const persistDraft = draftKey
-      ? debounce(() => void drafts.set(draftKey, filesFromModels(models)), 800)
+      ? debounce(() => saveDraft(filesFromModels(models)), 800)
       : null;
     editorInstance.onContentChange(() => {
       setSharedFiles(draftKey, filesFromModels(models));
@@ -334,7 +349,7 @@ const t = createTranslator(locale);
     button('reset')?.addEventListener('click', () => {
       if (!window.confirm(t.t('workbench.resetConfirm'))) return;
       setModels(models, initial);
-      if (draftKey) void drafts.set(draftKey, initial);
+      if (draftKey) saveDraft(initial);
       run();
       showToast(t.t('workbench.resetDone'));
     });
@@ -363,13 +378,15 @@ const t = createTranslator(locale);
       if (!window.confirm(t.t('lesson.loadSolutionConfirm'))) return;
       const files = asCodeFiles(detail);
       setModels(models, files);
-      if (draftKey) void drafts.set(draftKey, files);
+      if (draftKey) saveDraft(files);
       run();
     };
     window.addEventListener('webcraft:load-code', loadSolution);
 
-    // Cleanup on page exit.
+    // Cleanup on page exit (also drops the window-level listener so a
+    // bfcache restore cannot stack handlers).
     window.addEventListener('pagehide', () => {
+      window.removeEventListener('webcraft:load-code', loadSolution);
       persistDraft?.cancel();
       if (liveTimer !== null) clearTimeout(liveTimer);
       preview.dispose();

@@ -53,6 +53,13 @@ export async function* sseDataLines(
       newlineIndex = buffer.indexOf('\n');
     }
   }
+  // SSE allows the final event to be unterminated; flush the decoder and
+  // process whatever remains in the buffer.
+  buffer += decoder.decode();
+  const lastLine = buffer.replace(/\r$/, '');
+  if (lastLine.startsWith('data:')) {
+    yield lastLine.slice(5).trim();
+  }
 }
 
 /** Yields text deltas from an OpenAI-compatible SSE stream. */
@@ -86,6 +93,15 @@ export async function* parseOllamaDeltas(
       }
       newlineIndex = buffer.indexOf('\n');
     }
+  }
+  // NDJSON files may end without a trailing newline; flush and process the
+  // remainder so the final message (often done: true) is never dropped.
+  buffer += decoder.decode();
+  const remaining = buffer.trim();
+  if (remaining !== '') {
+    const { text, done } = extractOllamaDeltaText(remaining);
+    if (done) return;
+    if (text !== '') yield text;
   }
 }
 

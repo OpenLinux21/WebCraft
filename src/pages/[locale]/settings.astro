@@ -140,11 +140,16 @@ const t = createTranslator(locale);
     });
     confirm?.addEventListener('click', () => {
       void (async () => {
-        const storage = await getStorage();
-        await storage.clearAll();
-        clearAppLocalStorage();
-        dialog.close();
-        window.location.reload();
+        try {
+          const storage = await getStorage();
+          await storage.clearAll();
+          clearAppLocalStorage();
+          dialog.close();
+          window.location.reload();
+        } catch (error) {
+          // Partial failure: keep the dialog open so the user can retry.
+          console.error('[webcraft] Failed to clear local data', error);
+        }
       })();
     });
   }

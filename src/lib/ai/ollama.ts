@@ -44,8 +44,15 @@ export class OllamaProvider implements AIProvider {
     if (!response.ok || response.body === null) {
       throw new AIRequestError(`Ollama answered with HTTP ${response.status}`);
     }
-    for await (const text of parseOllamaDeltas(response.body)) {
-      yield { kind: 'text', text };
+    // Stream failures (network drop mid-response, abort after headers) must
+    // surface as AIRequestError too, not as a raw TypeError.
+    try {
+      for await (const text of parseOllamaDeltas(response.body)) {
+        yield { kind: 'text', text };
+      }
+    } catch (error: unknown) {
+      const described = describeFetchError(error);
+      throw new AIRequestError(described.message, described.hint, { cause: error });
     }
     yield { kind: 'done' };
   }

@@ -75,8 +75,14 @@ export class OpenAICompatibleProvider implements AIProvider {
 
   async *chat(config: AIConfig, request: ChatRequest): AsyncIterable<ChatDelta> {
     const response = await postChat(config, request);
-    for await (const text of parseOpenAiDeltas(response.body!)) {
-      yield { kind: 'text', text };
+    // Stream failures must honor the AIProvider error contract as well.
+    try {
+      for await (const text of parseOpenAiDeltas(response.body!)) {
+        yield { kind: 'text', text };
+      }
+    } catch (error: unknown) {
+      const described = describeFetchError(error);
+      throw new AIRequestError(described.message, described.hint, { cause: error });
     }
     yield { kind: 'done' };
   }

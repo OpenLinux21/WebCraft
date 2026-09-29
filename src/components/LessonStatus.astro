@@ -76,7 +76,20 @@ const { locale, lessonId } = Astro.props;
 
       for (const [action, button] of buttons) {
         button.addEventListener('click', () => {
-          void repo.apply(lessonId, action).then((progress) => sync(progress.status));
+          // Ignore clicks while a write is in flight: IndexedDB writes can
+          // settle out of order, and the last-applied status must match what
+          // is actually persisted.
+          if (button.disabled) return;
+          button.disabled = true;
+          repo
+            .apply(lessonId, action)
+            .then((progress) => sync(progress.status))
+            .catch(() => {
+              // Write failed: keep the previous status visible.
+            })
+            .finally(() => {
+              button.disabled = false;
+            });
         });
       }
     }

@@ -66,7 +66,7 @@ const t = createTranslator(locale);
   import { createTranslator, isAppLocale } from '@/lib/i18n/core';
   import { showToast } from '@/lib/ui/toast';
   import { getStorage } from '@/lib/storage/storage';
-  import { collectBackupStores, restoreBackup } from '@/lib/backup/restore';
+  import { collectBackupStores, countDroppedEntries, restoreBackup } from '@/lib/backup/restore';
   import { backupFileName, buildBackupFile, serializeBackup } from '@/lib/backup/export';
   import { BackupError, parseBackupJson } from '@/lib/backup/import';
   import type { BackupFile } from '@/lib/backup/types';
@@ -129,6 +129,12 @@ const t = createTranslator(locale);
         };
         const theme = rawString('webcraft.theme');
         const locale = rawString('webcraft.locale');
+        const dropped = countDroppedEntries(stores);
+        if (dropped > 0) {
+          console.warn(
+            `[webcraft] Backup skipped ${dropped} corrupted record(s); the export may be incomplete.`,
+          );
+        }
         const file = buildBackupFile({
           progress: stores.progress,
           drafts: stores.drafts,
@@ -146,14 +152,19 @@ const t = createTranslator(locale);
     });
 
     const importInput = root.querySelector<HTMLInputElement>('[data-import-file]');
+    // The confirm/cancel handlers are registered exactly once and read the
+    // currently pending file from this variable — re-registering per
+    // selection would stack handlers and restore the same backup twice when
+    // the dialog is dismissed via Escape/backdrop between selections.
+    let pendingFile: BackupFile | null = null;
     importInput?.addEventListener('change', () => {
       const file = importInput.files?.[0];
       if (!file || !dialog || !dialogText || !dialogConfirm) return;
       void (async () => {
-        let parsed: BackupFile;
         try {
-          parsed = parseBackupJson(await file.text());
+          pendingFile = parseBackupJson(await file.text());
         } catch (error: unknown) {
+          pendingFile = null;
           if (error instanceof BackupError && error.reason === 'newer-version') {
             showToast(t.t('settings.backup.newerVersion'));
           } else {
@@ -164,33 +175,30 @@ const t = createTranslator(locale);
         }
         dialogText.textContent = t.t('settings.backup.importConfirm');
         dialog.showModal();
-        dialogCancel?.addEventListener(
-          'click',
-          () => {
-            dialog.close();
-            importInput.value = '';
-          },
-          { once: true },
-        );
-        dialogConfirm.addEventListener(
-          'click',
-          () => {
-            void (async () => {
-              try {
-                const storage = await getStorage();
-                await restoreBackup(storage, parsed, { replace: true });
-                applyBackupSettings(parsed);
-                dialog.close();
-                showToast(t.t('settings.backup.importSuccess'));
-                window.setTimeout(() => window.location.reload(), 600);
-              } catch {
-                dialog.close();
-                showToast(t.t('errors.generic', { reason: 'restore failed' }));
-              }
-            })();
-          },
-          { once: true },
-        );
+      })();
+    });
+
+    dialogCancel?.addEventListener('click', () => {
+      pendingFile = null;
+      dialog.close();
+      if (importInput) importInput.value = '';
+    });
+    dialogConfirm?.addEventListener('click', () => {
+      if (!pendingFile) return;
+      const fileToRestore = pendingFile;
+      pendingFile = null;
+      void (async () => {
+        try {
+          const storage = await getStorage();
+          await restoreBackup(storage, fileToRestore, { replace: true });
+          applyBackupSettings(fileToRestore);
+          dialog?.close();
+          showToast(t.t('settings.backup.importSuccess'));
+          window.setTimeout(() => window.location.reload(), 600);
+        } catch {
+          dialog?.close();
+          showToast(t.t('errors.generic', { reason: 'restore failed' }));
+        }
       })();
     });
 
