@@ -126,6 +126,7 @@ export const en = {
     prev: 'Previous lesson',
     next: 'Next lesson',
     estimated: 'About {minutes} minutes',
+    toc: 'On this page',
     notFound: 'Lesson not found',
   },
   workbench: {

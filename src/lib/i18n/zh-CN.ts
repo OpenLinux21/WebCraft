@@ -127,6 +127,7 @@ export const zhCN: Dictionary = {
     prev: '上一课',
     next: '下一课',
     estimated: '约 {minutes} 分钟',
+    toc: '本页目录',
     notFound: '课程不存在',
   },
   workbench: {

@@ -1,0 +1,82 @@
+/* Lesson table of contents: sticky rail on wide screens, inline elsewhere. */
+
+.lesson-layout {
+  display: block;
+}
+
+.lesson-toc {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .lesson-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 16rem;
+    gap: var(--md-sys-spacing-6);
+    align-items: start;
+  }
+
+  .lesson-toc {
+    display: block;
+    position: sticky;
+    top: calc(var(--app-header-height) + var(--md-sys-spacing-4));
+    max-height: calc(100dvh - var(--app-header-height) - var(--md-sys-spacing-8));
+    overflow-y: auto;
+    border-inline-start: var(--app-border-strong-width) solid var(--md-sys-color-on-surface);
+    padding-inline-start: var(--md-sys-spacing-4);
+  }
+}
+
+.lesson-toc__title {
+  margin: 0 0 var(--md-sys-spacing-3);
+  font-family: var(--font-display);
+  font-size: var(--md-sys-typescale-small-size);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lesson-toc__group {
+  margin-block-end: var(--md-sys-spacing-3);
+}
+
+.lesson-toc__link {
+  display: block;
+  padding: 0.2rem 0;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-small-size);
+  text-decoration: none;
+  border-inline-start: 2px solid transparent;
+  padding-inline-start: var(--md-sys-spacing-2);
+  margin-inline-start: calc(-1 * var(--md-sys-spacing-2) - 2px);
+}
+
+.lesson-toc__link:hover {
+  color: var(--md-sys-color-primary);
+}
+
+.lesson-toc__link.is-active {
+  color: var(--md-sys-color-primary);
+  border-inline-start-color: var(--md-sys-color-primary);
+  font-weight: 600;
+}
+
+.lesson-toc__link--sub {
+  padding-inline-start: var(--md-sys-spacing-4);
+  font-size: 0.8rem;
+}
+
+.lesson-toc__children {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Anchored headings clear the sticky header when jumped to. */
+.prose h2,
+.prose h3,
+#objectives-title,
+.exercise h2 {
+  scroll-margin-top: calc(var(--app-header-height) + var(--md-sys-spacing-4));
+}

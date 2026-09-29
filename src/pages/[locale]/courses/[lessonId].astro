@@ -13,6 +13,7 @@ import { render } from 'astro:content';
 import '@/styles/pages.css';
 import '@/styles/courses.css';
 import '@/styles/prose.css';
+import '@/styles/toc.css';
 
 interface Props {
   locale: AppLocale;
@@ -42,7 +43,26 @@ export async function getStaticPaths(): Promise<StaticPath[]> {
 
 const { locale, entry, index, lessons } = Astro.props;
 const t = createTranslator(locale);
-const { Content } = await render(entry);
+const { Content, headings } = await render(entry);
+
+// TOC tree: h2 groups with nested h3 entries (Astro already provides slugs).
+interface TocEntry {
+  slug: string;
+  text: string;
+}
+const tocGroups = headings
+  .filter((heading) => heading.depth === 2 || heading.depth === 3)
+  .reduce<Array<{ group: { slug: string; text: string }; children: TocEntry[] }>>(
+    (groups, heading) => {
+      if (heading.depth === 2) {
+        groups.push({ group: { slug: heading.slug, text: heading.text }, children: [] });
+      } else if (groups.length > 0) {
+        groups[groups.length - 1]?.children.push({ slug: heading.slug, text: heading.text });
+      }
+      return groups;
+    },
+    [],
+  );
 const lessonId = lessonIdOf(entry);
 const exercise = getExerciseFiles(lessonId);
 const { prev, next } = lessonNeighbours(lessons, index);
@@ -70,72 +90,147 @@ const from = Astro.url.pathname;
     <p class="page-subtitle">{entry.data.summary}</p>
   </header>
 
-  <LessonStatus locale={locale} lessonId={lessonId} />
+  <div class="lesson-layout">
+    <div class="lesson-layout__main">
+      <LessonStatus locale={locale} lessonId={lessonId} />
 
-  <!-- AI tutor context: the global overlay and any panel read this. -->
-  <script
-    type="application/json"
-    data-lesson-payload
-    set:html={serializeJsonScript({
-      title: entry.data.title,
-      objectives: entry.data.objectives,
-      task: entry.data.exercise.task,
-    })}
-  />
-  <script
-    type="application/json"
-    data-lesson-level
-    set:html={JSON.stringify(entry.data.difficulty)}
-  />
-  <section class="lesson-objectives card" aria-labelledby="objectives-title">
-    <h2 id="objectives-title">{t.t('lesson.objectives')}</h2>
-    <ul>
-      {entry.data.objectives.map((objective) => (
-        <li>{objective}</li>
-      ))}
-    </ul>
-  </section>
+      <!-- AI tutor context: the global overlay and any panel read this. -->
+      <script
+        type="application/json"
+        data-lesson-payload
+        set:html={serializeJsonScript({
+          title: entry.data.title,
+          objectives: entry.data.objectives,
+          task: entry.data.exercise.task,
+        })}
+      />
+      <script
+        type="application/json"
+        data-lesson-level
+        set:html={JSON.stringify(entry.data.difficulty)}
+      />
+      <section class="lesson-objectives card" aria-labelledby="objectives-title">
+        <h2 id="objectives-title">{t.t('lesson.objectives')}</h2>
+        <ul>
+          {entry.data.objectives.map((objective) => (
+            <li>{objective}</li>
+          ))}
+        </ul>
+      </section>
 
-  <article class="prose">
-    <Content />
-  </article>
+      <article class="prose">
+        <Content />
+      </article>
 
-  <CodeWorkbench
-    locale={locale}
-    draftKey={lessonId}
-    instanceId={`lesson-${lessonId}`}
-    initial={exercise.starter}
-  />
+      <CodeWorkbench
+        locale={locale}
+        draftKey={lessonId}
+        instanceId={`lesson-${lessonId}`}
+        initial={exercise.starter}
+      />
 
-  <ExercisePanel
-    locale={locale}
-    task={entry.data.exercise.task}
-    hints={entry.data.exercise.hints}
-    solution={exercise.solution}
-  />
+      <ExercisePanel
+        locale={locale}
+        task={entry.data.exercise.task}
+        hints={entry.data.exercise.hints}
+        solution={exercise.solution}
+      />
 
-  <nav class="lesson-pager" aria-label={t.t('nav.courses')}>
-    {prev ? (
-      <a
-        class="lesson-pager__link"
-        data-direction="prev"
-        href={relativeHref(lessonPath(locale, lessonIdOf(prev)), from)}
-      >
-        <span aria-hidden="true">←</span> {prev.data.title}
-      </a>
-    ) : (
-      <span />
-    )}
-    {next ? (
-      <a
-        class="lesson-pager__link"
-        data-direction="next"
-        href={relativeHref(lessonPath(locale, lessonIdOf(next)), from)}
-      >
-        {next.data.title} <span aria-hidden="true">→</span>
-      </a>
-    ) : (
-      <span />
-    )}
-  </nav>
+      <nav class="lesson-pager" aria-label={t.t('nav.courses')}>
+        {prev ? (
+          <a
+            class="lesson-pager__link"
+            data-direction="prev"
+            href={relativeHref(lessonPath(locale, lessonIdOf(prev)), from)}
+          >
+            <span aria-hidden="true">←</span> {prev.data.title}
+          </a>
+        ) : (
+          <span />
+        )}
+        {next ? (
+          <a
+            class="lesson-pager__link"
+            data-direction="next"
+            href={relativeHref(lessonPath(locale, lessonIdOf(next)), from)}
+          >
+            {next.data.title} <span aria-hidden="true">→</span>
+          </a>
+        ) : (
+          <span />
+        )}
+      </nav>
+    </div>
+
+    <aside class="lesson-toc" data-toc aria-label={t.t('lesson.toc')}>
+      <nav class="lesson-toc__nav" aria-label={t.t('lesson.toc')}>
+        <p class="lesson-toc__title">{t.t('lesson.toc')}</p>
+        {tocGroups.map(({ group, children }) => (
+          <div class="lesson-toc__group">
+            <a class="lesson-toc__link" data-toc-link href={`#${group.slug}`}>
+              {group.text}
+            </a>
+            {children.length > 0 && (
+              <ul class="lesson-toc__children" data-toc-children>
+                {children.map((child) => (
+                  <li>
+                    <a
+                      class="lesson-toc__link lesson-toc__link--sub"
+                      data-toc-link
+                      href={`#${child.slug}`}
+                    >
+                      {child.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </nav>
+    </aside>
+  </div>
 </BaseLayout>
+
+<script>
+  // TOC behavior: click smooth-scrolls; an IntersectionObserver highlights
+  // the section currently in view.
+  function initToc(): void {
+    const toc = document.querySelector<HTMLElement>('[data-toc]');
+    const links = [...document.querySelectorAll<HTMLAnchorElement>('[data-toc-link]')];
+    if (!toc || links.length === 0) return;
+
+    const targets = links
+      .map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))))
+      .filter((element): element is HTMLElement => element !== null);
+    if (targets.length === 0) return;
+
+    links.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+        if (!target) return;
+        event.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, '', link.hash);
+      });
+    });
+
+    const setActive = (id: string): void => {
+      for (const link of links) {
+        link.classList.toggle('is-active', decodeURIComponent(link.hash.slice(1)) === id);
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActive(entry.target.id);
+        }
+      },
+      { rootMargin: '-20% 0px -70% 0px' },
+    );
+    for (const target of targets) observer.observe(target);
+  }
+
+  initToc();
+</script>
