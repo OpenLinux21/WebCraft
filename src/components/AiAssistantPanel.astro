@@ -152,8 +152,13 @@ const settingsHref = '../settings/';
     }
 
     // Task workspace (?task=<id>): the tutor gets the challenge brief as its
-    // lesson context. Loaded from IndexedDB; overrides a static payload.
-    const taskId = root.dataset.taskId;
+    // lesson context. The URL is the source of truth (module scripts run
+    // before inline body scripts); falls back to the inline mirror.
+    const urlTask = new URLSearchParams(window.location.search).get('task');
+    const taskId =
+      urlTask && /^[0-9a-f]{4,32}$/i.test(urlTask)
+        ? urlTask.toLowerCase()
+        : (root.dataset.taskId ?? undefined);
     if (taskId) {
       try {
         const { createPlaygroundRepo } = await import('@/lib/storage/repos/playground');

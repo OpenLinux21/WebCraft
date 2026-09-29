@@ -183,8 +183,17 @@ const t = createTranslator(locale);
   async function initWorkbench(root: HTMLElement, monacoModule: MonacoWorkbenchApi): Promise<void> {
     const { createCodeEditor, createModels, disposeModels } = monacoModule;
     const localeRaw: unknown = root.dataset.locale;
-    const draftKey = root.dataset.draftKey ?? '';
-    const instanceId = root.dataset.instanceId ?? 'workbench';
+    // ?task=<id> re-keys the workspace BEFORE anything else reads these:
+    // module scripts run before inline body scripts, so the URL is the
+    // single source of truth (the inline banner script mirrors it).
+    const taskParam = new URLSearchParams(window.location.search).get('task');
+    const taskId = taskParam && /^[0-9a-f]{4,32}$/i.test(taskParam) ? taskParam.toLowerCase() : null;
+    const draftKey = taskId ? `task-${taskId}` : (root.dataset.draftKey ?? '');
+    const instanceId = taskId ? `task-${taskId}` : (root.dataset.instanceId ?? 'workbench');
+    if (taskId) {
+      root.dataset.draftKey = draftKey;
+      root.dataset.instanceId = instanceId;
+    }
     if (!isAppLocale(localeRaw)) return;
     const t = createTranslator(localeRaw);
 

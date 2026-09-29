@@ -126,3 +126,40 @@ test('settings page shows all sections and the language switch navigates', async
   await page.waitForURL('**/zh-CN/settings/', { timeout: 10_000 });
   await expect(page.locator('h1')).toContainText('设置');
 });
+
+test('builtin challenge opens a per-task workspace via ?task=', async ({ page }) => {
+  await page.goto('/en/playground/', { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector(EDITOR_BOOT, { timeout: 20_000 });
+
+  // Add a starter challenge and open its workspace.
+  await page.locator('[data-tasks-builtin]').click();
+  const title = page.locator('.tasks-panel__title').first();
+  await expect(title).toBeVisible();
+  await title.click();
+
+  const banner = page.locator('[data-task-banner]');
+  await expect(banner).toBeVisible();
+  await expect(banner.locator('[data-task-title]')).toContainText(/./);
+  await expect(page.locator('[data-workbench]')).toHaveAttribute(
+    'data-draft-key',
+    /task-[0-9a-f]/,
+  );
+  // URL carries the task id; the back link returns to free mode.
+  await expect(page).toHaveURL(/\?task=[0-9a-f]/);
+  await banner.locator('.task-banner__back').click();
+  await expect(banner).toBeHidden();
+  await expect(page).toHaveURL(/\/playground\/\??$/);
+});
+
+test('lesson page exposes a table of contents that scrolls', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.goto('/en/courses/09-css-grid/', { waitUntil: 'domcontentloaded' });
+  const toc = page.locator('[data-toc]');
+  await expect(toc).toBeVisible();
+  const firstLink = toc.locator('[data-toc-link]').first();
+  await firstLink.click();
+  // The hash updates and the browser scrolled somewhere below the header.
+  await expect(page).toHaveURL(/#/);
+  const scrollY = await page.evaluate(() => window.scrollY);
+  expect(scrollY).toBeGreaterThan(100);
+});
