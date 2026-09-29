@@ -268,6 +268,8 @@ export const en = {
     includeConsole: 'Include console output',
     thinking: 'Thinking…',
     requestFailed: 'Request failed: {reason}',
+    challengeCreated: 'New challenge created — open it from the challenges list.',
+    challengeFailed: 'Could not read a challenge from the model reply:',
     disclaimer: 'AI answers can be wrong — treat them as guidance, not truth.',
   },
   aiPrompts: {

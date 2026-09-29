@@ -118,7 +118,9 @@ export function countDroppedEntries(input: {
   progress: Array<{ key: string; value: unknown }>;
   drafts: Array<{ key: string; value: unknown }>;
 }): number {
-  const droppedProgress = input.progress.filter((entry) => parseLessonProgress(entry.value) === null).length;
+  const droppedProgress = input.progress.filter(
+    (entry) => parseLessonProgress(entry.value) === null,
+  ).length;
   const droppedDrafts = input.drafts.filter((entry) => parseCodeDraft(entry.value) === null).length;
   return droppedProgress + droppedDrafts;
 }

@@ -310,9 +310,7 @@ const t = createTranslator(locale);
     run();
 
     // Autosave (debounced) + live preview on every content change.
-    const persistDraft = draftKey
-      ? debounce(() => saveDraft(filesFromModels(models)), 800)
-      : null;
+    const persistDraft = draftKey ? debounce(() => saveDraft(filesFromModels(models)), 800) : null;
     editorInstance.onContentChange(() => {
       setSharedFiles(draftKey, filesFromModels(models));
       persistDraft?.();

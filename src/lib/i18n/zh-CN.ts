@@ -263,6 +263,8 @@ export const zhCN: Dictionary = {
     includeConsole: '附上控制台输出',
     thinking: '思考中…',
     requestFailed: '请求失败：{reason}',
+    challengeCreated: '新挑战已生成——可在挑战列表中打开。',
+    challengeFailed: '无法从模型回复中解析出挑战：',
     disclaimer: 'AI 回答可能出错——请把它当作参考，而不是标准答案。',
   },
   aiPrompts: {

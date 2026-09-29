@@ -34,7 +34,10 @@ function buildSystemPrompt(context: AssistantContext): string {
     parts.push(
       t.t('aiPrompts.lessonContext', {
         title: context.lesson.title,
-        objectives: context.lesson.objectives.map((objective) => `- ${objective}`).join('\n'),
+        objectives: context.lesson.objectives
+          .filter((objective) => objective.trim() !== '')
+          .map((objective) => `- ${objective}`)
+          .join('\n'),
         task: context.lesson.task,
       }),
     );

@@ -97,6 +97,7 @@ const settingsHref = '../settings/';
   import { describeFetchError } from '@/lib/ai/errors';
   import type { ChatMessage } from '@/lib/ai/types';
   import type { ConsoleLine } from '@/lib/ai/prompt';
+  import { renderMarkdownToElement } from '@/lib/ai/markdown';
 
   const MODE_KEYS = ['hint', 'explain', 'review', 'debug', 'challenge', 'free'] as const;
   type Mode = (typeof MODE_KEYS)[number];
@@ -209,7 +210,10 @@ const settingsHref = '../settings/';
       }
 
       const bubble = addBubble('assistant');
-      bubble.textContent = t.t('ai.thinking');
+      const isChallenge = mode === 'challenge';
+      // Challenge replies are raw JSON for the task system, not prose: keep
+      // the thinking placeholder and swap in a compact verdict afterwards.
+      if (!isChallenge) bubble.textContent = t.t('ai.thinking');
       setBusy(true);
       controller = new AbortController();
 
@@ -223,19 +227,30 @@ const settingsHref = '../settings/';
         })) {
           if (delta.kind === 'done') break;
           replyText += delta.text;
-          bubble.textContent = replyText;
-          messages.scrollTop = messages.scrollHeight;
+          if (!isChallenge) {
+            // Assistant prose is markdown: re-render the bubble per frame.
+            bubble.replaceChildren(renderMarkdownToElement(replyText));
+            messages.scrollTop = messages.scrollHeight;
+          }
         }
         history.push(...newMessages, { role: 'assistant', content: replyText });
-        if (mode === 'challenge') {
+        if (isChallenge) {
           const challenge = parseChallengeReply(replyText);
           if (challenge) {
+            bubble.remove();
+            const note = addBubble('assistant');
+            note.textContent = t.t('ai.challengeCreated');
             window.dispatchEvent(new CustomEvent('webcraft:new-task', { detail: challenge }));
+          } else {
+            bubble.classList.add('ai-panel__bubble--error');
+            bubble.textContent = `${t.t('ai.challengeFailed')}\n${replyText}`;
           }
         }
       } catch (error: unknown) {
         if (controller.signal.aborted) {
-          bubble.textContent = replyText !== '' ? replyText : t.t('ai.thinking');
+          bubble.replaceChildren(
+            renderMarkdownToElement(replyText !== '' ? replyText : t.t('ai.thinking')),
+          );
         } else {
           const described = describeFetchError(error);
           bubble.classList.add('ai-panel__bubble--error');
