@@ -11,7 +11,7 @@ export type PreviewSource = CodeFiles;
 const CAPTURE_SCRIPT = `
 (function () {
   'use strict';
-  var TOKEN = '__TOKEN__';
+  var TOKEN = __TOKEN__;
   function post(message) {
     message.source = 'webcraft-preview';
     message.token = TOKEN;
