@@ -6,7 +6,7 @@
  */
 import { createRequire } from 'node:module';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
-import { mkdir, readdir, stat } from 'node:fs/promises';
+import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -41,8 +41,18 @@ const completed = new Promise((resolve, reject) => {
   archive.on('error', reject);
 });
 
-await archive.finalize();
-await completed;
+try {
+  await archive.finalize();
+  await completed;
+} catch (error) {
+  archive.abort();
+  // Never leave a truncated zip behind.
+  await rm(zipPath, { force: true }).catch(() => undefined);
+  console.error(
+    `Failed to create ${zipName}: ${error instanceof Error ? error.message : String(error)}`,
+  );
+  process.exit(1);
+}
 
 const { size } = await stat(zipPath);
 const fileCount = await countFiles(distDir);

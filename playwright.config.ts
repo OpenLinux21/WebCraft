@@ -12,7 +12,9 @@ export default defineConfig({
   webServer: {
     command: 'npm run preview',
     port: 4321,
-    reuseExistingServer: true,
+    // Reuse a local dev server, but always start fresh in CI where a
+    // stale listener could silently test the wrong build.
+    reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
