@@ -33,26 +33,22 @@ const homeLessons: HomeLesson[] = lessons.map((lesson) => ({
 }));
 const firstLesson = homeLessons[0];
 
-// English hero gets the typewriter; other locales keep the static title.
-const typewriterLines = locale === 'en' ? getDictionary('en').home.typewriterLines : [];
-const staticTitle = typewriterLines[0] ?? t.t('home.heroTitle');
+// Both locales run the English typewriter lines (product decision):
+// the hero always types the same five sentences.
+const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.heroTitle');
 ---
 
 <BaseLayout locale={locale} title={t.t('meta.homeTitle')} description={t.t('meta.homeDescription')}>
   <section class="hero immersive-section" data-immersive>
-    {locale === 'en' ? (
-      <h1 class="hero-title" data-typewriter data-locale={locale}>
-        <span class="visually-hidden">{staticTitle}</span>
-        <span aria-hidden="true" data-typewriter-text>
-          {staticTitle}
-        </span>
-        <span class="hero-cursor" aria-hidden="true">
-          |
-        </span>
-      </h1>
-    ) : (
-      <h1>{t.t('home.heroTitle')}</h1>
-    )}
+    <h1 class="hero-title" data-typewriter data-locale={locale}>
+      <span class="visually-hidden">{staticTitle}</span>
+      <span aria-hidden="true" data-typewriter-text>
+        {staticTitle}
+      </span>
+      <span class="hero-cursor" aria-hidden="true">
+        |
+      </span>
+    </h1>
     <p>{t.t('home.heroSubtitle')}</p>
     <div class="hero__actions">
       <a class="btn btn--filled" href={relativeHref(coursesPath(locale), from)}>
@@ -216,7 +212,7 @@ const staticTitle = typewriterLines[0] ?? t.t('home.heroTitle');
 </script>
 
 <script>
-  // Human-feel typewriter for the English hero (see home.typewriterLines).
+  // Human-feel typewriter for the hero on every locale (English lines).
   // Timing: type 60-120 ms/char (longer around punctuation and spaces),
   // hold 1-1.8 s per sentence, erase at 30-70 ms/char, breathe 0.3-0.6 s.
   // prefers-reduced-motion users get the static first line, no cursor.
@@ -226,12 +222,13 @@ const staticTitle = typewriterLines[0] ?? t.t('home.heroTitle');
     const host = document.querySelector<HTMLElement>('[data-typewriter]');
     if (!host) return; // non-English locales keep the static title
     const localeRaw: unknown = host.dataset.locale;
-    if (!isAppLocale(localeRaw) || !localeRaw.startsWith('en')) return;
+    if (!isAppLocale(localeRaw)) return;
 
     const textEl = host.querySelector<HTMLElement>('[data-typewriter-text]');
     if (!textEl) return;
 
-    const lines = getDictionary(localeRaw).home.typewriterLines;
+    // Both locales type the same English lines (product decision).
+    const lines = getDictionary('en').home.typewriterLines;
     if (lines.length === 0) return;
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
