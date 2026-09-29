@@ -213,8 +213,10 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
 
 <script>
   // Human-feel typewriter for the hero on every locale (English lines).
-  // Timing: type 60-120 ms/char (longer around punctuation and spaces),
-  // hold 1-1.8 s per sentence, erase at 30-70 ms/char, breathe 0.3-0.6 s.
+  // Baseline timing: type 60-120 ms/char (longer around punctuation and
+  // spaces), hold 1-1.8 s per sentence, erase at 30-70 ms/char, breathe
+  // 0.3-0.6 s. TYPE_SPEED_FACTOR scales the typing/erasing motion (1.75x
+  // faster); the sentence-hold pauses are unchanged.
   // prefers-reduced-motion users get the static first line, no cursor.
   import { getDictionary, isAppLocale } from '@/lib/i18n/core';
 
@@ -238,13 +240,15 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
 
     const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
     const rand = (min: number, max: number): number => min + Math.random() * (max - min);
+    // Scales the typing/erasing motion; 1.75 = 1.75x faster than baseline.
+    const SPEED_FACTOR = 1.75;
 
     const typeLine = async (line: string): Promise<void> => {
       for (const ch of line) {
         textEl.textContent = (textEl.textContent ?? '') + ch;
-        let delay = rand(60, 120);
-        if (/[.,!?;:—]/.test(ch)) delay = rand(150, 300);
-        else if (ch === ' ') delay += rand(0, 40);
+        let delay = rand(60, 120) / SPEED_FACTOR;
+        if (/[.,!?;:—]/.test(ch)) delay = rand(150, 300) / SPEED_FACTOR;
+        else if (ch === ' ') delay += rand(0, 40) / SPEED_FACTOR;
         await sleep(delay);
       }
     };
@@ -252,7 +256,7 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
     const eraseLine = async (): Promise<void> => {
       while ((textEl.textContent ?? '').length > 0) {
         textEl.textContent = (textEl.textContent ?? '').slice(0, -1);
-        await sleep(rand(30, 70));
+        await sleep(rand(30, 70) / SPEED_FACTOR);
       }
     };
 
