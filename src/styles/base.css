@@ -141,3 +141,45 @@ html.js :not(:defined) {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Immersive scrolling: hide the native scrollbar site-wide (a 3px top
+   progress bar restores orientation) and prepare section reveals. */
+
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-progress {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 60;
+  height: 3px;
+  background-color: var(--md-sys-color-primary);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  pointer-events: none;
+}
+
+.immersive-section {
+  opacity: 1;
+}
+
+html[data-immersive] .immersive-section {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+
+html[data-immersive] .immersive-section.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Scroll progress bar update is tiny JS in BaseLayout. */

@@ -45,6 +45,7 @@ const themeColorDark = '#131519';
     <script is:inline set:html={NO_FLASH_SCRIPT} />
   </head>
   <body>
+    <div class="scroll-progress" data-scroll-progress aria-hidden="true"></div>
     <a class="skip-link" href="#main-content">
       {t.t('common.skipToContent')}
     </a>
@@ -54,6 +55,19 @@ const themeColorDark = '#131519';
     </main>
     <AppFooter locale={locale} />
     <GlobalAiOverlay locale={locale} />
+    <script>
+      // Scroll progress bar (scrollbars are hidden site-wide).
+      const progressBar = document.querySelector<HTMLElement>('[data-scroll-progress]');
+      if (progressBar) {
+        const update = (): void => {
+          const max = document.documentElement.scrollHeight - window.innerHeight;
+          progressBar.style.transform = `scaleX(${max > 0 ? window.scrollY / max : 0})`;
+        };
+        update();
+        window.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', update);
+      }
+    </script>
     <script is:inline define:vars={{ locale, key: LOCALE_STORAGE_KEY }}>
       // Remember the last visited locale so the root page can redirect there.
       try {

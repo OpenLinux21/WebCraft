@@ -35,7 +35,7 @@ const firstLesson = homeLessons[0];
 ---
 
 <BaseLayout locale={locale} title={t.t('meta.homeTitle')} description={t.t('meta.homeDescription')}>
-  <section class="hero">
+  <section class="hero immersive-section" data-immersive>
     <h1>{t.t('home.heroTitle')}</h1>
     <p>{t.t('home.heroSubtitle')}</p>
     <div class="hero__actions">
@@ -48,7 +48,7 @@ const firstLesson = homeLessons[0];
     </div>
   </section>
 
-  <section aria-labelledby="features-title">
+  <section aria-labelledby="features-title" class="immersive-section" data-immersive>
     <h2 class="section-title" id="features-title">
       {t.t('home.featuresTitle')}
     </h2>
@@ -70,9 +70,10 @@ const firstLesson = homeLessons[0];
 
   {firstLesson && (
     <section
-      class="progress-card card"
+      class="progress-card card immersive-section"
       aria-labelledby="progress-title"
       data-progress-card
+      data-immersive
       data-locale={locale}
     >
       <h2 id="progress-title">{t.t('home.progressTitle')}</h2>
@@ -156,4 +157,62 @@ const firstLesson = homeLessons[0];
   }
 
   void initProgressCard();
+</script>
+
+<script>
+  // Immersive home scrolling: inertia via Lenis on desktop + scroll-snap
+  // to sections. Skipped entirely for reduced-motion users; touch devices
+  // rely on native momentum + CSS snap.
+  async function initImmersive(): Promise<void> {
+    const isHome = Boolean(document.querySelector('[data-immersive]'));
+    if (!isHome) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    document.documentElement.dataset.immersive = 'true';
+
+    const sections = [...document.querySelectorAll<HTMLElement>('[data-immersive]')];
+    // Reveal-on-scroll animation (IO + CSS transition, no extra dependency).
+    const revealer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) entry.target.classList.add('is-visible');
+        }
+      },
+      { threshold: 0.25 },
+    );
+    for (const section of sections) revealer.observe(section);
+
+    const { default: Lenis } = await import('lenis');
+    const lenis = new Lenis({ duration: 1.1, smoothWheel: true });
+    const root = document.documentElement;
+    root.dataset.lenisReady = 'true';
+
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    const snapToNearest = (): void => {
+      if (settleTimer !== null) clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => {
+        const viewportMid = window.scrollY + window.innerHeight / 2;
+        let best = sections[0];
+        let bestDistance = Number.POSITIVE_INFINITY;
+        for (const section of sections) {
+          const mid = section.offsetTop + section.offsetHeight / 2;
+          const distance = Math.abs(mid - viewportMid);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            best = section;
+          }
+        }
+        if (best) lenis.scrollTo(best, { duration: 0.7 });
+      }, 140);
+    };
+    lenis.on('scroll', snapToNearest);
+
+    const raf = (time: number): void => {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    };
+    requestAnimationFrame(raf);
+  }
+
+  void initImmersive();
 </script>

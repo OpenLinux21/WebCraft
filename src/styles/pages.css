@@ -176,3 +176,18 @@
   font-size: var(--md-sys-typescale-small-size);
   margin-inline-start: auto;
 }
+
+/* Immersive home sections (html[data-immersive] is set only on the home
+   page by its script; other pages never snap). */
+
+html[data-immersive] body {
+  scroll-snap-type: y proximity;
+}
+
+html[data-immersive] [data-immersive] {
+  min-height: calc(100dvh - var(--app-header-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
