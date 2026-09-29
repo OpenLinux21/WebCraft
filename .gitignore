@@ -36,3 +36,6 @@ logs/
 npm-debug.log*
 tmp/
 .cache/
+
+# Local code-review artifacts
+bug.txt
