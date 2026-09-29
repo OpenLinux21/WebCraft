@@ -84,7 +84,9 @@ test('course list reflects lesson progress', async ({ page }) => {
   await statusCard.locator('[data-action="start"]').click();
 
   await page.goto('/en/courses/', { waitUntil: 'domcontentloaded' });
-  const badge = page.locator('[data-lesson-progress-badge][data-lesson-id="02-html-text-semantic"]');
+  const badge = page.locator(
+    '[data-lesson-progress-badge][data-lesson-id="02-html-text-semantic"]',
+  );
   await expect(badge).toHaveAttribute('data-status', 'inProgress');
   await expect(badge).toContainText('In progress');
 
@@ -117,7 +119,9 @@ test('settings page shows all sections and the language switch navigates', async
   await expect(async () => {
     await languageSelect.click();
     await page.waitForFunction(
-      () => (document.querySelector('[data-setting="language"]') as { open?: boolean } | null)?.open === true,
+      () =>
+        (document.querySelector('[data-setting="language"]') as { open?: boolean } | null)?.open ===
+        true,
       undefined,
       { timeout: 2_000 },
     );
@@ -140,10 +144,7 @@ test('builtin challenge opens a per-task workspace via ?task=', async ({ page })
   const banner = page.locator('[data-task-banner]');
   await expect(banner).toBeVisible();
   await expect(banner.locator('[data-task-title]')).toContainText(/./);
-  await expect(page.locator('[data-workbench]')).toHaveAttribute(
-    'data-draft-key',
-    /task-[0-9a-f]/,
-  );
+  await expect(page.locator('[data-workbench]')).toHaveAttribute('data-draft-key', /task-[0-9a-f]/);
   // URL carries the task id; the back link returns to free mode.
   await expect(page).toHaveURL(/\?task=[0-9a-f]/);
   await banner.locator('.task-banner__back').click();
@@ -158,8 +159,18 @@ test('lesson page exposes a table of contents that scrolls', async ({ page }) =>
   await expect(toc).toBeVisible();
   const firstLink = toc.locator('[data-toc-link]').first();
   await firstLink.click();
-  // The hash updates and the browser scrolled somewhere below the header.
+  // The hash updates and smooth-scrolls below the sticky header; wait for
+  // the scroll animation to settle before asserting.
   await expect(page).toHaveURL(/#/);
-  const scrollY = await page.evaluate(() => window.scrollY);
-  expect(scrollY).toBeGreaterThan(100);
+  await expect
+    .poll(
+      async () => {
+        const current = await page.evaluate(() => window.scrollY);
+        await page.waitForTimeout(150);
+        return Math.abs((await page.evaluate(() => window.scrollY)) - current);
+      },
+      { timeout: 5_000 },
+    )
+    .toBeLessThan(2);
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
 });
