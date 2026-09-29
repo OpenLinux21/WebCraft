@@ -4,6 +4,7 @@ import CodeWorkbench from '@/components/CodeWorkbench.astro';
 import ExercisePanel from '@/components/ExercisePanel.astro';
 import LessonStatus from '@/components/LessonStatus.astro';
 import { getExerciseFiles } from '@/lib/courses/exercise-files';
+import { serializeJsonScript } from '@/lib/utils/json-script';
 import { getLessons, lessonIdOf, lessonNeighbours, type LessonEntry } from '@/lib/courses/server';
 import { createTranslator } from '@/lib/i18n/core';
 import { APP_LOCALES, type AppLocale } from '@/lib/i18n/types';
@@ -71,6 +72,21 @@ const from = Astro.url.pathname;
 
   <LessonStatus locale={locale} lessonId={lessonId} />
 
+  <!-- AI tutor context: the global overlay and any panel read this. -->
+  <script
+    type="application/json"
+    data-lesson-payload
+    set:html={serializeJsonScript({
+      title: entry.data.title,
+      objectives: entry.data.objectives,
+      task: entry.data.exercise.task,
+    })}
+  />
+  <script
+    type="application/json"
+    data-lesson-level
+    set:html={JSON.stringify(entry.data.difficulty)}
+  />
   <section class="lesson-objectives card" aria-labelledby="objectives-title">
     <h2 id="objectives-title">{t.t('lesson.objectives')}</h2>
     <ul>

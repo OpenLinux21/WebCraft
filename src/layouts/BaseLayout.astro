@@ -1,5 +1,6 @@
 ---
 import AppFooter from '@/components/AppFooter.astro';
+import GlobalAiOverlay from '@/components/GlobalAiOverlay.astro';
 import AppHeader from '@/components/AppHeader.astro';
 import { createTranslator } from '@/lib/i18n/core';
 import { LOCALE_STORAGE_KEY } from '@/lib/i18n/inline-scripts';
@@ -52,6 +53,7 @@ const themeColorDark = '#131519';
       <slot />
     </main>
     <AppFooter locale={locale} />
+    <GlobalAiOverlay locale={locale} />
     <script is:inline define:vars={{ locale, key: LOCALE_STORAGE_KEY }}>
       // Remember the last visited locale so the root page can redirect there.
       try {

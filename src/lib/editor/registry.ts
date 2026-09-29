@@ -17,6 +17,11 @@ export function getSharedFiles(key: string): CodeFiles | undefined {
   return entries.get(key);
 }
 
+/** First published files on the page (global AI has no specific key). */
+export function getAnySharedFiles(): CodeFiles | undefined {
+  return entries.values().next().value;
+}
+
 export function removeSharedFiles(key: string): void {
   entries.delete(key);
 }

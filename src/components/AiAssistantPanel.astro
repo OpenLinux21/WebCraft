@@ -93,7 +93,6 @@ const settingsHref = '../settings/';
   import { createTranslator, isAppLocale, type AppLocale } from '@/lib/i18n/core';
   import { getSharedFiles } from '@/lib/editor/registry';
   import { getStorage } from '@/lib/storage/storage';
-  import { getAIProvider } from '@/lib/ai/provider';
   import { loadAIConfig } from '@/lib/ai/settings';
   import { describeFetchError } from '@/lib/ai/errors';
   import type { ChatMessage } from '@/lib/ai/types';
@@ -235,19 +234,21 @@ const settingsHref = '../settings/';
       const requestMessages: ChatMessage[] = [...history.slice(-12), ...newMessages];
       let replyText = '';
       try {
-        const provider = getAIProvider(config.provider);
-        for await (const delta of provider.chat(config, {
+        const { runAssistantTurn } = await import('@/lib/ai/assistant');
+        const result = await runAssistantTurn({
+          config,
           messages: requestMessages,
           signal: controller.signal,
-        })) {
-          if (delta.kind === 'done') break;
-          replyText += delta.text;
-          if (!isChallenge) {
-            // Assistant prose is markdown: re-render the bubble per frame.
-            bubble.replaceChildren(renderMarkdownToElement(replyText));
-            messages.scrollTop = messages.scrollHeight;
-          }
-        }
+          onDelta: (fullText) => {
+            replyText = fullText;
+            if (!isChallenge) {
+              // Assistant prose is markdown: re-render the bubble per frame.
+              bubble.replaceChildren(renderMarkdownToElement(replyText));
+              messages.scrollTop = messages.scrollHeight;
+            }
+          },
+        });
+        replyText = result.replyText;
         history.push(...newMessages, { role: 'assistant', content: replyText });
         if (isChallenge) {
           const challenge = parseChallengeReply(replyText);

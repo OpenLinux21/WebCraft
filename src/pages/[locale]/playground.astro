@@ -43,18 +43,18 @@ const PLAYGROUND_STARTER: CodeFiles = {
   -->
   <script is:inline>
     (function () {
-      var taskId = new URLSearchParams(location.search).get('task');
+      let taskId = new URLSearchParams(location.search).get('task');
       if (!taskId || !/^[0-9a-f]{4,32}$/i.test(taskId)) return;
       taskId = taskId.toLowerCase();
       window.__webcraftTaskId = taskId;
-      var workbench = document.querySelector('[data-workbench]');
+      const workbench = document.querySelector('[data-workbench]');
       if (workbench) {
         workbench.dataset.draftKey = 'task-' + taskId;
         workbench.dataset.instanceId = 'task-' + taskId;
       }
-      var panel = document.querySelector('[data-ai-panel]');
+      const panel = document.querySelector('[data-ai-panel]');
       if (panel) panel.dataset.taskId = taskId;
-      var tasksPanel = document.querySelector('[data-tasks-panel]');
+      const tasksPanel = document.querySelector('[data-tasks-panel]');
       if (tasksPanel) tasksPanel.dataset.activeTask = taskId;
     })();
   </script>

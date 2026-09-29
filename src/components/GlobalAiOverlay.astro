@@ -1,0 +1,341 @@
+---
+/**
+ * Global AI overlay: right-click anywhere opens a slide-in tutor drawer,
+ * but ONLY when an AI provider is already configured — otherwise the
+ * native context menu is left untouched. Mounted from BaseLayout on every
+ * localized page; shares the assistant runtime and markdown renderer with
+ * the playground panel.
+ */
+import '@/components/material/register';
+import { createTranslator } from '@/lib/i18n/core';
+import type { AppLocale } from '@/lib/i18n/core';
+
+interface Props {
+  locale: AppLocale;
+}
+
+const { locale } = Astro.props;
+const t = createTranslator(locale);
+---
+
+<div class="ai-overlay" data-ai-overlay data-locale={locale} hidden>
+  <div class="ai-overlay__backdrop" data-overlay-backdrop></div>
+  <aside
+    class="ai-overlay__drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-label={t.t('ai.panelTitle')}
+  >
+    <div class="ai-overlay__head">
+      <h2>{t.t('ai.panelTitle')}</h2>
+      <md-icon-button type="button" data-overlay-close aria-label={t.t('common.close')}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+          <path d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4Z" />
+        </svg>
+      </md-icon-button>
+    </div>
+
+    <div class="ai-overlay__modes" role="group" aria-label={t.t('ai.panelTitle')}>
+      {(['hint', 'explain', 'review', 'debug'] as const).map((mode) => (
+        <md-filled-tonal-button type="button" data-overlay-mode={mode}>
+          {t.t(`ai.modes.${mode}`)}
+        </md-filled-tonal-button>
+      ))}
+    </div>
+
+    <div class="ai-overlay__messages" data-overlay-messages aria-live="polite"></div>
+
+    <form class="ai-overlay__composer" data-overlay-composer>
+      <textarea
+        class="ai-overlay__input"
+        data-overlay-input
+        rows="3"
+        placeholder={t.t('ai.placeholder')}
+        aria-label={t.t('ai.placeholder')}
+      ></textarea>
+      <div class="ai-overlay__composer-actions">
+        <md-outlined-button type="button" data-overlay-stop hidden>
+          {t.t('ai.stop')}
+        </md-outlined-button>
+        <md-filled-button type="submit" data-overlay-send>
+          {t.t('ai.send')}
+        </md-filled-button>
+      </div>
+    </form>
+
+    <p class="ai-overlay__disclaimer">{t.t('ai.disclaimer')}</p>
+  </aside>
+</div>
+
+<script>
+  import '@/components/material/register';
+  import { createTranslator, isAppLocale, type AppLocale } from '@/lib/i18n/core';
+  import type { ConsoleLine } from '@/lib/ai/prompt';
+  import type { ChatMessage } from '@/lib/ai/types';
+  import { getAnySharedFiles } from '@/lib/editor/registry';
+  import { loadAIConfig } from '@/lib/ai/settings';
+  import { describeFetchError } from '@/lib/ai/errors';
+  import { renderMarkdownToElement } from '@/lib/ai/markdown';
+
+  const MODES = ['hint', 'explain', 'review', 'debug'] as const;
+  type OverlayMode = (typeof MODES)[number];
+  type Mode = OverlayMode | 'free';
+
+  interface LessonContext {
+    title: string;
+    objectives: string[];
+    task: string;
+  }
+
+  function readConsoleLines(): ConsoleLine[] {
+    return [...document.querySelectorAll<HTMLElement>('[data-console-list] li')].map((entry) => ({
+      level: entry.dataset.level ?? 'log',
+      text: entry.textContent ?? '',
+    }));
+  }
+
+  function readLessonContext(): LessonContext | undefined {
+    const payload = document.querySelector<HTMLScriptElement>('[data-lesson-payload]');
+    if (!payload) return undefined;
+    try {
+      const parsed: unknown = JSON.parse(payload.textContent ?? 'null');
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        typeof (parsed as Record<string, unknown>)['title'] === 'string' &&
+        Array.isArray((parsed as Record<string, unknown>)['objectives'])
+      ) {
+        return parsed as LessonContext;
+      }
+    } catch {
+      return undefined;
+    }
+    return undefined;
+  }
+
+  function initOverlay(): void {
+    const root = document.querySelector<HTMLElement>('[data-ai-overlay]');
+    if (!root) return;
+    const localeRaw: unknown = root.dataset.locale;
+    if (!isAppLocale(localeRaw)) return;
+    const locale: AppLocale = localeRaw;
+    const t = createTranslator(locale);
+
+    const messages = root.querySelector<HTMLElement>('[data-overlay-messages]');
+    const input = root.querySelector<HTMLTextAreaElement>('[data-overlay-input]');
+    const sendButton = root.querySelector<HTMLElement>('[data-overlay-send]');
+    const stopButton = root.querySelector<HTMLElement>('[data-overlay-stop]');
+    const composer = root.querySelector<HTMLFormElement>('[data-overlay-composer]');
+    const closeButton = root.querySelector<HTMLElement>('[data-overlay-close]');
+    if (!messages || !input || !sendButton || !stopButton || !composer) return;
+
+    // Show the overlay affordance only when AI is configured: the settings
+    // section and right-click interception both key off this attribute.
+    const config = loadAIConfig();
+    const aiReady = config?.enabled === true;
+    if (!aiReady) return;
+    document.documentElement.dataset.aiAvailable = 'true';
+
+    let open = false;
+    let controller: AbortController | null = null;
+    const levelPayload = document.querySelector<HTMLScriptElement>('[data-lesson-level]');
+    const level =
+      levelPayload?.textContent?.trim() === 'intermediate' ? 'intermediate' : 'beginner';
+    const history: ChatMessage[] = [];
+
+    const isBusy = (): boolean => controller !== null;
+
+    const setOpen = (next: boolean): void => {
+      open = next;
+      root.hidden = !next;
+      document.documentElement.classList.toggle('ai-overlay-open', next);
+      if (next) input?.focus();
+    };
+
+    const addEntry = (role: 'user' | 'assistant'): HTMLElement => {
+      const entry = document.createElement('div');
+      entry.className = `ai-panel__bubble ai-panel__bubble--${role}`;
+      entry.dataset.speaker = role === 'user' ? '>' : 'AI';
+      messages.appendChild(entry);
+      messages.scrollTop = messages.scrollHeight;
+      return entry;
+    };
+
+    const request = async (mode: Mode, question: string | undefined): Promise<void> => {
+      const activeConfig = loadAIConfig();
+      if (!activeConfig?.enabled || isBusy()) return;
+      const { buildAssistantMessages } = await import('@/lib/ai/prompt');
+      const { runAssistantTurn } = await import('@/lib/ai/assistant');
+
+      const lesson = readLessonContext();
+      const code = getAnySharedFiles();
+      const consoleLines = readConsoleLines();
+      const newMessages = buildAssistantMessages({
+        mode,
+        locale,
+        level,
+        ...(lesson ? { lesson } : {}),
+        ...(code ? { code } : {}),
+        ...(consoleLines.length > 0 ? { consoleLines } : {}),
+        ...(question !== undefined ? { question } : {}),
+      });
+
+      if (question !== undefined) addEntry('user').textContent = question;
+      const bubble = addEntry('assistant');
+      bubble.textContent = t.t('ai.thinking');
+      controller = new AbortController();
+
+      try {
+        const result = await runAssistantTurn({
+          config: activeConfig,
+          messages: [...history.slice(-12), ...newMessages],
+          signal: controller.signal,
+          onDelta: (fullText) => {
+            bubble.replaceChildren(renderMarkdownToElement(fullText));
+            messages.scrollTop = messages.scrollHeight;
+          },
+        });
+        history.push(...newMessages, { role: 'assistant', content: result.replyText });
+        if (result.aborted && result.replyText === '') {
+          bubble.textContent = t.t('ai.thinking');
+        }
+      } catch (error: unknown) {
+        const described = describeFetchError(error);
+        bubble.classList.add('ai-panel__bubble--error');
+        bubble.textContent = t.t('ai.requestFailed', { reason: described.message.slice(0, 200) });
+        if (described.hint) {
+          const hint = document.createElement('span');
+          hint.className = 'ai-panel__hint';
+          hint.textContent = described.hint;
+          bubble.appendChild(hint);
+        }
+      } finally {
+        controller = null;
+        stopButton.hidden = true;
+      }
+    };
+
+    // Right-click summons the tutor only when configured; otherwise the
+    // native menu survives untouched.
+    document.addEventListener('contextmenu', (event) => {
+      if (!aiReady) return;
+      const target = event.target as HTMLElement | null;
+      // Keep native menus inside editable fields and code inputs.
+      if (target?.closest('input, textarea, [contenteditable="true"], .monaco-editor')) return;
+      event.preventDefault();
+      const selection = window.getSelection()?.toString().trim() ?? '';
+      if (selection !== '' && input && input.value === '') {
+        input.value = selection.slice(0, 500);
+      }
+      setOpen(true);
+    });
+
+    root.querySelector('[data-overlay-backdrop]')?.addEventListener('click', () => setOpen(false));
+    closeButton?.addEventListener('click', () => setOpen(false));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && open) setOpen(false);
+    });
+
+    stopButton.addEventListener('click', () => controller?.abort());
+
+    composer.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const question = input.value.trim();
+      if (question === '' || isBusy()) return;
+      input.value = '';
+      stopButton.hidden = false;
+      void request('free', question);
+    });
+
+    for (const button of root.querySelectorAll<HTMLElement>('[data-overlay-mode]')) {
+      const mode = (button.dataset.overlayMode ?? '') as OverlayMode;
+      if (!MODES.includes(mode)) continue;
+      button.addEventListener('click', () => {
+        if (isBusy()) return;
+        stopButton.hidden = false;
+        void request(mode, input.value.trim() === '' ? undefined : input.value.trim());
+      });
+    }
+
+    void t;
+  }
+
+  initOverlay();
+</script>
+
+<style>
+  .ai-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+  }
+
+  .ai-overlay__backdrop {
+    position: absolute;
+    inset: 0;
+    background-color: var(--md-sys-color-scrim);
+  }
+
+  .ai-overlay__drawer {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: min(26rem, 100vw);
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-3);
+    padding: var(--md-sys-spacing-4);
+    border-inline-start: var(--app-border-strong-width) solid var(--md-sys-color-on-surface);
+    background-color: var(--md-sys-color-surface);
+    overflow-y: auto;
+  }
+
+  .ai-overlay__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .ai-overlay__head h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+  }
+
+  .ai-overlay__modes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--md-sys-spacing-2);
+  }
+
+  .ai-overlay__messages {
+    flex: 1;
+    min-height: 6rem;
+    overflow-y: auto;
+    border-block: 1px solid var(--md-sys-color-outline-variant);
+  }
+
+  .ai-overlay__input {
+    width: 100%;
+    padding: var(--md-sys-spacing-3);
+    border: var(--app-border-strong-width) solid var(--md-sys-color-on-surface);
+    border-radius: var(--md-sys-shape-corner-sm);
+    background-color: var(--md-sys-color-surface-container-lowest);
+    color: var(--md-sys-color-on-surface);
+    font: inherit;
+    resize: vertical;
+  }
+
+  .ai-overlay__composer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--md-sys-spacing-2);
+    margin-block-start: var(--md-sys-spacing-2);
+  }
+
+  .ai-overlay__disclaimer {
+    margin: 0;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: var(--md-sys-typescale-small-size);
+  }
+</style>
