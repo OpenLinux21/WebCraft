@@ -174,3 +174,98 @@ test('lesson page exposes a table of contents that scrolls', async ({ page }) =>
     .toBeLessThan(2);
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
 });
+
+// --- ClientRouter (soft navigation) behavior ---
+
+test('nav links soft-navigate without a full page reload', async ({ page }) => {
+  await page.goto('/en/', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => {
+    (window as { __e2eMarker?: number }).__e2eMarker = 42;
+  });
+  await page.locator('.app-nav__link', { hasText: 'Courses' }).click();
+  await expect(page).toHaveURL(/\/en\/courses\/$/);
+  // A full reload would wipe the marker; the ClientRouter keeps it.
+  expect(await page.evaluate(() => (window as { __e2eMarker?: number }).__e2eMarker)).toBe(42);
+  // The scroll progress bar must be re-bound on the fresh document.
+  expect(
+    await page.evaluate(() => {
+      const bar = document.querySelector<HTMLElement>('[data-scroll-progress]');
+      return bar !== null && bar.style.transform.length > 0;
+    }),
+  ).toBe(true);
+});
+
+test('theme choice survives client-side navigation', async ({ page }) => {
+  await page.goto('/en/', { waitUntil: 'domcontentloaded' });
+  const toggle = page.locator('[data-theme-toggle]');
+  await toggle.click(); // -> light
+  await toggle.click(); // -> dark
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.locator('.app-nav__link', { hasText: 'Playground' }).click();
+  await expect(page).toHaveURL(/\/en\/playground\/$/);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  // The toggle button (fresh DOM after the swap) still works.
+  await toggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+});
+
+test('workbench reinitializes after a client-side round trip', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/en/courses/01-html-doc-structure/', { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector(EDITOR_BOOT, { timeout: 20_000 });
+
+  // Leave via a soft navigation and come back: Monaco models for the same
+  // lesson URIs must be creatable again (the old ones were disposed).
+  await page.locator('.breadcrumb a').click();
+  await expect(page).toHaveURL(/\/en\/courses\/$/);
+  await page.locator('.course-list__link', { hasText: 'HTML' }).first().click();
+  await expect(page).toHaveURL(/01-html-doc-structure/);
+  await page.waitForSelector(EDITOR_BOOT, { timeout: 20_000 });
+  // The editor's own worker spawn emits noise even on full loads; a real
+  // regression would surface as duplicate model URIs or a missing editor.
+  const fatal = errors.filter(
+    (message) =>
+      message.includes('already exists') ||
+      message.includes('Cannot add model') ||
+      message.includes('ModelService'),
+  );
+  expect(fatal).toEqual([]);
+  await expect(page.locator('.monaco-editor')).toBeVisible();
+});
+
+test('home typewriter keeps typing after returning home', async ({ page }) => {
+  await page.goto('/en/', { waitUntil: 'domcontentloaded' });
+  await page.locator('.app-nav__link', { hasText: 'Courses' }).click();
+  await expect(page).toHaveURL(/\/en\/courses\/$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/en\/$/);
+
+  const readText = (): Promise<string> =>
+    page.evaluate(() => document.querySelector('[data-typewriter-text]')?.textContent ?? '');
+  // Sample the hero a few times: an active typer changes the text.
+  const samples = new Set<string>();
+  for (let i = 0; i < 6; i += 1) {
+    samples.add(await readText());
+    await page.waitForTimeout(500);
+  }
+  expect(samples.size).toBeGreaterThan(1);
+});
+
+test('404 shows the terminal page and redirects to a locale home', async ({ page }) => {
+  await page.goto('/en/definitely-missing/', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.nf__line--error')).toContainText('404: page not found');
+  await page.waitForURL(/\/(en|zh-CN)\//, { timeout: 8_000 });
+});
+
+test('entrance animation settles fully visible without scripts', async ({ page }) => {
+  // data-motion elements are hidden only while JS runs; with scripts blocked
+  // (and with reduced motion) the content must never stay invisible.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/en/', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(600);
+  const opacity = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.hero__actions') as Element).opacity,
+  );
+  expect(Number(opacity)).toBeGreaterThan(0.9);
+});

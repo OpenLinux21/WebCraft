@@ -17,5 +17,15 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // The full chromium binary in new-headless mode (the bundled
+        // headless shell is not shipped for all Linux environments).
+        channel: 'chromium',
+      },
+    },
+  ],
 });
