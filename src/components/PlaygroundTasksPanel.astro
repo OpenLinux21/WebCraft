@@ -44,6 +44,7 @@ const t = createTranslator(locale);
   import { createTranslator, isAppLocale } from '@/lib/i18n/core';
   import { getStorage } from '@/lib/storage/storage';
   import { createPlaygroundRepo, type PlaygroundRepo } from '@/lib/storage/repos/playground';
+  import { onPageLoad, registerCleanup } from '@/lib/ui/lifecycle';
 
   interface ChallengeDraft {
     title: string;
@@ -69,6 +70,7 @@ const t = createTranslator(locale);
     const t = createTranslator(localeRaw);
     const panel: HTMLElement = root;
     const repo: PlaygroundRepo = createPlaygroundRepo(await getStorage());
+    if (!root.isConnected) return; // swapped away while storage opened
     const list = panel.querySelector<HTMLElement>('[data-tasks-list]');
     const emptyHint = panel.querySelector<HTMLElement>('[data-tasks-empty]');
     if (!list || !emptyHint) return;
@@ -161,16 +163,18 @@ const t = createTranslator(locale);
       window.dispatchEvent(new CustomEvent('webcraft:generate-challenge'));
     });
 
-    window.addEventListener('webcraft:new-task', (event) => {
+    const onNewTask = (event: Event): void => {
       const detail = (event as CustomEvent<unknown>).detail;
       if (!isChallengeDraft(detail)) return;
       void repo.add({ ...detail, source: 'ai' }).then(sync);
-    });
+    };
+    window.addEventListener('webcraft:new-task', onNewTask);
+    registerCleanup(() => window.removeEventListener('webcraft:new-task', onNewTask));
 
     await sync();
   }
 
-  void initTasksPanel();
+  onPageLoad(() => void initTasksPanel());
 </script>
 
 <style>

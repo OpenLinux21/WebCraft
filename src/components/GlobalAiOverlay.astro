@@ -76,6 +76,8 @@ const t = createTranslator(locale);
   import { loadAIConfig } from '@/lib/ai/settings';
   import { describeFetchError } from '@/lib/ai/errors';
   import { renderMarkdownToElement } from '@/lib/ai/markdown';
+  import { buildThinkingIndicator } from '@/lib/ui/ai-indicator';
+  import { onPageLoad } from '@/lib/ui/lifecycle';
 
   const MODES = ['hint', 'explain', 'review', 'debug'] as const;
   type OverlayMode = (typeof MODES)[number];
@@ -113,7 +115,7 @@ const t = createTranslator(locale);
     return undefined;
   }
 
-  function initOverlay(): void {
+  function initOverlay(): void | (() => void) {
     const root = document.querySelector<HTMLElement>('[data-ai-overlay]');
     if (!root) return;
     const localeRaw: unknown = root.dataset.locale;
@@ -182,7 +184,7 @@ const t = createTranslator(locale);
 
       if (question !== undefined) addEntry('user').textContent = question;
       const bubble = addEntry('assistant');
-      bubble.textContent = t.t('ai.thinking');
+      bubble.replaceChildren(buildThinkingIndicator(t.t('ai.thinking')));
       controller = new AbortController();
 
       try {
@@ -197,7 +199,7 @@ const t = createTranslator(locale);
         });
         history.push(...newMessages, { role: 'assistant', content: result.replyText });
         if (result.aborted && result.replyText === '') {
-          bubble.textContent = t.t('ai.thinking');
+          bubble.replaceChildren(buildThinkingIndicator(t.t('ai.thinking')));
         }
       } catch (error: unknown) {
         const described = describeFetchError(error);
@@ -216,25 +218,28 @@ const t = createTranslator(locale);
     };
 
     // Right-click summons the tutor only when configured; otherwise the
-    // native menu survives untouched.
-    document.addEventListener('contextmenu', (event) => {
-      if (!aiReady) return;
+    // native menu survives untouched. The document-level listeners are
+    // rebound on every page load (the swap replaces both the overlay DOM
+    // and the handlers' closures) and removed again before the next swap.
+    const onContextMenu = (event: MouseEvent): void => {
       const target = event.target as HTMLElement | null;
       // Keep native menus inside editable fields and code inputs.
       if (target?.closest('input, textarea, [contenteditable="true"], .monaco-editor')) return;
       event.preventDefault();
       const selection = window.getSelection()?.toString().trim() ?? '';
-      if (selection !== '' && input && input.value === '') {
+      if (selection !== '' && input.value === '') {
         input.value = selection.slice(0, 500);
       }
       setOpen(true);
-    });
+    };
+    document.addEventListener('contextmenu', onContextMenu);
 
     root.querySelector('[data-overlay-backdrop]')?.addEventListener('click', () => setOpen(false));
     closeButton?.addEventListener('click', () => setOpen(false));
-    document.addEventListener('keydown', (event) => {
+    const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape' && open) setOpen(false);
-    });
+    };
+    document.addEventListener('keydown', onKeyDown);
 
     stopButton.addEventListener('click', () => controller?.abort());
 
@@ -257,18 +262,43 @@ const t = createTranslator(locale);
       });
     }
 
-    void t;
+    return () => {
+      document.removeEventListener('contextmenu', onContextMenu);
+      document.removeEventListener('keydown', onKeyDown);
+      if (controller) controller.abort();
+    };
   }
 
-  initOverlay();
+  onPageLoad(() => initOverlay());
 </script>
 
 <style>
-  .ai-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 80;
+.ai-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+/* The drawer slides in from the trailing edge when the overlay opens. */
+.ai-overlay:not([hidden]) .ai-overlay__backdrop {
+  animation: overlay-backdrop-in var(--motion-base) var(--ease-standard);
+}
+
+.ai-overlay:not([hidden]) .ai-overlay__drawer {
+  animation: overlay-drawer-in var(--motion-base) var(--ease-standard);
+}
+
+@keyframes overlay-backdrop-in {
+  from {
+    opacity: 0;
   }
+}
+
+@keyframes overlay-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
 
   .ai-overlay__backdrop {
     position: absolute;

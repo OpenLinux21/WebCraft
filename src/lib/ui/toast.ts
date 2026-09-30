@@ -17,10 +17,20 @@ export function showToast(message: string, durationMs = 2500): void {
   toast.textContent = message;
   ensureRegion().appendChild(toast);
   window.setTimeout(() => {
-    toast.remove();
-    if (region && region.childElementCount === 0) {
-      region.remove();
-      region = null;
-    }
+    // Play the exit animation, then drop the element. The timer is a
+    // fallback in case `animationend` never fires.
+    toast.classList.add('toast--leaving');
+    let removed = false;
+    const remove = (): void => {
+      if (removed) return;
+      removed = true;
+      toast.remove();
+      if (region && region.childElementCount === 0) {
+        region.remove();
+        region = null;
+      }
+    };
+    toast.addEventListener('animationend', remove, { once: true });
+    window.setTimeout(remove, 400);
   }, durationMs);
 }

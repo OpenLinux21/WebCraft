@@ -33,12 +33,18 @@ function applyThemeDocument(mode: ThemeMode): void {
   document.documentElement.dataset.theme = mode;
 }
 
+let watchingSystemPalette = false;
+
 /**
- * Idempotent bootstrap; call once from the layout script on every page.
- * Keeps following the OS palette while the setting is `system`.
+ * Idempotent bootstrap; call once from the layout script on every page
+ * (safe to repeat per astro:page-load). The OS-palette listener is bound
+ * only once per session; repeat calls just re-apply the resolved mode,
+ * which is what a fresh document needs after a client-side swap.
  */
 export function initTheme(): void {
   applyThemeDocument(getResolvedTheme());
+  if (watchingSystemPalette) return;
+  watchingSystemPalette = true;
   window.matchMedia(DARK_QUERY).addEventListener('change', (event) => {
     if (getThemeSetting() === 'system') applyThemeDocument(event.matches ? 'dark' : 'light');
   });

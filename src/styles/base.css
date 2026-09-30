@@ -143,7 +143,7 @@ html.js :not(:defined) {
 }
 
 /* Immersive scrolling: hide the native scrollbar site-wide (a 3px top
-   progress bar restores orientation) and prepare section reveals. */
+   progress bar restores orientation). */
 
 html {
   scrollbar-width: none;
@@ -165,21 +165,60 @@ html::-webkit-scrollbar {
   pointer-events: none;
 }
 
-.immersive-section {
-  opacity: 1;
+/* Page transitions (ClientRouter): a quick exit fade and a rise-in entrance.
+   Plain cross-fade feels inert; the 8px lift keeps the workshop "handled"
+   character. Gated on reduced motion; the `*` kill-switch above does not
+   reach the ::view-transition pseudo tree. */
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: page-exit var(--motion-fast) var(--ease-exit) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: page-enter var(--motion-base) var(--ease-standard) both;
+  }
 }
 
-html[data-immersive] .immersive-section {
+@keyframes page-exit {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-md));
+  }
+}
+
+/* Shared entrance system: add `data-motion="rise"` plus an optional
+   `--motion-index` to any element; a shared IntersectionObserver in
+   BaseLayout reveals them with a stagger. Gated on `html.js` so content
+   stays visible when scripts are blocked. */
+
+html.js [data-motion~='rise'] {
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateY(var(--motion-distance-md));
   transition:
-    opacity 0.5s ease,
-    transform 0.5s ease;
+    opacity var(--motion-slow) var(--ease-entry),
+    transform var(--motion-slow) var(--ease-entry);
+  transition-delay: calc(var(--motion-index, 0) * var(--motion-stagger));
 }
 
-html[data-immersive] .immersive-section.is-visible {
+html.js [data-motion~='rise'].is-visible {
   opacity: 1;
   transform: none;
+}
+
+/* Printed pages capture the DOM without scrolling: never hide content. */
+@media print {
+  html.js [data-motion~='rise'] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* Scroll progress bar update is tiny JS in BaseLayout. */

@@ -103,23 +103,35 @@ const navItems: ReadonlyArray<{ key: MessageKey; path: string }> = [
     setThemeSetting,
     type ThemeSetting,
   } from '@/lib/theme/theme';
+  import { onPageLoad } from '@/lib/ui/lifecycle';
 
   initTheme();
 
   const ORDER: readonly ThemeSetting[] = ['light', 'dark', 'system'];
-  const button = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
 
-  if (button) {
-    const sync = (): void => {
-      button.dataset.setting = getThemeSetting();
-      button.dataset.mode = getResolvedTheme();
-    };
-    sync();
-    document.addEventListener('webcraft:theme-change', sync);
+  const syncButton = (button: HTMLButtonElement): void => {
+    button.dataset.setting = getThemeSetting();
+    button.dataset.mode = getResolvedTheme();
+  };
+
+  // Document-level: bind exactly once per session; the button is re-queried
+  // per event so the handler survives client-side navigations.
+  document.addEventListener('webcraft:theme-change', () => {
+    const button = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
+    if (button) syncButton(button);
+  });
+
+  // The swap replaces the header DOM on every navigation, so the click
+  // listener is rebound to the fresh button each time.
+  onPageLoad(() => {
+    initTheme();
+    const button = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
+    if (!button) return;
+    syncButton(button);
     button.addEventListener('click', () => {
       const current = getThemeSetting();
       const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length] ?? 'system';
       setThemeSetting(next);
     });
-  }
+  });
 </script>

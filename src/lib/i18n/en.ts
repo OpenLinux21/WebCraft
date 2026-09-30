@@ -36,6 +36,7 @@ export const en = {
     privacyNote:
       'No accounts, no telemetry: your progress and code stay in this browser unless you send them to an AI service you configured yourself.',
     openSource: 'Open source under the MIT license.',
+    backToTop: 'Back to top',
   },
   theme: {
     label: 'Theme',

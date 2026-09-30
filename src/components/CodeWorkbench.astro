@@ -150,6 +150,7 @@ const t = createTranslator(locale);
     type LivePreviewMs,
   } from '@/lib/storage/settings';
   import { showToast } from '@/lib/ui/toast';
+  import { onPageLoad, registerCleanup } from '@/lib/ui/lifecycle';
   import type { EditorModels, EditorViewState, MonacoWorkbenchApi } from '@/lib/editor/monaco';
 
   type Lang = 'html' | 'css' | 'javascript';
@@ -215,6 +216,10 @@ const t = createTranslator(locale);
     let savedDraft: CodeDraft | undefined;
     try {
       const storage = await getStorage();
+      // A client-side navigation may have swapped the page away while
+      // storage was opening; bail before creating any models so the fresh
+      // page can build its own editor without duplicate-URI conflicts.
+      if (!root.isConnected) return;
       drafts = createDraftRepo(storage);
       savedDraft = draftKey ? await drafts.get(draftKey) : undefined;
     } catch {
@@ -391,16 +396,23 @@ const t = createTranslator(locale);
     };
     window.addEventListener('webcraft:load-code', loadSolution);
 
-    // Cleanup on page exit (also drops the window-level listener so a
-    // bfcache restore cannot stack handlers).
-    window.addEventListener('pagehide', () => {
+    // Cleanup on page exit: `pagehide` covers full unloads and bfcache
+    // restores, while the shared lifecycle flushes the same teardown on
+    // client-side swaps (which never fire pagehide). Guarded so running
+    // both paths cannot double-dispose the editor.
+    let disposed = false;
+    const disposeAll = (): void => {
+      if (disposed) return;
+      disposed = true;
       window.removeEventListener('webcraft:load-code', loadSolution);
       persistDraft?.cancel();
       if (liveTimer !== null) clearTimeout(liveTimer);
       preview.dispose();
       editorInstance.dispose();
       disposeModels(models);
-    });
+    };
+    window.addEventListener('pagehide', disposeAll, { once: true });
+    registerCleanup(disposeAll);
   }
 
   async function initWorkbenches(): Promise<void> {
@@ -408,9 +420,10 @@ const t = createTranslator(locale);
     if (roots.length === 0) return;
     const monacoModule = await import('@/lib/editor/monaco');
     for (const root of roots) {
+      if (!root.isConnected) continue; // swapped away mid-import
       await initWorkbench(root, monacoModule);
     }
   }
 
-  void initWorkbenches();
+  onPageLoad(() => void initWorkbenches());
 </script>

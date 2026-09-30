@@ -38,6 +38,7 @@ export const zhCN: Dictionary = {
     privacyNote:
       '无账号、无遥测：你的学习进度和代码只保存在本浏览器中，除非你主动把它们发送给自己配置的 AI 服务。',
     openSource: '以 MIT 许可证开源。',
+    backToTop: '回到顶部',
   },
   theme: {
     label: '主题',

@@ -32,8 +32,10 @@ const groups = COURSE_MODULES.map((module) => ({
   title={t.t('meta.coursesTitle')}
   description={t.t('meta.coursesDescription')}
 >
-  <h1 class="page-title">{t.t('courses.title')}</h1>
-  <p class="page-subtitle">{t.t('courses.subtitle')}</p>
+  <h1 class="page-title" data-motion="rise">{t.t('courses.title')}</h1>
+  <p class="page-subtitle" data-motion="rise" style="--motion-index: 1">
+    {t.t('courses.subtitle')}
+  </p>
 
   {groups.map(({ module, entries }) =>
     entries.length > 0 ? (
@@ -81,6 +83,7 @@ const groups = COURSE_MODULES.map((module) => ({
   import { createTranslator, localeFromLanguageTag } from '@/lib/i18n/core';
   import { createProgressRepo } from '@/lib/storage/repos/progress';
   import { getStorage } from '@/lib/storage/storage';
+  import { onPageLoad } from '@/lib/ui/lifecycle';
 
   async function initProgressBadges(): Promise<void> {
     const badges = document.querySelectorAll<HTMLElement>('[data-lesson-progress-badge]');
@@ -98,5 +101,5 @@ const groups = COURSE_MODULES.map((module) => ({
     }
   }
 
-  void initProgressBadges();
+  onPageLoad(() => void initProgressBadges());
 </script>

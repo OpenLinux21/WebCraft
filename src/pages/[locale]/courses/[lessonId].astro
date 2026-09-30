@@ -81,13 +81,15 @@ const from = Astro.url.pathname;
   </nav>
 
   <header class="lesson-header">
-    <p class="lesson-header__meta">
+    <p class="lesson-header__meta" data-motion="rise">
       {t.t(`courses.moduleNames.${entry.data.module}`)} ·{' '}
       {t.t(`courses.difficulty.${entry.data.difficulty}`)} ·
       {t.t('lesson.estimated', { minutes: entry.data.minutes })}
     </p>
-    <h1 class="page-title">{entry.data.title}</h1>
-    <p class="page-subtitle">{entry.data.summary}</p>
+    <h1 class="page-title" data-motion="rise" style="--motion-index: 1">{entry.data.title}</h1>
+    <p class="page-subtitle" data-motion="rise" style="--motion-index: 2">
+      {entry.data.summary}
+    </p>
   </header>
 
   <div class="lesson-layout">
@@ -109,7 +111,12 @@ const from = Astro.url.pathname;
         data-lesson-level
         set:html={JSON.stringify(entry.data.difficulty)}
       />
-      <section class="lesson-objectives card" aria-labelledby="objectives-title">
+      <section
+        class="lesson-objectives card"
+        aria-labelledby="objectives-title"
+        data-motion="rise"
+        style="--motion-index: 3"
+      >
         <h2 id="objectives-title">{t.t('lesson.objectives')}</h2>
         <ul>
           {entry.data.objectives.map((objective) => (
@@ -194,26 +201,30 @@ const from = Astro.url.pathname;
 
 <script>
   // TOC behavior: click smooth-scrolls; an IntersectionObserver highlights
-  // the section currently in view.
-  function initToc(): void {
+  // the section currently in view. Rebound per page load; the observer is
+  // disconnected before the next swap.
+  import { onPageLoad } from '@/lib/ui/lifecycle';
+
+  function initToc(): () => void {
+    const noop = (): void => {};
     const toc = document.querySelector<HTMLElement>('[data-toc]');
     const links = [...document.querySelectorAll<HTMLAnchorElement>('[data-toc-link]')];
-    if (!toc || links.length === 0) return;
+    if (!toc || links.length === 0) return noop;
 
     const targets = links
       .map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))))
       .filter((element): element is HTMLElement => element !== null);
-    if (targets.length === 0) return;
+    if (targets.length === 0) return noop;
 
-    links.forEach((link) => {
-      link.addEventListener('click', (event) => {
-        const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
-        if (!target) return;
-        event.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        history.replaceState(null, '', link.hash);
-      });
-    });
+    const onClick = (event: MouseEvent): void => {
+      const link = event.currentTarget as HTMLAnchorElement;
+      const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', link.hash);
+    };
+    for (const link of links) link.addEventListener('click', onClick);
 
     const setActive = (id: string): void => {
       for (const link of links) {
@@ -230,7 +241,12 @@ const from = Astro.url.pathname;
       { rootMargin: '-20% 0px -70% 0px' },
     );
     for (const target of targets) observer.observe(target);
+
+    return () => {
+      observer.disconnect();
+      for (const link of links) link.removeEventListener('click', onClick);
+    };
   }
 
-  initToc();
+  onPageLoad(initToc);
 </script>

@@ -64,6 +64,7 @@
 }
 
 .app-nav__link {
+  position: relative;
   font-family: var(--font-display);
   font-size: 0.9rem;
   color: var(--md-sys-color-on-surface-variant);
@@ -71,11 +72,29 @@
   padding-block: var(--md-sys-spacing-1);
   border-block-end: var(--app-border-strong-width) solid transparent;
   white-space: nowrap;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+/* Underline grows from the leading edge on hover; the static border stays
+   reserved for the current-page indicator so layout never shifts. */
+.app-nav__link::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  height: var(--app-border-strong-width);
+  background-color: var(--md-sys-color-primary);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform var(--motion-base) var(--ease-standard);
 }
 
 .app-nav__link:hover {
   color: var(--md-sys-color-primary);
-  border-block-end-color: var(--md-sys-color-outline-variant);
+}
+
+.app-nav__link:hover::after {
+  transform: scaleX(1);
 }
 
 .app-nav__link[aria-current='page'] {
@@ -102,11 +121,19 @@
   background-color: transparent;
   color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .icon-btn:hover {
   background-color: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface);
+}
+
+.icon-btn:active {
+  transform: scale(0.92);
 }
 
 .icon-btn svg {
@@ -133,11 +160,19 @@
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-sm);
   white-space: nowrap;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .lang-switch:hover {
   border-color: var(--md-sys-color-primary);
   color: var(--md-sys-color-primary);
+}
+
+.lang-switch:active {
+  transform: translateY(1px);
 }
 
 .app-main {
@@ -167,6 +202,41 @@
   margin: 0;
 }
 
+/* Terminal sign-off row: prompt flavor on the left, way back up on the right. */
+.app-footer__meta {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--md-sys-spacing-4);
+  padding-block-start: var(--md-sys-spacing-2);
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.app-footer__prompt {
+  font-family: var(--font-display);
+  color: var(--md-sys-color-tertiary);
+}
+
+.app-footer__top {
+  font-family: var(--font-display);
+  text-decoration: none;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.app-footer__top:hover {
+  color: var(--md-sys-color-primary);
+}
+
+.app-footer__top span {
+  display: inline-block;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.app-footer__top:hover span {
+  transform: translateY(calc(-1 * var(--motion-distance-sm)));
+}
+
 /* Buttons rendered as links: rectangular, bordered, workshop press effect. */
 .btn {
   display: inline-flex;
@@ -181,8 +251,10 @@
   text-decoration: none;
   cursor: pointer;
   transition:
-    transform 0.1s ease,
-    box-shadow 0.1s ease;
+    transform var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
 }
 
 .btn--filled {
@@ -210,6 +282,13 @@
 .btn--outlined:hover {
   border-color: var(--md-sys-color-primary);
   color: var(--md-sys-color-primary);
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0 0 var(--md-sys-color-outline-variant);
+}
+
+.btn--outlined:active {
+  transform: translate(0, 0);
+  box-shadow: none;
 }
 
 /* Card surface: a bordered panel, not a floating rounded box. */
@@ -222,6 +301,24 @@
 
 .card--strong {
   border: var(--app-border-strong-width) solid var(--md-sys-color-on-surface);
+}
+
+/* Interactive card: the button press language, for panels that act as one
+   big affordance (e.g. the home progress card). Static panels stay calm. */
+.card--interactive {
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.card--interactive:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--md-elev-1);
+}
+
+.card--interactive:active {
+  transform: translate(0, 0);
+  box-shadow: none;
 }
 
 @media (max-width: 600px) {

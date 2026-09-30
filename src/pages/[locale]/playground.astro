@@ -40,11 +40,20 @@ const PLAYGROUND_STARTER: CodeFiles = {
     The inline script below runs BEFORE any module script and re-keys the
     workbench (drafts), the AI panel (context) and itself via data
     attributes, so each challenge gets its own sandbox without new routes.
+    data-astro-rerun: the ClientRouter does not re-execute inline scripts on
+    client-side navigation, and a ?task= link must re-key the page when it
+    arrives as a soft navigation.
   -->
-  <script is:inline>
+  <script is:inline data-astro-rerun>
     (function () {
       let taskId = new URLSearchParams(location.search).get('task');
-      if (!taskId || !/^[0-9a-f]{4,32}$/i.test(taskId)) return;
+      if (!taskId || !/^[0-9a-f]{4,32}$/i.test(taskId)) {
+        // Leaving task mode (or arriving without ?task=) after a soft
+        // navigation: the swapped-in DOM is fresh, but the flag survives —
+        // clear it so the banner logic stays URL-driven.
+        delete window.__webcraftTaskId;
+        return;
+      }
       taskId = taskId.toLowerCase();
       window.__webcraftTaskId = taskId;
       const workbench = document.querySelector('[data-workbench]');
@@ -95,6 +104,7 @@ const PLAYGROUND_STARTER: CodeFiles = {
   import { createTranslator, isAppLocale } from '@/lib/i18n/core';
   import { getStorage } from '@/lib/storage/storage';
   import { createPlaygroundRepo } from '@/lib/storage/repos/playground';
+  import { onPageLoad } from '@/lib/ui/lifecycle';
 
   declare global {
     interface Window {
@@ -163,5 +173,5 @@ const PLAYGROUND_STARTER: CodeFiles = {
     syncButtons();
   }
 
-  void initTaskBanner();
+  onPageLoad(() => void initTaskBanner());
 </script>

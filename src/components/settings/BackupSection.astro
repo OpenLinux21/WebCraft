@@ -73,6 +73,7 @@ const t = createTranslator(locale);
   import { parseThemeSetting, setThemeSetting } from '@/lib/theme/theme';
   import { parsePreviewSettings, savePreviewSettings } from '@/lib/storage/settings';
   import { parseAIConfig, saveAIConfig } from '@/lib/ai/settings';
+  import { onPageLoad } from '@/lib/ui/lifecycle';
 
   function downloadJson(fileName: string, content: string): void {
     const blob = new Blob([content], { type: 'application/json' });
@@ -210,5 +211,5 @@ const t = createTranslator(locale);
     });
   }
 
-  initBackupSection();
+  onPageLoad(initBackupSection);
 </script>

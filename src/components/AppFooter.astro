@@ -16,5 +16,11 @@ const t = createTranslator(locale);
     <p>
       © {new Date().getFullYear()} WebCraft · {t.t('footer.openSource')}
     </p>
+    <p class="app-footer__meta">
+      <span class="app-footer__prompt" aria-hidden="true">$ exit 0</span>
+      <a class="app-footer__top" href="#main-content">
+        {t.t('footer.backToTop')} <span aria-hidden="true">↑</span>
+      </a>
+    </p>
   </div>
 </footer>

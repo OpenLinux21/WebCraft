@@ -34,6 +34,7 @@ const { locale, lessonId } = Astro.props;
   import type { LessonStatus, ProgressAction } from '@/lib/courses/types';
   import { createProgressRepo } from '@/lib/storage/repos/progress';
   import { getStorage } from '@/lib/storage/storage';
+  import { onPageLoad } from '@/lib/ui/lifecycle';
 
   const BUTTON_LABELS: Record<ProgressAction, MessageKey> = {
     start: 'lesson.markStart',
@@ -47,6 +48,7 @@ const { locale, lessonId } = Astro.props;
     const repo = createProgressRepo(await getStorage());
 
     for (const section of sections) {
+      if (!section.isConnected) continue; // swapped away while storage opened
       const lessonId = section.dataset.lessonId ?? '';
       const localeRaw: unknown = section.dataset.locale;
       if (!lessonId || !isAppLocale(localeRaw)) continue;
@@ -95,5 +97,5 @@ const { locale, lessonId } = Astro.props;
     }
   }
 
-  void initLessonStatus();
+  onPageLoad(() => void initLessonStatus());
 </script>

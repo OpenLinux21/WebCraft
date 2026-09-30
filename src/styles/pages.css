@@ -70,6 +70,11 @@
   border-radius: 0;
   background-color: transparent;
   padding: var(--md-sys-spacing-4) 0 var(--md-sys-spacing-4) 4rem;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+.feature-grid .card:hover {
+  background-color: var(--md-sys-color-surface-container-low);
 }
 
 .feature-grid .card::before {
@@ -82,6 +87,11 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--md-sys-color-primary);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.feature-grid .card:hover::before {
+  color: var(--md-sys-color-tertiary);
 }
 
 .feature-grid .card h3 {
@@ -118,7 +128,7 @@
 .progress-card__bar > div {
   height: 100%;
   background-color: var(--md-sys-color-primary);
-  transition: width 0.3s ease;
+  transition: width var(--motion-slow) var(--ease-standard);
 }
 
 .progress-card__meta {
@@ -178,10 +188,15 @@
 }
 
 /* Home sections: compact, content-sized (html[data-immersive] is set only
-   on the home page by its script — it gates the reveal animation). */
+   on the home page by its script). Sections stack tightly, but the hero
+   keeps bottom padding so the actions never touch its closing rule. */
 
 html[data-immersive] [data-immersive] {
   padding-block: var(--md-sys-spacing-5) 0;
+}
+
+html[data-immersive] .hero {
+  padding-block-end: var(--md-sys-spacing-6);
 }
 
 /* Typewriter hero: reserve two lines so the subtitle never jumps while the

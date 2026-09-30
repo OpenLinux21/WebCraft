@@ -97,6 +97,7 @@ const t = createTranslator(locale);
     savePreviewSettings,
     type LivePreviewMs,
   } from '@/lib/storage/settings';
+  import { onPageLoad } from '@/lib/ui/lifecycle';
 
   function initThemeSelect(): void {
     const select = document.querySelector<MdOutlinedSelect>('[data-setting="theme"]');
@@ -154,10 +155,12 @@ const t = createTranslator(locale);
     });
   }
 
-  initThemeSelect();
-  initLanguageSelect();
-  initLivePreviewSelect();
-  initClearAll();
+  onPageLoad(() => {
+    initThemeSelect();
+    initLanguageSelect();
+    initLivePreviewSelect();
+    initClearAll();
+  });
 </script>
 
 <style>

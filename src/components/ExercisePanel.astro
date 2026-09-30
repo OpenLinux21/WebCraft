@@ -50,31 +50,39 @@ const hasSolution = [solution.html, solution.css, solution.js].some((code) => co
 </section>
 
 <script>
-  // Progressive hints: opening a hint unlocks the next one.
-  document.querySelectorAll<HTMLElement>('[data-hints]').forEach((root) => {
-    const items = [...root.querySelectorAll<HTMLDetailsElement>('details[data-hint]')];
-    items.forEach((item) => {
-      item.addEventListener('toggle', () => {
-        if (!item.open) return;
-        const next = items[items.indexOf(item) + 1];
-        if (next) next.hidden = false;
+  // Progressive hints + reference-solution loading. Rebound on every page
+  // load: the swap replaces the panel DOM, and the listeners live on it.
+  import { onPageLoad } from '@/lib/ui/lifecycle';
+
+  function initExercisePanel(): void {
+    // Progressive hints: opening a hint unlocks the next one.
+    document.querySelectorAll<HTMLElement>('[data-hints]').forEach((root) => {
+      const items = [...root.querySelectorAll<HTMLDetailsElement>('details[data-hint]')];
+      items.forEach((item) => {
+        item.addEventListener('toggle', () => {
+          if (!item.open) return;
+          const next = items[items.indexOf(item) + 1];
+          if (next) next.hidden = false;
+        });
       });
     });
-  });
 
-  // Ask every workbench on the page to load the reference solution.
-  document.querySelectorAll<HTMLElement>('[data-load-solution]').forEach((button) => {
-    const root = button.closest<HTMLElement>('.exercise');
-    const payload = root?.querySelector<HTMLScriptElement>('[data-solution-payload]');
-    button.addEventListener('click', () => {
-      if (!payload) return;
-      let solution: unknown = {};
-      try {
-        solution = JSON.parse(payload.textContent ?? '{}');
-      } catch {
-        return;
-      }
-      window.dispatchEvent(new CustomEvent('webcraft:load-code', { detail: solution }));
+    // Ask every workbench on the page to load the reference solution.
+    document.querySelectorAll<HTMLElement>('[data-load-solution]').forEach((button) => {
+      const root = button.closest<HTMLElement>('.exercise');
+      const payload = root?.querySelector<HTMLScriptElement>('[data-solution-payload]');
+      button.addEventListener('click', () => {
+        if (!payload) return;
+        let solution: unknown = {};
+        try {
+          solution = JSON.parse(payload.textContent ?? '{}');
+        } catch {
+          return;
+        }
+        window.dispatchEvent(new CustomEvent('webcraft:load-code', { detail: solution }));
+      });
     });
-  });
+  }
+
+  onPageLoad(initExercisePanel);
 </script>

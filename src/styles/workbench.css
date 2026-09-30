@@ -56,6 +56,10 @@
   font-weight: 600;
   text-transform: uppercase;
   cursor: pointer;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
 .workbench__tab:hover {
@@ -177,6 +181,14 @@
   border-inline-start: 2px solid transparent;
   white-space: pre-wrap;
   word-break: break-word;
+  animation: console-entry var(--motion-fast) var(--ease-entry);
+}
+
+@keyframes console-entry {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--motion-distance-sm)));
+  }
 }
 
 .console-panel__entry::before {
@@ -236,4 +248,23 @@
   box-shadow: var(--md-elev-2);
   font-family: var(--font-display);
   font-size: var(--md-sys-typescale-small-size);
+  animation: toast-in var(--motion-base) var(--ease-entry);
+}
+
+.toast--leaving {
+  animation: toast-out var(--motion-fast) var(--ease-exit) both;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-md));
+  }
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-sm));
+  }
 }

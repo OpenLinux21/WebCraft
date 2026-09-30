@@ -14,12 +14,15 @@ export const LOCALE_STORAGE_KEY = 'webcraft.locale';
  * absolute: the 404 page is served at arbitrary nested paths, where
  * relative targets like './en/' would redirect deeper and deeper
  * (/blog/post/en/en/… — an unbounded loop).
+ *
+ * `delayMs` defers the redirect so a styled 404 stays visible long enough
+ * to be read; the root page keeps the default (0, instant).
  */
-export function buildLocaleDetectScript(base: string = '/'): string {
+export function buildLocaleDetectScript(base: string = '/', delayMs = 0): string {
   const root = base.endsWith('/') ? base : `${base}/`;
   const fallback = DEFAULT_LOCALE;
-  return (
-    `(function(){` +
+  const go =
+    `function(){` +
     `try{` +
     `var s=localStorage.getItem('${LOCALE_STORAGE_KEY}');` +
     `if(s==='zh-CN'||s==='en'){location.replace('${root}'+s+'/');return;}` +
@@ -31,6 +34,10 @@ export function buildLocaleDetectScript(base: string = '/'): string {
     `}` +
     `}catch(e){}` +
     `location.replace('${root}${fallback}/');` +
+    `}`;
+  return (
+    `(function(){var go=${go};` +
+    (delayMs > 0 ? `setTimeout(go, ${delayMs});` : `go();`) +
     `})();`
   );
 }

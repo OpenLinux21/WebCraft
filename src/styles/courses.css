@@ -44,8 +44,8 @@
   color: inherit;
   text-decoration: none;
   transition:
-    border-color 0.1s ease,
-    background-color 0.1s ease;
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
 .course-list__link:hover {
@@ -60,10 +60,11 @@
   font-weight: 600;
   color: var(--md-sys-color-on-surface-variant);
   min-width: 2rem;
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .course-list__link:hover .course-list__order {
-  color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-tertiary);
 }
 
 .course-list__text {
@@ -71,6 +72,11 @@
   flex-direction: column;
   gap: 0.2rem;
   min-width: 0;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.course-list__link:hover .course-list__text {
+  transform: translateX(var(--motion-distance-sm));
 }
 
 .course-list__text strong {
@@ -148,11 +154,27 @@
   font-size: var(--md-sys-typescale-small-size);
   text-decoration: none;
   max-width: 45%;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
 }
 
 .lesson-pager__link:hover {
   border-color: var(--md-sys-color-primary);
   color: var(--md-sys-color-primary);
+}
+
+/* The arrow nudges in the travel direction. */
+.lesson-pager__link span[aria-hidden='true'] {
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.lesson-pager__link[data-direction='prev']:hover span[aria-hidden='true'] {
+  transform: translateX(calc(-1 * var(--motion-distance-sm)));
+}
+
+.lesson-pager__link[data-direction='next']:hover span[aria-hidden='true'] {
+  transform: translateX(var(--motion-distance-sm));
 }
 
 .lesson-pager__link[data-direction='next'] {
@@ -193,11 +215,15 @@
   color: var(--md-sys-color-primary);
   font-size: var(--md-sys-typescale-small-size);
   font-weight: 600;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
 .exercise__hint summary:hover,
 .exercise__solution summary:hover {
   border-color: var(--md-sys-color-primary);
+  background-color: var(--md-sys-color-surface-container-low);
 }
 
 .exercise__hint > p {
@@ -311,4 +337,31 @@
 
 .course-list__status[data-status='completed']::before {
   background-color: var(--md-sys-color-success);
+}
+
+/* "In progress" blinks like a terminal cursor: the lesson is alive. */
+
+@keyframes status-dot-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.lesson-status[data-status='inProgress'] .lesson-status__state::before,
+.course-list__status[data-status='inProgress']::before {
+  animation: status-dot-blink 1.4s steps(1) infinite;
+}
+
+/* Revealed details content fades in from the summary, not from nowhere. */
+
+@keyframes details-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--motion-distance-sm)));
+  }
+}
+
+.exercise__hint > p,
+.exercise__solution pre {
+  animation: details-reveal var(--motion-base) var(--ease-entry);
 }

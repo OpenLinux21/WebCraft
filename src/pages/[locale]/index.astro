@@ -39,8 +39,8 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
 ---
 
 <BaseLayout locale={locale} title={t.t('meta.homeTitle')} description={t.t('meta.homeDescription')}>
-  <section class="hero immersive-section" data-immersive>
-    <h1 class="hero-title" data-typewriter data-locale={locale}>
+  <section class="hero" data-immersive>
+    <h1 class="hero-title" data-typewriter data-locale={locale} data-motion="rise">
       <span class="visually-hidden">{staticTitle}</span>
       <span aria-hidden="true" data-typewriter-text>
         {staticTitle}
@@ -49,8 +49,8 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
         |
       </span>
     </h1>
-    <p>{t.t('home.heroSubtitle')}</p>
-    <div class="hero__actions">
+    <p data-motion="rise" style="--motion-index: 1">{t.t('home.heroSubtitle')}</p>
+    <div class="hero__actions" data-motion="rise" style="--motion-index: 2">
       <a class="btn btn--filled" href={relativeHref(coursesPath(locale), from)}>
         {t.t('home.ctaStart')}
       </a>
@@ -60,20 +60,20 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
     </div>
   </section>
 
-  <section aria-labelledby="features-title" class="immersive-section" data-immersive>
-    <h2 class="section-title" id="features-title">
+  <section aria-labelledby="features-title" data-immersive>
+    <h2 class="section-title" id="features-title" data-motion="rise">
       {t.t('home.featuresTitle')}
     </h2>
     <div class="feature-grid">
-      <article class="card">
+      <article class="card" data-motion="rise" style="--motion-index: 1">
         <h3>{t.t('home.featurePrivacyTitle')}</h3>
         <p>{t.t('home.featurePrivacyBody')}</p>
       </article>
-      <article class="card">
+      <article class="card" data-motion="rise" style="--motion-index: 2">
         <h3>{t.t('home.featureStaticTitle')}</h3>
         <p>{t.t('home.featureStaticBody')}</p>
       </article>
-      <article class="card">
+      <article class="card" data-motion="rise" style="--motion-index: 3">
         <h3>{t.t('home.featureAiTitle')}</h3>
         <p>{t.t('home.featureAiBody')}</p>
       </article>
@@ -82,10 +82,11 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
 
   {firstLesson && (
     <section
-      class="progress-card card immersive-section"
+      class="progress-card card card--interactive"
       aria-labelledby="progress-title"
       data-progress-card
       data-immersive
+      data-motion="rise"
       data-locale={locale}
     >
       <h2 id="progress-title">{t.t('home.progressTitle')}</h2>
@@ -114,6 +115,7 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
   import { createTranslator, isAppLocale } from '@/lib/i18n/core';
   import { createProgressRepo } from '@/lib/storage/repos/progress';
   import { getStorage } from '@/lib/storage/storage';
+  import { onPageLoad } from '@/lib/ui/lifecycle';
 
   interface HomeLesson {
     id: string;
@@ -168,47 +170,42 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
     }
   }
 
-  void initProgressCard();
+  onPageLoad(() => void initProgressCard());
 </script>
 
 <script>
-  // Immersive home scrolling: inertia via Lenis on desktop + scroll-snap
-  // to sections. Skipped entirely for reduced-motion users; touch devices
-  // rely on native momentum + CSS snap.
-  async function initImmersive(): Promise<void> {
+  // Immersive home scrolling: Lenis inertia on desktop. Skipped entirely for
+  // reduced-motion users. Torn down before every swap so the rAF loop and
+  // wheel interception never leak into the next page.
+  import { onPageLoad } from '@/lib/ui/lifecycle';
+
+  async function initImmersive(): Promise<() => void> {
     const isHome = Boolean(document.querySelector('[data-immersive]'));
-    if (!isHome) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!isHome) return () => {};
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return () => {};
 
     document.documentElement.dataset.immersive = 'true';
-
-    const sections = [...document.querySelectorAll<HTMLElement>('[data-immersive]')];
-    // Reveal-on-scroll animation (IO + CSS transition, no extra dependency).
-    const revealer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) entry.target.classList.add('is-visible');
-        }
-      },
-      { threshold: 0.25 },
-    );
-    for (const section of sections) revealer.observe(section);
 
     // Compact layout: sections are content-sized, so there is nothing to
     // snap to — Lenis only provides the smooth inertia.
     const { default: Lenis } = await import('lenis');
     const lenis = new Lenis({ duration: 0.9, smoothWheel: true });
-    const root = document.documentElement;
-    root.dataset.lenisReady = 'true';
+    document.documentElement.dataset.lenisReady = 'true';
 
-    const raf = (time: number): void => {
+    let rafId = requestAnimationFrame(function raf(time: number): void {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      rafId = requestAnimationFrame(raf);
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+      delete document.documentElement.dataset.immersive;
+      delete document.documentElement.dataset.lenisReady;
     };
-    requestAnimationFrame(raf);
   }
 
-  void initImmersive();
+  onPageLoad(() => void initImmersive());
 </script>
 
 <script>
@@ -218,9 +215,16 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
   // 0.3-0.6 s. TYPE_SPEED_FACTOR scales the typing/erasing motion (1.75x
   // faster); the sentence-hold pauses are unchanged.
   // prefers-reduced-motion users get the static first line, no cursor.
+  // The loop is aborted on navigation so it never keeps mutating a
+  // detached hero (and restarts cleanly when the visitor returns home).
   import { getDictionary, isAppLocale } from '@/lib/i18n/core';
+  import { onPageLoad } from '@/lib/ui/lifecycle';
+
+  let activeTyper: AbortController | null = null;
 
   async function initTypewriter(): Promise<void> {
+    activeTyper?.abort();
+    activeTyper = null;
     const host = document.querySelector<HTMLElement>('[data-typewriter]');
     if (!host) return; // non-English locales keep the static title
     const localeRaw: unknown = host.dataset.locale;
@@ -238,13 +242,29 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
       return; // static first line; the cursor is hidden by CSS
     }
 
-    const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+    const controller = new AbortController();
+    activeTyper = controller;
+    const signal = controller.signal;
+
+    const sleep = (ms: number): Promise<void> =>
+      new Promise((resolve) => {
+        const timer = setTimeout(resolve, ms);
+        signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
+      });
     const rand = (min: number, max: number): number => min + Math.random() * (max - min);
     // Scales the typing/erasing motion; 1.75 = 1.75x faster than baseline.
     const SPEED_FACTOR = 1.75;
 
     const typeLine = async (line: string): Promise<void> => {
       for (const ch of line) {
+        if (signal.aborted) return;
         textEl.textContent = (textEl.textContent ?? '') + ch;
         let delay = rand(60, 120) / SPEED_FACTOR;
         if (/[.,!?;:—]/.test(ch)) delay = rand(150, 300) / SPEED_FACTOR;
@@ -254,7 +274,7 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
     };
 
     const eraseLine = async (): Promise<void> => {
-      while ((textEl.textContent ?? '').length > 0) {
+      while ((textEl.textContent ?? '').length > 0 && !signal.aborted) {
         textEl.textContent = (textEl.textContent ?? '').slice(0, -1);
         await sleep(rand(30, 70) / SPEED_FACTOR);
       }
@@ -262,7 +282,7 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
 
     // Hand the heading over to the animation from a blank slate.
     textEl.textContent = '';
-    for (let index = 0; ; index += 1) {
+    for (let index = 0; !signal.aborted; index += 1) {
       const line = lines[index % lines.length] ?? '';
       await typeLine(line);
       await sleep(rand(1000, 1800));
@@ -271,5 +291,5 @@ const staticTitle = getDictionary('en').home.typewriterLines[0] ?? t.t('home.her
     }
   }
 
-  void initTypewriter();
+  onPageLoad(() => void initTypewriter());
 </script>

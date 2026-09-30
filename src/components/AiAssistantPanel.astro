@@ -98,6 +98,7 @@ const settingsHref = '../settings/';
   import type { ChatMessage } from '@/lib/ai/types';
   import type { ConsoleLine } from '@/lib/ai/prompt';
   import { renderMarkdownToElement } from '@/lib/ai/markdown';
+  import { buildStreamCursor, buildThinkingIndicator } from '@/lib/ui/ai-indicator';
 
   const MODE_KEYS = ['hint', 'explain', 'review', 'debug', 'challenge', 'free'] as const;
   type Mode = (typeof MODE_KEYS)[number];
@@ -230,11 +231,14 @@ const settingsHref = '../settings/';
 
       const bubble = addBubble('assistant');
       const isChallenge = mode === 'challenge';
-      // Challenge replies are raw JSON for the task system, not prose: keep
-      // the thinking placeholder and swap in a compact verdict afterwards.
-      if (!isChallenge) bubble.textContent = t.t('ai.thinking');
+      // Terminal-style waiting state for every mode; the first streamed
+      // delta replaces it, and challenge verdicts replace or remove the
+      // bubble entirely.
+      bubble.replaceChildren(buildThinkingIndicator(t.t('ai.thinking')));
       setBusy(true);
       controller = new AbortController();
+
+      const streamCursor = buildStreamCursor();
 
       const requestMessages: ChatMessage[] = [...history.slice(-12), ...newMessages];
       let replyText = '';
@@ -247,8 +251,9 @@ const settingsHref = '../settings/';
           onDelta: (fullText) => {
             replyText = fullText;
             if (!isChallenge) {
-              // Assistant prose is markdown: re-render the bubble per frame.
-              bubble.replaceChildren(renderMarkdownToElement(replyText));
+              // Assistant prose is markdown: re-render the bubble per frame,
+              // with a blinking block cursor while the reply is streaming.
+              bubble.replaceChildren(renderMarkdownToElement(replyText), streamCursor);
               messages.scrollTop = messages.scrollHeight;
             }
           },
@@ -284,6 +289,7 @@ const settingsHref = '../settings/';
           }
         }
       } finally {
+        streamCursor.remove();
         setBusy(false);
         controller = null;
       }

@@ -50,6 +50,9 @@
   border-inline-start: 2px solid transparent;
   padding-inline-start: var(--md-sys-spacing-2);
   margin-inline-start: calc(-1 * var(--md-sys-spacing-2) - 2px);
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .lesson-toc__link:hover {

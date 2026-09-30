@@ -141,6 +141,7 @@ const t = createTranslator(locale);
     saveAIConfig,
   } from '@/lib/ai/settings';
   import { describeFetchError } from '@/lib/ai/errors';
+  import { onPageLoad } from '@/lib/ui/lifecycle';
   import type { AIConfig, AIProviderId } from '@/lib/ai/types';
 
   const DEFAULT_BASE_URLS: Record<AIProviderId, string> = {
@@ -325,5 +326,5 @@ const t = createTranslator(locale);
     });
   }
 
-  void initAiSettings();
+  onPageLoad(() => void initAiSettings());
 </script>
